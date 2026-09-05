@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="text-2xl font-bold text-gold mb-4">Edit Match — {{ match.match_date }}</h1>
+
+{% if warning %}
+<div class="bg-amber-950 border border-amber-700 text-amber-200 rounded-xl p-4 mb-4 text-sm">
+  <p class="mb-2">{{ warning }}</p>
+  <ul class="list-disc list-inside space-y-1 mb-3">
+    <li>Current fee: ₹{{ preview.old_fee }} · New fee: ₹{{ preview.new_fee }}</li>
+    <li>{{ preview.paid_count }} of {{ preview.total_players }} players have already paid — their fee stays unchanged</li>
+    <li>Remaining {{ preview.total_players - preview.paid_count }} player(s) move to the new fee of ₹{{ preview.new_fee }}</li>
+  </ul>
+  <form method="post" action="/matches/{{ match.id }}/edit">
+    <input type="hidden" name="ground_fees" value="{{ pending_ground_fees }}">
+    <input type="hidden" name="additional_amount" value="{{ pending_additional_amount }}">
+    <input type="hidden" name="confirmed" value="true">
+    <button class="bg-red-700 text-white px-3 py-1.5 rounded text-xs font-semibold">Confirm and apply</button>
+  </form>
+</div>
+{% endif %}
+
+<form method="post" action="/matches/{{ match.id }}/edit" class="card rounded-xl p-6 max-w-lg space-y-4">
+  <div class="grid grid-cols-2 gap-3">
+    <div>
+      <label class="block text-sm text-gray-400 mb-1">Ground Fees (₹)</label>
+      <input type="number" step="0.01" name="ground_fees" value="{{ match.ground_fees }}" required class="w-full bg-ink border border-gray-700 rounded px-3 py-2">
+    </div>
+    <div>
+      <label class="block text-sm text-gray-400 mb-1">Additional Amount (₹)</label>
+      <input type="number" step="0.01" name="additional_amount" value="{{ match.additional_amount }}" class="w-full bg-ink border border-gray-700 rounded px-3 py-2">
+    </div>
+  </div>
+  <p class="text-xs text-gray-500">Player list can't be changed after creation in this version. If nobody has paid yet, the fee recalculates freely. If some players already paid, you'll be asked to confirm before anything changes.</p>
+  <button class="bg-gold text-ink font-semibold px-4 py-2 rounded">Save Changes</button>
+</form>
+{% endblock %}

@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, Request, Form
+from ..auth import require_admin
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from typing import List
@@ -9,7 +10,7 @@ from ..services.expense_service import (
     create_team_expense, allocate_expense_to_players, pay_expense_allocation,
 )
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_admin)])
 
 DEFAULT_CATEGORIES = ["Cricket Balls", "Gloves", "Stumps", "Bats", "Jerseys", "Equipment", "Other Team Expenses"]
 

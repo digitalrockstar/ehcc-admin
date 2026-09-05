@@ -77,8 +77,68 @@ def get_match_financials(db: Session, match_id: int) -> dict:
     }
 
 
-def cancel_match(db: Session, match_id: int) -> models.Match:
+class ConfirmationRequired(Exception):
+    """Raised when an edit/cancel touches existing payments and the caller
+    has not yet passed confirm=True. The route layer catches this and
+    re-renders the page with a warning instead of a hard 400."""
+    def __init__(self, message: str, preview: dict = None):
+        super().__init__(message)
+        self.preview = preview or {}
+
+
+def preview_match_edit(db: Session, match_id: int, new_ground_fees: float, new_additional_amount: float) -> dict:
+    """Section 38: show the financial impact of an edit before saving."""
     match = db.query(models.Match).get(match_id)
+    old_total = float(match.total_expense)
+    new_total = new_ground_fees + new_additional_amount
+    old_fee = float(match.participants[0].fee_amount) if match.participants else 0
+    new_fee = calculate_match_player_fee(int(round(new_total)), len(match.participants)) if match.participants else 0
+    paid_count = sum(1 for p in match.participants if p.status == models.PaymentStatus.paid)
+    return {
+        "old_total_expense": old_total, "new_total_expense": new_total,
+        "old_fee": old_fee, "new_fee": new_fee,
+        "paid_count": paid_count, "total_players": len(match.participants),
+        "has_payments": paid_count > 0 or match.expense_paid_from_account,
+    }
+
+
+def apply_match_edit(db: Session, match_id: int, new_ground_fees: float, new_additional_amount: float,
+                      confirmed: bool = False) -> models.Match:
+    match = db.query(models.Match).get(match_id)
+    preview = preview_match_edit(db, match_id, new_ground_fees, new_additional_amount)
+
+    if preview["has_payments"] and not confirmed:
+        raise ConfirmationRequired(
+            "This match has existing payments. Confirm to apply the recalculated fee "
+            "to players who have not yet paid; already-paid fees are left untouched.",
+            preview=preview,
+        )
+
+    match.ground_fees = new_ground_fees
+    match.additional_amount = new_additional_amount
+    new_fee = preview["new_fee"]
+
+    # Never overwrite an already-paid fee. Only unpaid obligations move to
+    # the recalculated amount - this is the explicit rule from Section 38.
+    for p in match.participants:
+        if p.status == models.PaymentStatus.due:
+            p.fee_amount = new_fee
+
+    db.commit()
+    db.refresh(match)
+    return match
+
+
+def cancel_match(db: Session, match_id: int, confirmed: bool = False) -> models.Match:
+    match = db.query(models.Match).get(match_id)
+    has_payments = any(p.status == models.PaymentStatus.paid for p in match.participants) or match.expense_paid_from_account
+
+    if has_payments and not confirmed:
+        raise ConfirmationRequired(
+            "This match has recorded payments/expense. Cancelling removes it from active "
+            "totals but keeps the full history visible. Confirm to proceed.",
+        )
+
     match.status = models.MatchStatus.cancelled
     db.commit()
     db.refresh(match)

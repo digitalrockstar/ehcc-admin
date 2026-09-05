@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, Request, Form
+from ..auth import require_admin
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from .. import models
@@ -6,7 +7,7 @@ from ..database import get_db
 from ..deps import templates, get_current_team
 from ..services.expense_service import add_adhoc_income
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_admin)])
 
 DEFAULT_TYPES = ["Team Contribution", "Sponsorship", "Donation", "Miscellaneous Income"]
 

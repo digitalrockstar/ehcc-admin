@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, Request, Form
+from ..auth import require_admin
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from typing import List
@@ -7,9 +8,10 @@ from ..database import get_db
 from ..deps import templates, get_current_team
 from ..services.match_service import (
     create_match, pay_match_expense_from_account, mark_match_fee_paid, get_match_financials, cancel_match,
+    preview_match_edit, apply_match_edit, ConfirmationRequired,
 )
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_admin)])
 
 
 @router.get("/matches")
@@ -57,8 +59,42 @@ def pay_expense(match_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/matches/{match_id}/cancel")
-def cancel(match_id: int, db: Session = Depends(get_db)):
-    cancel_match(db, match_id)
+def cancel(match_id: int, request: Request, confirmed: bool = Form(False), db: Session = Depends(get_db)):
+    try:
+        cancel_match(db, match_id, confirmed=confirmed)
+    except ConfirmationRequired as e:
+        team = get_current_team(db)
+        match = db.query(models.Match).get(match_id)
+        financials = get_match_financials(db, match_id)
+        return templates.TemplateResponse("match_detail.html", {
+            "request": request, "team": team, "match": match, "financials": financials,
+            "cancel_warning": str(e),
+        })
+    return RedirectResponse(f"/matches/{match_id}", status_code=303)
+
+
+@router.get("/matches/{match_id}/edit")
+def edit_match_form(match_id: int, request: Request, db: Session = Depends(get_db)):
+    team = get_current_team(db)
+    match = db.query(models.Match).get(match_id)
+    return templates.TemplateResponse("match_edit.html", {"request": request, "team": team, "match": match})
+
+
+@router.post("/matches/{match_id}/edit")
+def edit_match_submit(
+    match_id: int, request: Request, ground_fees: float = Form(...), additional_amount: float = Form(0),
+    confirmed: bool = Form(False), db: Session = Depends(get_db),
+):
+    team = get_current_team(db)
+    try:
+        apply_match_edit(db, match_id, ground_fees, additional_amount, confirmed=confirmed)
+    except ConfirmationRequired as e:
+        match = db.query(models.Match).get(match_id)
+        return templates.TemplateResponse("match_edit.html", {
+            "request": request, "team": team, "match": match,
+            "warning": str(e), "preview": e.preview,
+            "pending_ground_fees": ground_fees, "pending_additional_amount": additional_amount,
+        })
     return RedirectResponse(f"/matches/{match_id}", status_code=303)
 
 

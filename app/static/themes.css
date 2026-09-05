@@ -1,0 +1,60 @@
+/* EHCC Accounts - theme system (Section 41)
+   Each theme sets a handful of CSS custom properties. bg-ink / bg-card /
+   text-gold / border-* Tailwind classes are wired to these vars via the
+   tailwind.config in base.html. The !important overrides below cover the
+   hardcoded gray/status utility classes used throughout the templates,
+   so a theme switch actually repaints the whole page, not just the shell. */
+
+:root, body[data-theme="dark"] {
+  --ink: #0f1115; --card: #151922; --accent: #c9a227; --border: #24293a;
+  --text: #f3f4f6; --text-dim: #9ca3af; --text-faint: #6b7280;
+}
+
+body[data-theme="light"] {
+  --ink: #f6f7f9; --card: #ffffff; --accent: #b8860b; --border: #e2e5eb;
+  --text: #14161a; --text-dim: #4b5563; --text-faint: #6b7280;
+}
+
+body[data-theme="cricket-green"] {
+  --ink: #0a1f14; --card: #12301f; --accent: #7cd68a; --border: #1e4a30;
+  --text: #eafbf0; --text-dim: #9fd4ae; --text-faint: #6fa77e;
+}
+
+body[data-theme="midnight"] {
+  --ink: #05070f; --card: #0d1120; --accent: #6ea8fe; --border: #1a2036;
+  --text: #e6e9f5; --text-dim: #8b93b0; --text-faint: #5c637f;
+}
+
+body[data-theme="maroon"] {
+  --ink: #1a0709; --card: #2a0f12; --accent: #e0a458; --border: #4a1c20;
+  --text: #f7e9e9; --text-dim: #c99b9c; --text-faint: #9c7273;
+}
+
+body[data-theme="royal-blue"] {
+  --ink: #06122b; --card: #0c1e42; --accent: #ffd166; --border: #1c3566;
+  --text: #eaf1ff; --text-dim: #9fb3d9; --text-faint: #6d80a3;
+}
+
+body[data-theme="monochrome"] {
+  --ink: #111111; --card: #1c1c1c; --accent: #e5e5e5; --border: #333333;
+  --text: #f2f2f2; --text-dim: #a3a3a3; --text-faint: #737373;
+}
+
+body[data-theme="luxury-gold"] {
+  --ink: #0c0a06; --card: #1a1509; --accent: #f0c14b; --border: #3a2f14;
+  --text: #f7f0dc; --text-dim: #c9b98a; --text-faint: #8a7c53;
+}
+
+body { color: var(--text); }
+.card { background: linear-gradient(145deg, var(--card), color-mix(in srgb, var(--card) 85%, black)); border: 1px solid var(--border) !important; }
+
+/* Repaint hardcoded utility classes used across templates to follow the theme */
+body [class*="text-gray-100"] { color: var(--text) !important; }
+body [class*="text-gray-400"] { color: var(--text-dim) !important; }
+body [class*="text-gray-500"] { color: var(--text-faint) !important; }
+body [class*="border-gray-700"] { border-color: var(--border) !important; }
+body [class*="border-gray-800"] { border-color: var(--border) !important; }
+body [class*="divide-gray-800"] > * + * { border-color: var(--border) !important; }
+body [class*="bg-gray-700"] { background-color: color-mix(in srgb, var(--border) 70%, var(--card)) !important; }
+body [class*="bg-gray-800"] { background-color: color-mix(in srgb, var(--border) 40%, var(--card)) !important; }
+body input, body select, body textarea { background-color: var(--ink) !important; color: var(--text) !important; }

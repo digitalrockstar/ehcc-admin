@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends, Request
+from ..auth import require_admin
 from sqlalchemy.orm import Session
 from .. import models
 from ..database import get_db
 from ..deps import templates, get_current_team
 from ..services.match_service import get_match_financials
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_admin)])
 
 
 @router.get("/reports")

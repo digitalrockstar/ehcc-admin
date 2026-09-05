@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: ehcc-admin
+    runtime: python
+    plan: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: DATABASE_URL
+        sync: false          # set this to your Neon connection string in the Render dashboard
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+        generateValue: true  # Render will generate a strong value if you don't set one
+      - key: PYTHON_VERSION
+        value: "3.12.5"

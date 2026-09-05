@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, Request
+from ..auth import require_admin
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from ..database import get_db
@@ -6,7 +7,7 @@ from ..deps import templates, get_current_team
 from ..services.team_service import get_dashboard_summary
 from .. import models
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_admin)])
 
 
 @router.get("/")

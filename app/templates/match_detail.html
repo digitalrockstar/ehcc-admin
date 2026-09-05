@@ -10,6 +10,16 @@
   <div class="card rounded-xl p-3"><p class="text-gray-400">Surplus</p><p class="font-bold text-gold">₹{{ financials.match_surplus }}</p></div>
 </div>
 
+{% if cancel_warning %}
+<div class="bg-amber-950 border border-amber-700 text-amber-200 rounded-xl p-4 mb-4 text-sm">
+  <p class="mb-2">{{ cancel_warning }}</p>
+  <form method="post" action="/matches/{{ match.id }}/cancel">
+    <input type="hidden" name="confirmed" value="true">
+    <button class="bg-red-700 text-white px-3 py-1.5 rounded text-xs font-semibold">Yes, cancel anyway</button>
+  </form>
+</div>
+{% endif %}
+
 <div class="flex gap-3 mb-6">
   {% if not match.expense_paid_from_account %}
   <form method="post" action="/matches/{{ match.id }}/pay-expense">
@@ -17,7 +27,8 @@
   </form>
   {% endif %}
   {% if match.status.value != 'cancelled' %}
-  <form method="post" action="/matches/{{ match.id }}/cancel" onsubmit="return confirm('Cancel this match? History is preserved.')">
+  <a href="/matches/{{ match.id }}/edit" class="border border-gray-700 px-4 py-2 rounded hover:border-gold">Edit Match</a>
+  <form method="post" action="/matches/{{ match.id }}/cancel">
     <button class="border border-red-700 text-red-400 px-4 py-2 rounded">Cancel Match</button>
   </form>
   {% endif %}
