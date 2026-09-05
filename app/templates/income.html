@@ -12,11 +12,13 @@
   <button class="col-span-2 bg-gold text-ink font-semibold px-4 py-2 rounded">Record Income</button>
 </form>
 
-<div class="card rounded-xl divide-y divide-gray-800">
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
   {% for i in income %}
-  <div class="p-3 flex justify-between text-sm">
-    <span>{{ i.date }} · {{ i.income_type }}</span><span class="text-gold font-semibold">₹{{ i.amount }}</span>
+  <div class="card rounded-xl p-4 text-sm">
+    <p class="font-medium">{{ i.income_type }}</p>
+    <p class="text-gold font-semibold">₹{{ i.amount }}</p>
+    <p class="text-gray-400">{{ i.date }}{% if i.notes %} · {{ i.notes }}{% endif %}</p>
   </div>
-  {% else %}<p class="p-4 text-gray-500">No additional income recorded yet.</p>{% endfor %}
+  {% else %}<p class="text-gray-500 col-span-full text-sm">No additional income recorded yet.</p>{% endfor %}
 </div>
 {% endblock %}

@@ -35,14 +35,16 @@
 </div>
 
 <h2 class="font-semibold mb-2">Player Fees</h2>
-<div class="card rounded-xl divide-y divide-gray-800">
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
   {% for p in match.participants %}
-  <div class="p-3 flex justify-between items-center text-sm">
-    <span>{{ p.player.name }}</span>
-    <span>₹{{ p.fee_amount }}{% if p.amount_paid and p.amount_paid != p.fee_amount %} (paid ₹{{ p.amount_paid }}){% endif %}</span>
-    <span class="{{ 'text-green-400' if p.status.value=='paid' else 'text-amber-400' }}">{{ p.status.value }}</span>
+  <div class="card rounded-xl p-4">
+    <div class="flex justify-between items-start mb-1">
+      <p class="font-medium">{{ p.player.name }}</p>
+      <span class="text-xs px-2 py-0.5 rounded {{ 'bg-green-900 text-green-300' if p.status.value=='paid' else 'bg-amber-900 text-amber-300' }}">{{ p.status.value }}</span>
+    </div>
+    <p class="text-sm text-gray-400">Fee ₹{{ p.fee_amount }}{% if p.amount_paid and p.amount_paid != p.fee_amount %} · Paid ₹{{ p.amount_paid }}{% endif %}</p>
     {% if p.status.value == 'due' %}
-    <form method="post" action="/match-participants/{{ p.id }}/pay" class="flex gap-1">
+    <form method="post" action="/match-participants/{{ p.id }}/pay" class="flex gap-1 mt-2">
       <input type="number" step="0.01" name="amount_paid" placeholder="{{ p.fee_amount }}" class="w-20 bg-ink border border-gray-700 rounded px-2 text-xs">
       <button class="bg-green-700 text-white text-xs px-2 rounded">Mark Paid</button>
     </form>

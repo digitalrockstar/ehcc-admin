@@ -22,10 +22,14 @@
   </div>
   <div>
     <label class="block text-sm text-gray-400 mb-2">Participating Players</label>
-    <div class="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto border border-gray-800 rounded p-3">
+    <div class="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-80 overflow-y-auto border border-gray-800 rounded p-3">
       {% for p in players %}
-      <label class="flex items-center gap-2 text-sm">
-        <input type="checkbox" name="player_ids" value="{{ p.id }}"> {{ p.name }}
+      <label class="cursor-pointer">
+        <input type="checkbox" name="player_ids" value="{{ p.id }}" class="peer hidden">
+        <div class="card rounded-lg px-3 py-2 border-2 border-transparent peer-checked:border-gold peer-checked:bg-gold/10 transition text-sm">
+          <p class="font-medium">{{ p.name }}</p>
+          {% if p.contact_number %}<p class="text-xs text-gray-500">{{ p.contact_number }}</p>{% endif %}
+        </div>
       </label>
       {% endfor %}
     </div>

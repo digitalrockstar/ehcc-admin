@@ -1,3 +1,4 @@
+from datetime import date
 from fastapi import APIRouter, Depends, Request, Form
 from ..auth import require_admin
 from fastapi.responses import RedirectResponse
@@ -8,7 +9,7 @@ from ..database import get_db
 from ..deps import templates, get_current_team
 from ..services.match_service import (
     create_match, pay_match_expense_from_account, mark_match_fee_paid, get_match_financials, cancel_match,
-    preview_match_edit, apply_match_edit, ConfirmationRequired,
+    preview_match_edit, apply_match_edit, ConfirmationRequired, InvalidEdit,
 )
 
 router = APIRouter(dependencies=[Depends(require_admin)])
@@ -20,7 +21,8 @@ def list_matches(request: Request, db: Session = Depends(get_db)):
     matches = db.query(models.Match).filter(models.Match.team_id == team.id).order_by(
         models.Match.match_date.desc()
     ).all()
-    return templates.TemplateResponse("matches.html", {"request": request, "team": team, "matches": matches})
+    rows = [{"match": m, **get_match_financials(db, m.id)} for m in matches]
+    return templates.TemplateResponse("matches.html", {"request": request, "team": team, "rows": rows})
 
 
 @router.get("/matches/new")
@@ -34,7 +36,7 @@ def new_match_form(request: Request, db: Session = Depends(get_db)):
 
 @router.post("/matches")
 def create_match_submit(
-    match_date: str = Form(...), ground_fees: float = Form(...), additional_amount: float = Form(0),
+    match_date: date = Form(...), ground_fees: float = Form(...), additional_amount: float = Form(0),
     notes: str = Form(None), player_ids: List[int] = Form(...), db: Session = Depends(get_db),
 ):
     team = get_current_team(db)
@@ -77,21 +79,44 @@ def cancel(match_id: int, request: Request, confirmed: bool = Form(False), db: S
 def edit_match_form(match_id: int, request: Request, db: Session = Depends(get_db)):
     team = get_current_team(db)
     match = db.query(models.Match).get(match_id)
-    return templates.TemplateResponse("match_edit.html", {"request": request, "team": team, "match": match})
+    all_players = db.query(models.Player).filter(
+        models.Player.team_id == team.id, models.Player.status == models.PlayerStatus.active
+    ).all()
+    selected_ids = {p.player_id for p in match.participants}
+    paid_ids = {p.player_id for p in match.participants if p.status == models.PaymentStatus.paid}
+    return templates.TemplateResponse("match_edit.html", {
+        "request": request, "team": team, "match": match, "all_players": all_players,
+        "selected_ids": selected_ids, "paid_ids": paid_ids,
+    })
 
 
 @router.post("/matches/{match_id}/edit")
 def edit_match_submit(
     match_id: int, request: Request, ground_fees: float = Form(...), additional_amount: float = Form(0),
-    confirmed: bool = Form(False), db: Session = Depends(get_db),
+    player_ids: List[int] = Form(...), confirmed: bool = Form(False), db: Session = Depends(get_db),
 ):
     team = get_current_team(db)
     try:
-        apply_match_edit(db, match_id, ground_fees, additional_amount, confirmed=confirmed)
+        apply_match_edit(db, match_id, ground_fees, additional_amount, player_ids, confirmed=confirmed)
+    except InvalidEdit as e:
+        match = db.query(models.Match).get(match_id)
+        all_players = db.query(models.Player).filter(
+            models.Player.team_id == team.id, models.Player.status == models.PlayerStatus.active
+        ).all()
+        paid_ids = {p.player_id for p in match.participants if p.status == models.PaymentStatus.paid}
+        return templates.TemplateResponse("match_edit.html", {
+            "request": request, "team": team, "match": match, "all_players": all_players,
+            "selected_ids": set(player_ids), "paid_ids": paid_ids, "error": str(e),
+        })
     except ConfirmationRequired as e:
         match = db.query(models.Match).get(match_id)
+        all_players = db.query(models.Player).filter(
+            models.Player.team_id == team.id, models.Player.status == models.PlayerStatus.active
+        ).all()
+        paid_ids = {p.player_id for p in match.participants if p.status == models.PaymentStatus.paid}
         return templates.TemplateResponse("match_edit.html", {
-            "request": request, "team": team, "match": match,
+            "request": request, "team": team, "match": match, "all_players": all_players,
+            "selected_ids": set(player_ids), "paid_ids": paid_ids,
             "warning": str(e), "preview": e.preview,
             "pending_ground_fees": ground_fees, "pending_additional_amount": additional_amount,
         })

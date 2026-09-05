@@ -2,35 +2,58 @@
 {% block content %}
 <h1 class="text-2xl font-bold text-gold mb-4">Edit Match — {{ match.match_date }}</h1>
 
+{% if error %}
+<div class="bg-red-950 border border-red-700 text-red-200 rounded-xl p-4 mb-4 text-sm">{{ error }}</div>
+{% endif %}
+
 {% if warning %}
 <div class="bg-amber-950 border border-amber-700 text-amber-200 rounded-xl p-4 mb-4 text-sm">
   <p class="mb-2">{{ warning }}</p>
   <ul class="list-disc list-inside space-y-1 mb-3">
-    <li>Current fee: ₹{{ preview.old_fee }} · New fee: ₹{{ preview.new_fee }}</li>
-    <li>{{ preview.paid_count }} of {{ preview.total_players }} players have already paid — their fee stays unchanged</li>
-    <li>Remaining {{ preview.total_players - preview.paid_count }} player(s) move to the new fee of ₹{{ preview.new_fee }}</li>
+    <li>Fee moves from ₹{{ preview.old_fee }} to ₹{{ preview.new_fee }}</li>
+    <li>{{ preview.paid_count }} player(s) already paid — untouched</li>
+    <li>{{ preview.new_total_players }} player(s) total after this change ({{ preview.to_add|length }} added, {{ preview.to_remove|length }} removed)</li>
   </ul>
   <form method="post" action="/matches/{{ match.id }}/edit">
     <input type="hidden" name="ground_fees" value="{{ pending_ground_fees }}">
     <input type="hidden" name="additional_amount" value="{{ pending_additional_amount }}">
+    {% for pid in selected_ids %}<input type="hidden" name="player_ids" value="{{ pid }}">{% endfor %}
     <input type="hidden" name="confirmed" value="true">
     <button class="bg-red-700 text-white px-3 py-1.5 rounded text-xs font-semibold">Confirm and apply</button>
   </form>
 </div>
 {% endif %}
 
-<form method="post" action="/matches/{{ match.id }}/edit" class="card rounded-xl p-6 max-w-lg space-y-4">
+<form method="post" action="/matches/{{ match.id }}/edit" class="card rounded-xl p-6 max-w-2xl space-y-4">
   <div class="grid grid-cols-2 gap-3">
     <div>
       <label class="block text-sm text-gray-400 mb-1">Ground Fees (₹)</label>
-      <input type="number" step="0.01" name="ground_fees" value="{{ match.ground_fees }}" required class="w-full bg-ink border border-gray-700 rounded px-3 py-2">
+      <input type="number" step="0.01" name="ground_fees" value="{{ pending_ground_fees or match.ground_fees }}" required class="w-full bg-ink border border-gray-700 rounded px-3 py-2">
     </div>
     <div>
       <label class="block text-sm text-gray-400 mb-1">Additional Amount (₹)</label>
-      <input type="number" step="0.01" name="additional_amount" value="{{ match.additional_amount }}" class="w-full bg-ink border border-gray-700 rounded px-3 py-2">
+      <input type="number" step="0.01" name="additional_amount" value="{{ pending_additional_amount or match.additional_amount }}" class="w-full bg-ink border border-gray-700 rounded px-3 py-2">
     </div>
   </div>
-  <p class="text-xs text-gray-500">Player list can't be changed after creation in this version. If nobody has paid yet, the fee recalculates freely. If some players already paid, you'll be asked to confirm before anything changes.</p>
+
+  <div>
+    <label class="block text-sm text-gray-400 mb-2">Participating Players</label>
+    <div class="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-80 overflow-y-auto border border-gray-800 rounded p-3">
+      {% for p in all_players %}
+      <label class="cursor-pointer {{ 'opacity-60' if p.id in paid_ids }}">
+        <input type="checkbox" name="player_ids" value="{{ p.id }}" class="peer hidden"
+          {{ 'checked' if p.id in selected_ids }} {{ 'disabled' if p.id in paid_ids }}>
+        {% if p.id in paid_ids %}<input type="hidden" name="player_ids" value="{{ p.id }}">{% endif %}
+        <div class="card rounded-lg px-3 py-2 border-2 border-transparent peer-checked:border-gold peer-checked:bg-gold/10 transition text-sm">
+          <p class="font-medium">{{ p.name }}</p>
+          {% if p.id in paid_ids %}<p class="text-xs text-green-400">Already paid — locked</p>{% endif %}
+        </div>
+      </label>
+      {% endfor %}
+    </div>
+    <p class="text-xs text-gray-500 mt-2">Players who already paid can't be removed here.</p>
+  </div>
+
   <button class="bg-gold text-ink font-semibold px-4 py-2 rounded">Save Changes</button>
 </form>
 {% endblock %}

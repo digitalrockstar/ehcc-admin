@@ -4,15 +4,20 @@
   <h1 class="text-2xl font-bold text-gold">Team Expenses</h1>
   <a href="/expenses/new" class="bg-gold text-ink font-semibold px-4 py-2 rounded">+ New Expense</a>
 </div>
-<div class="card rounded-xl divide-y divide-gray-800">
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
   {% for e in expenses %}
-  <a href="/expenses/{{ e.id }}" class="block p-3 flex justify-between hover:bg-gray-800/40 text-sm">
-    <span>{{ e.date }} · {{ e.category }}</span>
-    <span class="text-gray-400">₹{{ e.amount }} · {{ e.payment_source.value }}{% if e.paid_by %} ({{ e.paid_by.name }}){% endif %}</span>
-    <span class="{{ 'text-red-400' if e.reimbursement_status.value=='due' else 'text-gray-500' }}">{{ e.reimbursement_status.value }}</span>
+  <a href="/expenses/{{ e.id }}" class="card rounded-xl p-4 hover:border-gold border-2 border-transparent transition block">
+    <div class="flex justify-between items-start mb-2">
+      <p class="font-semibold">{{ e.category }}</p>
+      <span class="text-xs px-2 py-0.5 rounded {{ 'bg-red-900 text-red-300' if e.reimbursement_status.value=='due' else 'bg-gray-700 text-gray-400' }}">{{ e.reimbursement_status.value }}</span>
+    </div>
+    <div class="text-sm space-y-0.5 text-gray-400">
+      <p>₹{{ e.amount }} · {{ e.date }}</p>
+      <p>{{ e.payment_source.value }}{% if e.paid_by %} — {{ e.paid_by.name }}{% endif %}</p>
+    </div>
   </a>
   {% else %}
-  <p class="p-4 text-gray-500">No expenses yet.</p>
+  <p class="text-gray-500 col-span-full">No expenses yet.</p>
   {% endfor %}
 </div>
 {% endblock %}

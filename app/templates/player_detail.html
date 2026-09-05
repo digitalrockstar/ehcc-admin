@@ -10,29 +10,32 @@
 </div>
 
 <h2 class="font-semibold mb-2">Match Fees</h2>
-<div class="card rounded-xl divide-y divide-gray-800 mb-6">
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
   {% for f in match_fees %}
-  <div class="p-3 flex justify-between text-sm">
-    <span>Match #{{ f.match_id }}</span><span>₹{{ f.fee_amount }}</span><span>{{ f.status.value }}</span>
-  </div>
-  {% else %}<p class="p-3 text-gray-500 text-sm">None</p>{% endfor %}
+  <a href="/matches/{{ f.match_id }}" class="card rounded-xl p-3 hover:border-gold border-2 border-transparent transition block text-sm">
+    <p class="font-medium">Match #{{ f.match_id }}</p>
+    <p class="text-gray-400">₹{{ f.fee_amount }} · <span class="{{ 'text-green-400' if f.status.value=='paid' else 'text-amber-400' }}">{{ f.status.value }}</span></p>
+  </a>
+  {% else %}<p class="text-gray-500 col-span-full text-sm">None</p>{% endfor %}
 </div>
 
 <h2 class="font-semibold mb-2">Expense Shares (Receivables)</h2>
-<div class="card rounded-xl divide-y divide-gray-800 mb-6">
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
   {% for a in allocations %}
-  <div class="p-3 flex justify-between text-sm">
-    <span>{{ a.expense.category }}</span><span>₹{{ a.amount }}</span><span>{{ a.status.value }}</span>
-  </div>
-  {% else %}<p class="p-3 text-gray-500 text-sm">None</p>{% endfor %}
+  <a href="/expenses/{{ a.expense_id }}" class="card rounded-xl p-3 hover:border-gold border-2 border-transparent transition block text-sm">
+    <p class="font-medium">{{ a.expense.category }}</p>
+    <p class="text-gray-400">₹{{ a.amount }} · <span class="{{ 'text-green-400' if a.status.value=='paid' else 'text-amber-400' }}">{{ a.status.value }}</span></p>
+  </a>
+  {% else %}<p class="text-gray-500 col-span-full text-sm">None</p>{% endfor %}
 </div>
 
 <h2 class="font-semibold mb-2">Personally Paid Expenses (Payables)</h2>
-<div class="card rounded-xl divide-y divide-gray-800">
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
   {% for e in expenses_paid %}
-  <div class="p-3 flex justify-between text-sm">
-    <span>{{ e.category }}</span><span>₹{{ e.amount }}</span><span>{{ e.reimbursement_status.value }}</span>
-  </div>
-  {% else %}<p class="p-3 text-gray-500 text-sm">None</p>{% endfor %}
+  <a href="/expenses/{{ e.id }}" class="card rounded-xl p-3 hover:border-gold border-2 border-transparent transition block text-sm">
+    <p class="font-medium">{{ e.category }}</p>
+    <p class="text-gray-400">₹{{ e.amount }} · <span class="{{ 'text-red-400' if e.reimbursement_status.value=='due' else 'text-gray-500' }}">{{ e.reimbursement_status.value }}</span></p>
+  </a>
+  {% else %}<p class="text-gray-500 col-span-full text-sm">None</p>{% endfor %}
 </div>
 {% endblock %}

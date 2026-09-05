@@ -4,15 +4,21 @@
   <h1 class="text-2xl font-bold text-gold">Matches</h1>
   <a href="/matches/new" class="bg-gold text-ink font-semibold px-4 py-2 rounded">+ New Match</a>
 </div>
-<div class="card rounded-xl divide-y divide-gray-800">
-  {% for m in matches %}
-  <a href="/matches/{{ m.id }}" class="block p-3 flex justify-between hover:bg-gray-800/40">
-    <span>{{ m.match_date }}</span>
-    <span class="text-gray-400">₹{{ "%.2f"|format(m.total_expense) }} · {{ m.participants|length }} players</span>
-    <span class="px-2 py-0.5 rounded text-xs {{ 'bg-green-900 text-green-300' if m.status.value=='completed' else 'bg-gray-700' if m.status.value=='upcoming' else 'bg-red-900 text-red-300' }}">{{ m.status.value }}</span>
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+  {% for row in rows %}
+  <a href="/matches/{{ row.match.id }}" class="card rounded-xl p-4 hover:border-gold border-2 border-transparent transition block">
+    <div class="flex justify-between items-start mb-2">
+      <p class="font-semibold">{{ row.match.match_date }}</p>
+      <span class="text-xs px-2 py-0.5 rounded {{ 'bg-green-900 text-green-300' if row.match.status.value=='completed' else 'bg-gray-700' if row.match.status.value=='upcoming' else 'bg-red-900 text-red-300' }}">{{ row.match.status.value }}</span>
+    </div>
+    <div class="text-sm space-y-0.5 text-gray-400">
+      <p>Expense ₹{{ "%.0f"|format(row.total_expense) }} · {{ row.match.participants|length }} players</p>
+      <p class="text-amber-400">Outstanding ₹{{ "%.0f"|format(row.outstanding) }}</p>
+      {% if row.match_surplus > 0 %}<p class="text-gold">Surplus ₹{{ "%.0f"|format(row.match_surplus) }}</p>{% endif %}
+    </div>
   </a>
   {% else %}
-  <p class="p-4 text-gray-500">No matches yet.</p>
+  <p class="text-gray-500 col-span-full">No matches yet.</p>
   {% endfor %}
 </div>
 {% endblock %}

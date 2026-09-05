@@ -1,3 +1,4 @@
+from datetime import date as date_type
 from fastapi import APIRouter, Depends, Request, Form
 from ..auth import require_admin
 from fastapi.responses import RedirectResponse
@@ -39,7 +40,7 @@ def new_expense_form(request: Request, db: Session = Depends(get_db)):
 
 @router.post("/expenses")
 def create_expense_submit(
-    date: str = Form(...), category: str = Form(...), amount: float = Form(...),
+    date: date_type = Form(...), category: str = Form(...), amount: float = Form(...),
     payment_source: str = Form(...), paid_by_player_id: int = Form(None), db: Session = Depends(get_db),
 ):
     team = get_current_team(db)

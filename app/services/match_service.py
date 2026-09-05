@@ -86,31 +86,59 @@ class ConfirmationRequired(Exception):
         self.preview = preview or {}
 
 
-def preview_match_edit(db: Session, match_id: int, new_ground_fees: float, new_additional_amount: float) -> dict:
-    """Section 38: show the financial impact of an edit before saving."""
+class InvalidEdit(Exception):
+    """A hard stop, not a confirmable warning - e.g. trying to remove a
+    player who has already paid their fee. There's no cash-safe way to
+    silently apply this, so it's rejected outright."""
+    pass
+
+
+def preview_match_edit(db: Session, match_id: int, new_ground_fees: float, new_additional_amount: float,
+                        new_player_ids: list) -> dict:
+    """Section 38: show the financial impact of an edit before saving.
+    Covers both the amount changing and players being added/removed."""
     match = db.query(models.Match).get(match_id)
+    current = {p.player_id: p for p in match.participants}
+    new_ids = set(new_player_ids)
+    current_ids = set(current.keys())
+
+    to_remove = current_ids - new_ids
+    to_add = new_ids - current_ids
+    paid_being_removed = [current[pid] for pid in to_remove if current[pid].status == models.PaymentStatus.paid]
+
     old_total = float(match.total_expense)
     new_total = new_ground_fees + new_additional_amount
     old_fee = float(match.participants[0].fee_amount) if match.participants else 0
-    new_fee = calculate_match_player_fee(int(round(new_total)), len(match.participants)) if match.participants else 0
+    new_fee = calculate_match_player_fee(int(round(new_total)), len(new_ids)) if new_ids else 0
     paid_count = sum(1 for p in match.participants if p.status == models.PaymentStatus.paid)
+
     return {
         "old_total_expense": old_total, "new_total_expense": new_total,
         "old_fee": old_fee, "new_fee": new_fee,
         "paid_count": paid_count, "total_players": len(match.participants),
+        "new_total_players": len(new_ids),
+        "to_add": list(to_add), "to_remove": list(to_remove),
+        "paid_being_removed": [p.player.name for p in paid_being_removed],
         "has_payments": paid_count > 0 or match.expense_paid_from_account,
     }
 
 
 def apply_match_edit(db: Session, match_id: int, new_ground_fees: float, new_additional_amount: float,
-                      confirmed: bool = False) -> models.Match:
+                      new_player_ids: list, confirmed: bool = False) -> models.Match:
     match = db.query(models.Match).get(match_id)
-    preview = preview_match_edit(db, match_id, new_ground_fees, new_additional_amount)
+    preview = preview_match_edit(db, match_id, new_ground_fees, new_additional_amount, new_player_ids)
+
+    if preview["paid_being_removed"]:
+        raise InvalidEdit(
+            "Can't remove " + ", ".join(preview["paid_being_removed"]) +
+            " - they've already paid their match fee. Keep them selected, or handle "
+            "this manually before removing them."
+        )
 
     if preview["has_payments"] and not confirmed:
         raise ConfirmationRequired(
             "This match has existing payments. Confirm to apply the recalculated fee "
-            "to players who have not yet paid; already-paid fees are left untouched.",
+            "to unpaid players and any newly added players; already-paid fees are left untouched.",
             preview=preview,
         )
 
@@ -118,8 +146,16 @@ def apply_match_edit(db: Session, match_id: int, new_ground_fees: float, new_add
     match.additional_amount = new_additional_amount
     new_fee = preview["new_fee"]
 
-    # Never overwrite an already-paid fee. Only unpaid obligations move to
-    # the recalculated amount - this is the explicit rule from Section 38.
+    for pid in preview["to_remove"]:
+        participant = next(p for p in match.participants if p.player_id == pid)
+        db.delete(participant)
+
+    for pid in preview["to_add"]:
+        db.add(models.MatchParticipant(match_id=match.id, player_id=pid, fee_amount=new_fee))
+
+    db.flush()
+    # Never overwrite an already-paid fee. Every unpaid obligation (existing
+    # or newly added) moves to the recalculated amount.
     for p in match.participants:
         if p.status == models.PaymentStatus.due:
             p.fee_amount = new_fee

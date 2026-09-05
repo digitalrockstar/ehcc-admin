@@ -1,3 +1,4 @@
+from datetime import date as date_type
 from fastapi import APIRouter, Depends, Request, Form
 from ..auth import require_admin
 from fastapi.responses import RedirectResponse
@@ -27,7 +28,7 @@ def list_income(request: Request, db: Session = Depends(get_db)):
 
 @router.post("/income")
 def add_income(
-    date: str = Form(...), income_type: str = Form(...), amount: float = Form(...),
+    date: date_type = Form(...), income_type: str = Form(...), amount: float = Form(...),
     notes: str = Form(None), db: Session = Depends(get_db),
 ):
     team = get_current_team(db)
