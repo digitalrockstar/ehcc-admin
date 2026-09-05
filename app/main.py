@@ -2,7 +2,7 @@ import os
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from .database import Base, engine, DATABASE_URL
-from .routers import dashboard, teams, players, matches, expenses, reimbursements, income, reports, theme
+from .routers import dashboard, teams, players, matches, expenses, reimbursements, income, reports, theme, settings
 
 # Real deployments run `alembic upgrade head` before boot (see render.yaml).
 # For local sqlite dev, auto-create so `uvicorn app.main:app` just works.
@@ -21,3 +21,4 @@ app.include_router(expenses.router)
 app.include_router(reimbursements.router)
 app.include_router(income.router)
 app.include_router(reports.router)
+app.include_router(settings.router)

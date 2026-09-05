@@ -76,3 +76,17 @@ def get_dashboard_summary(db: Session, team_id: int) -> dict:
         "players_owe_team": float(players_owe_from_matches) + float(players_owe_from_expenses),
         "team_owes_players": float(team_owes_players),
     }
+
+
+def reset_all_data(db: Session) -> None:
+    """Wipe every row in every table. Used for post-testing resets before
+    a real season starts. Deleted in FK-safe order; nothing is soft-deleted
+    here on purpose - this is meant to be a genuine clean slate."""
+    for model in [
+        models.Transaction, models.Reimbursement, models.ExpenseAllocation,
+        models.TeamExpense, models.AdHocIncome, models.MatchParticipant,
+        models.Match, models.Player, models.ExpenseCategory, models.IncomeType,
+        models.Team,
+    ]:
+        db.query(model).delete()
+    db.commit()

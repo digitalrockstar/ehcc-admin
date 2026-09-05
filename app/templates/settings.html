@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="text-2xl font-bold text-gold mb-4">Settings</h1>
+
+<h2 class="font-semibold mb-2">Team</h2>
+<form method="post" action="/setup" class="card rounded-xl p-6 max-w-md space-y-4 mb-8">
+  <div>
+    <label class="block text-sm text-gray-400 mb-1">Team Name</label>
+    <input name="name" required value="{{ team.name if team else '' }}"
+      class="w-full bg-ink border border-gray-700 rounded px-3 py-2">
+  </div>
+  <div>
+    <label class="block text-sm text-gray-400 mb-1">Starting Balance (₹)</label>
+    <input name="starting_balance" type="number" step="0.01" required
+      value="{{ team.starting_balance if team else 0 }}"
+      class="w-full bg-ink border border-gray-700 rounded px-3 py-2">
+  </div>
+  <button class="bg-gold text-ink font-semibold px-4 py-2 rounded hover:opacity-90">Save</button>
+</form>
+
+<h2 class="font-semibold mb-2">Theme</h2>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+  {% for t in themes %}
+  <form method="post" action="/theme">
+    <input type="hidden" name="theme" value="{{ t }}">
+    <button class="w-full card rounded-lg p-3 text-sm text-left border-2 {{ 'border-gold' if t == current_theme else 'border-transparent' }} hover:border-gold transition">
+      <span class="font-medium">{{ t|replace('-', ' ')|title }}</span>
+      {% if t == current_theme %}<span class="block text-xs text-gold mt-1">Active</span>{% endif %}
+    </button>
+  </form>
+  {% endfor %}
+</div>
+
+<h2 class="font-semibold mb-2 text-red-400">Danger Zone</h2>
+<div class="card rounded-xl p-6 max-w-md border border-red-900">
+  {% if reset_error %}
+  <p class="text-red-400 text-sm mb-3">{{ reset_error }}</p>
+  {% endif %}
+  <p class="text-sm text-gray-400 mb-3">
+    Permanently deletes every team, player, match, expense, income, and transaction record.
+    Meant for wiping test data before a real season starts. This cannot be undone.
+  </p>
+  <form method="post" action="/settings/reset-data" class="space-y-2">
+    <label class="block text-xs text-gray-500">Type <span class="text-red-400 font-semibold">RESET</span> to confirm</label>
+    <input name="confirmation_text" required class="w-full bg-ink border border-red-800 rounded px-3 py-2">
+    <button class="bg-red-700 text-white font-semibold px-4 py-2 rounded text-sm">Delete All Data</button>
+  </form>
+</div>
+{% endblock %}

@@ -15,28 +15,36 @@
 <link rel="stylesheet" href="/static/themes.css">
 </head>
 <body data-theme="{{ request.cookies.get('ehcc_theme', 'dark') }}" class="bg-ink min-h-screen">
-<nav class="bg-card border-b border-gray-800 px-4 py-3 flex items-center justify-between sticky top-0 z-10">
-  <a href="/" class="text-gold font-bold text-lg tracking-wide">EHCC {% if team %}· {{ team.name }}{% endif %}</a>
-  <div class="flex gap-3 text-sm overflow-x-auto">
-    <a href="/" class="hover:text-gold">Dashboard</a>
-    <a href="/matches" class="hover:text-gold">Matches</a>
-    <a href="/players" class="hover:text-gold">Players</a>
-    <a href="/expenses" class="hover:text-gold">Expenses</a>
-    <a href="/reimbursements" class="hover:text-gold">Reimbursements</a>
-    <a href="/income" class="hover:text-gold">Income</a>
-    <a href="/reports" class="hover:text-gold">Reports</a>
-    <a href="/setup" class="hover:text-gold">Settings</a>
-    <form method="post" action="/theme" class="inline">
-      <select name="theme" onchange="this.form.submit()" class="bg-card border border-gray-700 rounded text-xs px-2 py-1">
-        {% for t in ["dark","light","cricket-green","midnight","maroon","royal-blue","monochrome","luxury-gold"] %}
-        <option value="{{ t }}" {{ 'selected' if request.cookies.get('ehcc_theme','dark')==t else '' }}>{{ t|replace('-', ' ')|title }}</option>
-        {% endfor %}
-      </select>
-    </form>
+
+<input type="checkbox" id="nav-toggle" class="peer hidden">
+<label for="nav-toggle" class="fixed inset-0 bg-black/60 z-40 hidden peer-checked:block md:hidden"></label>
+
+<aside class="fixed inset-y-0 left-0 z-50 w-64 bg-card border-r border-gray-800 p-4 flex flex-col gap-1
+              transform -translate-x-full peer-checked:translate-x-0 md:translate-x-0 transition-transform duration-200">
+  <div class="flex items-center justify-between mb-4">
+    <a href="/" class="text-gold font-bold text-lg tracking-wide">EHCC{% if team %} · {{ team.name }}{% endif %}</a>
+    <label for="nav-toggle" class="md:hidden cursor-pointer text-2xl leading-none px-2">&times;</label>
   </div>
-</nav>
-<main class="max-w-6xl mx-auto p-4">
-{% block content %}{% endblock %}
-</main>
+  <a href="/" class="px-3 py-2 rounded hover:bg-gray-800/50 hover:text-gold text-sm">Dashboard</a>
+  <a href="/matches" class="px-3 py-2 rounded hover:bg-gray-800/50 hover:text-gold text-sm">Matches</a>
+  <a href="/players" class="px-3 py-2 rounded hover:bg-gray-800/50 hover:text-gold text-sm">Players</a>
+  <a href="/expenses" class="px-3 py-2 rounded hover:bg-gray-800/50 hover:text-gold text-sm">Team Expenses</a>
+  <a href="/reimbursements" class="px-3 py-2 rounded hover:bg-gray-800/50 hover:text-gold text-sm">Reimbursements</a>
+  <a href="/income" class="px-3 py-2 rounded hover:bg-gray-800/50 hover:text-gold text-sm">Additional Income</a>
+  <a href="/reports" class="px-3 py-2 rounded hover:bg-gray-800/50 hover:text-gold text-sm">Reports</a>
+  <div class="flex-1"></div>
+  <a href="/settings" class="px-3 py-2 rounded hover:bg-gray-800/50 hover:text-gold text-sm border-t border-gray-800 pt-3">Settings</a>
+</aside>
+
+<div class="md:pl-64 min-h-screen">
+  <header class="md:hidden flex items-center gap-3 p-4 border-b border-gray-800 sticky top-0 bg-ink z-30">
+    <label for="nav-toggle" class="cursor-pointer text-2xl leading-none">&#9776;</label>
+    <span class="text-gold font-bold">EHCC{% if team %} · {{ team.name }}{% endif %}</span>
+  </header>
+  <main class="max-w-6xl mx-auto p-4">
+  {% block content %}{% endblock %}
+  </main>
+</div>
+
 </body>
 </html>
