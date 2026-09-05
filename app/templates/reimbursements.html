@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="text-2xl font-bold text-gold mb-4">Reimbursements</h1>
+
+<h2 class="font-semibold mb-2">Outstanding</h2>
+<div class="card rounded-xl divide-y divide-gray-800 mb-8">
+  {% for e in due_expenses %}
+  <div class="p-3 flex justify-between items-center text-sm">
+    <span>{{ e.paid_by.name }} — {{ e.category }}</span>
+    <span class="font-bold text-amber-400">₹{{ e.amount }}</span>
+    <form method="post" action="/reimbursements/{{ e.id }}"><button class="bg-gold text-ink text-xs px-3 py-1 rounded font-semibold">Reimburse</button></form>
+  </div>
+  {% else %}<p class="p-4 text-gray-500">Nothing outstanding.</p>{% endfor %}
+</div>
+
+<h2 class="font-semibold mb-2">History</h2>
+<div class="card rounded-xl divide-y divide-gray-800">
+  {% for r in history %}
+  <div class="p-3 flex justify-between text-sm">
+    <span>{{ r.date }} · {{ r.player.name }}</span><span>₹{{ r.amount }}</span>
+  </div>
+  {% else %}<p class="p-4 text-gray-500">No reimbursements yet.</p>{% endfor %}
+</div>
+{% endblock %}

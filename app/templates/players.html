@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="text-2xl font-bold text-gold mb-4">Players</h1>
+
+<form method="post" action="/players" class="card rounded-xl p-4 mb-6 flex gap-3 flex-wrap">
+  <input name="name" placeholder="Player name" required class="bg-ink border border-gray-700 rounded px-3 py-2 flex-1 min-w-[150px]">
+  <input name="contact_number" placeholder="Contact (optional, 10 digits)" pattern="[0-9]{10}" class="bg-ink border border-gray-700 rounded px-3 py-2 flex-1 min-w-[150px]">
+  <button class="bg-gold text-ink font-semibold px-4 py-2 rounded">Add Player</button>
+</form>
+
+<div class="card rounded-xl divide-y divide-gray-800">
+  {% for p in players %}
+  <div class="p-3 flex justify-between items-center">
+    <a href="/players/{{ p.id }}" class="hover:text-gold">{{ p.name }}</a>
+    <div class="flex items-center gap-3 text-sm">
+      <span class="px-2 py-0.5 rounded {{ 'bg-green-900 text-green-300' if p.status.value=='active' else 'bg-gray-700 text-gray-400' }}">{{ p.status.value }}</span>
+      <form method="post" action="/players/{{ p.id }}/toggle-status">
+        <button class="text-gray-400 hover:text-gold text-xs underline">toggle</button>
+      </form>
+    </div>
+  </div>
+  {% else %}
+  <p class="p-4 text-gray-500">No players yet.</p>
+  {% endfor %}
+</div>
+{% endblock %}

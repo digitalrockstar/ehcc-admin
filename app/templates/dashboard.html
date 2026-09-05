@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="text-2xl font-bold text-gold mb-4">Dashboard</h1>
+
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+  <div class="card rounded-xl p-4">
+    <p class="text-xs text-gray-400 uppercase">Cash Available</p>
+    <p class="text-2xl font-bold text-green-400">₹{{ "%.2f"|format(summary.account) }}</p>
+  </div>
+  <div class="card rounded-xl p-4">
+    <p class="text-xs text-gray-400 uppercase">Players Owe Team</p>
+    <p class="text-2xl font-bold text-amber-400">₹{{ "%.2f"|format(summary.players_owe_team) }}</p>
+  </div>
+  <div class="card rounded-xl p-4">
+    <p class="text-xs text-gray-400 uppercase">Team Owes Players</p>
+    <p class="text-2xl font-bold text-red-400">₹{{ "%.2f"|format(summary.team_owes_players) }}</p>
+  </div>
+  <div class="card rounded-xl p-4">
+    <p class="text-xs text-gray-400 uppercase">Additional Income / Surplus</p>
+    <p class="text-2xl font-bold text-gold">₹{{ "%.2f"|format(summary.additional_income) }}</p>
+  </div>
+</div>
+
+<div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8 text-sm">
+  <div class="card rounded-xl p-4"><p class="text-gray-400">Starting Balance</p><p class="text-lg font-semibold">₹{{ "%.2f"|format(summary.starting_balance) }}</p></div>
+  <div class="card rounded-xl p-4"><p class="text-gray-400">Cash Collections</p><p class="text-lg font-semibold">₹{{ "%.2f"|format(summary.cash_collections) }}</p></div>
+  <div class="card rounded-xl p-4"><p class="text-gray-400">Cash Expenses</p><p class="text-lg font-semibold">₹{{ "%.2f"|format(summary.cash_expenses) }}</p></div>
+</div>
+
+<canvas id="overviewChart" height="90"></canvas>
+<script>
+new Chart(document.getElementById('overviewChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Account', 'Owed by Players', 'Owed to Players', 'Additional Income'],
+    datasets: [{
+      data: [{{ summary.account }}, {{ summary.players_owe_team }}, {{ summary.team_owes_players }}, {{ summary.additional_income }}],
+      backgroundColor: ['#22c55e', '#f59e0b', '#ef4444', '#c9a227']
+    }]
+  },
+  options: { plugins: { legend: { display: false } }, scales: { y: { ticks: { color: '#9ca3af' } }, x: { ticks: { color: '#9ca3af' } } } }
+});
+</script>
+
+<h2 class="text-lg font-semibold mt-8 mb-3">Recent Matches</h2>
+<div class="card rounded-xl divide-y divide-gray-800">
+  {% for m in recent_matches %}
+  <a href="/matches/{{ m.id }}" class="block p-3 hover:bg-gray-800/40 flex justify-between">
+    <span>{{ m.match_date }} · {{ m.status.value }}</span>
+    <span class="text-gray-400">₹{{ "%.2f"|format(m.total_expense) }}</span>
+  </a>
+  {% else %}
+  <p class="p-4 text-gray-500">No matches yet. <a href="/matches/new" class="text-gold">Create one</a>.</p>
+  {% endfor %}
+</div>
+{% endblock %}

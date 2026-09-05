@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="text-2xl font-bold text-gold mb-1">Match — {{ match.match_date }}</h1>
+<p class="text-gray-400 mb-4">{{ match.status.value }} {% if match.notes %}· {{ match.notes }}{% endif %}</p>
+
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 text-sm">
+  <div class="card rounded-xl p-3"><p class="text-gray-400">Total Expense</p><p class="font-bold">₹{{ financials.total_expense }}</p></div>
+  <div class="card rounded-xl p-3"><p class="text-gray-400">Fee Obligations</p><p class="font-bold">₹{{ financials.total_fee_obligations }}</p></div>
+  <div class="card rounded-xl p-3"><p class="text-gray-400">Collected</p><p class="font-bold">₹{{ financials.total_collected }}</p></div>
+  <div class="card rounded-xl p-3"><p class="text-gray-400">Surplus</p><p class="font-bold text-gold">₹{{ financials.match_surplus }}</p></div>
+</div>
+
+<div class="flex gap-3 mb-6">
+  {% if not match.expense_paid_from_account %}
+  <form method="post" action="/matches/{{ match.id }}/pay-expense">
+    <button class="bg-gold text-ink px-4 py-2 rounded font-semibold">Pay Expense from Account</button>
+  </form>
+  {% endif %}
+  {% if match.status.value != 'cancelled' %}
+  <form method="post" action="/matches/{{ match.id }}/cancel" onsubmit="return confirm('Cancel this match? History is preserved.')">
+    <button class="border border-red-700 text-red-400 px-4 py-2 rounded">Cancel Match</button>
+  </form>
+  {% endif %}
+</div>
+
+<h2 class="font-semibold mb-2">Player Fees</h2>
+<div class="card rounded-xl divide-y divide-gray-800">
+  {% for p in match.participants %}
+  <div class="p-3 flex justify-between items-center text-sm">
+    <span>{{ p.player.name }}</span>
+    <span>₹{{ p.fee_amount }}{% if p.amount_paid and p.amount_paid != p.fee_amount %} (paid ₹{{ p.amount_paid }}){% endif %}</span>
+    <span class="{{ 'text-green-400' if p.status.value=='paid' else 'text-amber-400' }}">{{ p.status.value }}</span>
+    {% if p.status.value == 'due' %}
+    <form method="post" action="/match-participants/{{ p.id }}/pay" class="flex gap-1">
+      <input type="number" step="0.01" name="amount_paid" placeholder="{{ p.fee_amount }}" class="w-20 bg-ink border border-gray-700 rounded px-2 text-xs">
+      <button class="bg-green-700 text-white text-xs px-2 rounded">Mark Paid</button>
+    </form>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

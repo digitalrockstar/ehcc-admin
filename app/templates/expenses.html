@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="flex justify-between items-center mb-4">
+  <h1 class="text-2xl font-bold text-gold">Team Expenses</h1>
+  <a href="/expenses/new" class="bg-gold text-ink font-semibold px-4 py-2 rounded">+ New Expense</a>
+</div>
+<div class="card rounded-xl divide-y divide-gray-800">
+  {% for e in expenses %}
+  <a href="/expenses/{{ e.id }}" class="block p-3 flex justify-between hover:bg-gray-800/40 text-sm">
+    <span>{{ e.date }} · {{ e.category }}</span>
+    <span class="text-gray-400">₹{{ e.amount }} · {{ e.payment_source.value }}{% if e.paid_by %} ({{ e.paid_by.name }}){% endif %}</span>
+    <span class="{{ 'text-red-400' if e.reimbursement_status.value=='due' else 'text-gray-500' }}">{{ e.reimbursement_status.value }}</span>
+  </a>
+  {% else %}
+  <p class="p-4 text-gray-500">No expenses yet.</p>
+  {% endfor %}
+</div>
+{% endblock %}

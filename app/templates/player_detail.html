@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="text-2xl font-bold text-gold mb-1">{{ player.name }}</h1>
+<p class="text-gray-400 mb-4">{{ player.contact_number or "No contact number" }} · {{ player.status.value }}</p>
+
+<div class="grid grid-cols-3 gap-4 mb-6">
+  <div class="card rounded-xl p-4"><p class="text-xs text-gray-400">Owes Team</p><p class="text-xl font-bold text-amber-400">₹{{ "%.2f"|format(owed_by_player) }}</p></div>
+  <div class="card rounded-xl p-4"><p class="text-xs text-gray-400">Team Owes</p><p class="text-xl font-bold text-red-400">₹{{ "%.2f"|format(owed_to_player) }}</p></div>
+  <div class="card rounded-xl p-4"><p class="text-xs text-gray-400">Net</p><p class="text-xl font-bold {{ 'text-green-400' if net>=0 else 'text-red-400' }}">₹{{ "%.2f"|format(net) }}</p></div>
+</div>
+
+<h2 class="font-semibold mb-2">Match Fees</h2>
+<div class="card rounded-xl divide-y divide-gray-800 mb-6">
+  {% for f in match_fees %}
+  <div class="p-3 flex justify-between text-sm">
+    <span>Match #{{ f.match_id }}</span><span>₹{{ f.fee_amount }}</span><span>{{ f.status.value }}</span>
+  </div>
+  {% else %}<p class="p-3 text-gray-500 text-sm">None</p>{% endfor %}
+</div>
+
+<h2 class="font-semibold mb-2">Expense Shares (Receivables)</h2>
+<div class="card rounded-xl divide-y divide-gray-800 mb-6">
+  {% for a in allocations %}
+  <div class="p-3 flex justify-between text-sm">
+    <span>{{ a.expense.category }}</span><span>₹{{ a.amount }}</span><span>{{ a.status.value }}</span>
+  </div>
+  {% else %}<p class="p-3 text-gray-500 text-sm">None</p>{% endfor %}
+</div>
+
+<h2 class="font-semibold mb-2">Personally Paid Expenses (Payables)</h2>
+<div class="card rounded-xl divide-y divide-gray-800">
+  {% for e in expenses_paid %}
+  <div class="p-3 flex justify-between text-sm">
+    <span>{{ e.category }}</span><span>₹{{ e.amount }}</span><span>{{ e.reimbursement_status.value }}</span>
+  </div>
+  {% else %}<p class="p-3 text-gray-500 text-sm">None</p>{% endfor %}
+</div>
+{% endblock %}

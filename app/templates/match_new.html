@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="text-2xl font-bold text-gold mb-4">New Match</h1>
+<form method="post" action="/matches" class="card rounded-xl p-6 max-w-lg space-y-4">
+  <div>
+    <label class="block text-sm text-gray-400 mb-1">Match Date</label>
+    <input type="date" name="match_date" required class="w-full bg-ink border border-gray-700 rounded px-3 py-2">
+  </div>
+  <div class="grid grid-cols-2 gap-3">
+    <div>
+      <label class="block text-sm text-gray-400 mb-1">Ground Fees (₹)</label>
+      <input type="number" step="0.01" name="ground_fees" required class="w-full bg-ink border border-gray-700 rounded px-3 py-2">
+    </div>
+    <div>
+      <label class="block text-sm text-gray-400 mb-1">Additional Amount (₹)</label>
+      <input type="number" step="0.01" name="additional_amount" value="0" class="w-full bg-ink border border-gray-700 rounded px-3 py-2">
+    </div>
+  </div>
+  <div>
+    <label class="block text-sm text-gray-400 mb-1">Notes</label>
+    <input name="notes" class="w-full bg-ink border border-gray-700 rounded px-3 py-2">
+  </div>
+  <div>
+    <label class="block text-sm text-gray-400 mb-2">Participating Players</label>
+    <div class="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto border border-gray-800 rounded p-3">
+      {% for p in players %}
+      <label class="flex items-center gap-2 text-sm">
+        <input type="checkbox" name="player_ids" value="{{ p.id }}"> {{ p.name }}
+      </label>
+      {% endfor %}
+    </div>
+  </div>
+  <button class="bg-gold text-ink font-semibold px-4 py-2 rounded">Create Match</button>
+</form>
+{% endblock %}

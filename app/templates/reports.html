@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="text-2xl font-bold text-gold mb-4">Reports</h1>
+
+<h2 class="font-semibold mb-2">Player-wise Outstanding</h2>
+<div class="card rounded-xl divide-y divide-gray-800 mb-8 text-sm">
+  {% for row in player_rows %}
+  <div class="p-3 flex justify-between">
+    <span>{{ row.player.name }}</span>
+    <span class="text-amber-400">Owes ₹{{ row.owed_by }}</span>
+    <span class="text-red-400">Owed ₹{{ row.owed_to }}</span>
+    <span class="font-semibold">Net ₹{{ row.net }}</span>
+  </div>
+  {% else %}<p class="p-4 text-gray-500">No players.</p>{% endfor %}
+</div>
+
+<h2 class="font-semibold mb-2">Match-wise Summary</h2>
+<div class="card rounded-xl divide-y divide-gray-800 text-sm">
+  {% for row in match_rows %}
+  <div class="p-3 flex justify-between">
+    <span>{{ row.match.match_date }}</span>
+    <span>Expense ₹{{ row.total_expense }}</span>
+    <span>Collected ₹{{ row.total_collected }}</span>
+    <span class="text-gold">Surplus ₹{{ row.match_surplus }}</span>
+    <span class="text-amber-400">Outstanding ₹{{ row.outstanding }}</span>
+  </div>
+  {% else %}<p class="p-4 text-gray-500">No matches.</p>{% endfor %}
+</div>
+{% endblock %}

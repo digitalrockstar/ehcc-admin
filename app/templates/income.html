@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="text-2xl font-bold text-gold mb-4">Additional Income</h1>
+
+<form method="post" action="/income" class="card rounded-xl p-4 mb-6 grid grid-cols-2 gap-3">
+  <input type="date" name="date" required class="bg-ink border border-gray-700 rounded px-3 py-2">
+  <select name="income_type" class="bg-ink border border-gray-700 rounded px-3 py-2">
+    {% for t in types %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+  </select>
+  <input type="number" step="0.01" name="amount" placeholder="Amount (₹)" required class="bg-ink border border-gray-700 rounded px-3 py-2">
+  <input name="notes" placeholder="Notes (optional)" class="bg-ink border border-gray-700 rounded px-3 py-2">
+  <button class="col-span-2 bg-gold text-ink font-semibold px-4 py-2 rounded">Record Income</button>
+</form>
+
+<div class="card rounded-xl divide-y divide-gray-800">
+  {% for i in income %}
+  <div class="p-3 flex justify-between text-sm">
+    <span>{{ i.date }} · {{ i.income_type }}</span><span class="text-gold font-semibold">₹{{ i.amount }}</span>
+  </div>
+  {% else %}<p class="p-4 text-gray-500">No additional income recorded yet.</p>{% endfor %}
+</div>
+{% endblock %}
