@@ -76,6 +76,63 @@ def reimburse_player_for_expense(db: Session, expense_id: int, payment_date: dat
     return reimb
 
 
+def update_team_expense(db: Session, expense_id: int, category: str, amount: float,
+                         payment_source: str, paid_by_player_id: int = None) -> models.TeamExpense:
+    expense = db.query(models.TeamExpense).get(expense_id)
+    if expense.reimbursement_status == models.ReimbursementStatus.paid:
+        raise ValueError("Undo the reimbursement before editing this expense.")
+
+    account_txn = db.query(models.Transaction).filter(
+        models.Transaction.type == models.TransactionType.team_expense_account,
+        models.Transaction.expense_id == expense_id,
+    ).first()
+
+    if payment_source == models.PaymentSource.account.value:
+        if account_txn:
+            account_txn.amount = -float(amount)
+        else:
+            db.add(models.Transaction(
+                team_id=expense.team_id, date=expense.date, type=models.TransactionType.team_expense_account,
+                amount=-float(amount), expense_id=expense.id, description=f"Team expense - {category}",
+            ))
+    elif account_txn:
+        db.delete(account_txn)
+
+    expense.category = category
+    expense.amount = amount
+    expense.payment_source = payment_source
+    expense.paid_by_player_id = paid_by_player_id if payment_source == models.PaymentSource.player.value else None
+    expense.reimbursement_status = (
+        models.ReimbursementStatus.due if payment_source == models.PaymentSource.player.value
+        else models.ReimbursementStatus.na
+    )
+    db.commit()
+    db.refresh(expense)
+    return expense
+
+
+def delete_team_expense(db: Session, expense_id: int) -> None:
+    expense = db.query(models.TeamExpense).get(expense_id)
+    if expense.reimbursement_status == models.ReimbursementStatus.paid:
+        raise ValueError("Undo the reimbursement before deleting this expense.")
+    db.query(models.Transaction).filter(models.Transaction.expense_id == expense_id).delete()
+    db.query(models.ExpenseAllocation).filter(models.ExpenseAllocation.expense_id == expense_id).delete()
+    db.delete(expense)
+    db.commit()
+
+
+def undo_reimbursement(db: Session, expense_id: int) -> models.TeamExpense:
+    expense = db.query(models.TeamExpense).get(expense_id)
+    if expense.reimbursement:
+        db.query(models.Transaction).filter(
+            models.Transaction.type == models.TransactionType.reimbursement,
+            models.Transaction.expense_id == expense_id,
+        ).delete()
+        db.delete(expense.reimbursement)
+    expense.reimbursement_status = models.ReimbursementStatus.due
+    db.commit()
+    db.refresh(expense)
+    return expense
 def add_adhoc_income(db: Session, team_id: int, income_date: date, income_type: str,
                       amount: float, match_id: int = None, notes: str = None) -> models.AdHocIncome:
     income = models.AdHocIncome(

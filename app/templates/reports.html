@@ -3,26 +3,32 @@
 <h1 class="text-2xl font-bold text-gold mb-4">Reports</h1>
 
 <h2 class="font-semibold mb-2">Player-wise Outstanding</h2>
-<div class="card rounded-xl divide-y divide-gray-800 mb-8 text-sm">
+<div class="card rounded-xl overflow-hidden mb-8 text-sm">
+  <div class="grid grid-cols-4 gap-2 px-3 py-2 text-xs text-gray-500 border-b border-gray-800">
+    <span>Player</span><span class="text-right">Owes</span><span class="text-right">Owed</span><span class="text-right">Net</span>
+  </div>
   {% for row in player_rows %}
-  <div class="p-3 flex justify-between">
-    <span>{{ row.player.name }}</span>
-    <span class="text-amber-400">Owes ₹{{ row.owed_by }}</span>
-    <span class="text-red-400">Owed ₹{{ row.owed_to }}</span>
-    <span class="font-semibold">Net ₹{{ row.net }}</span>
+  <div class="grid grid-cols-4 gap-2 px-3 py-2.5 border-b border-gray-800 last:border-0">
+    <span class="truncate">{{ row.player.name }}</span>
+    <span class="text-amber-400 text-right">₹{{ row.owed_by }}</span>
+    <span class="text-red-400 text-right">₹{{ row.owed_to }}</span>
+    <span class="font-semibold text-right">₹{{ row.net }}</span>
   </div>
   {% else %}<p class="p-4 text-gray-500">No players.</p>{% endfor %}
 </div>
 
 <h2 class="font-semibold mb-2">Match-wise Summary</h2>
-<div class="card rounded-xl divide-y divide-gray-800 text-sm">
+<div class="card rounded-xl overflow-hidden text-sm">
+  <div class="grid grid-cols-5 gap-2 px-3 py-2 text-xs text-gray-500 border-b border-gray-800">
+    <span>Date</span><span class="text-right">Expense</span><span class="text-right">Collected</span><span class="text-right">Surplus</span><span class="text-right">Outstanding</span>
+  </div>
   {% for row in match_rows %}
-  <div class="p-3 flex justify-between">
+  <div class="grid grid-cols-5 gap-2 px-3 py-2.5 border-b border-gray-800 last:border-0">
     <span>{{ row.match.match_date }}</span>
-    <span>Expense ₹{{ row.total_expense }}</span>
-    <span>Collected ₹{{ row.total_collected }}</span>
-    <span class="text-gold">Surplus ₹{{ row.match_surplus }}</span>
-    <span class="text-amber-400">Outstanding ₹{{ row.outstanding }}</span>
+    <span class="text-right">₹{{ row.total_expense }}</span>
+    <span class="text-right">₹{{ row.total_collected }}</span>
+    <span class="text-gold text-right">₹{{ row.match_surplus }}</span>
+    <span class="text-amber-400 text-right">₹{{ row.outstanding }}</span>
   </div>
   {% else %}<p class="p-4 text-gray-500">No matches.</p>{% endfor %}
 </div>

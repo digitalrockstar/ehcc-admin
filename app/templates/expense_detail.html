@@ -3,41 +3,12 @@
 <h1 class="text-2xl font-bold text-gold mb-1">{{ expense.category }} — ₹{{ expense.amount }}</h1>
 <p class="text-gray-400 mb-4">{{ expense.date }} · Paid via {{ expense.payment_source.value }}{% if expense.paid_by %} ({{ expense.paid_by.name }}){% endif %} · Reimbursement: {{ expense.reimbursement_status.value }}</p>
 
-{% if not expense.allocations %}
-<form method="post" action="/expenses/{{ expense.id }}/allocate" class="card rounded-xl p-4 mb-6">
-  <p class="text-sm text-gray-400 mb-2">Allocate to players (selection order sets remainder-rupee distribution):</p>
-  <div class="grid grid-cols-2 md:grid-cols-3 gap-2 mb-3">
-    {% for p in players %}
-    <label class="cursor-pointer relative block">
-      <input type="checkbox" name="player_ids_in_order" value="{{ p.id }}" class="peer hidden">
-      <div class="card rounded-lg px-3 py-2 border-2 border-transparent peer-checked:border-gold peer-checked:bg-gold/10 transition text-sm">
-        <p class="font-medium">{{ p.name }}</p>
-      </div>
-      <span class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-gold text-ink text-xs font-bold flex items-center justify-center opacity-0 scale-75 peer-checked:opacity-100 peer-checked:scale-100 transition">✓</span>
-    </label>
-    {% endfor %}
-  </div>
-  <button class="bg-gold text-ink px-4 py-2 rounded font-semibold">Allocate</button>
-</form>
-{% else %}
-<div class="grid grid-cols-3 gap-4 mb-4 text-sm">
-  <div class="card rounded-xl p-3"><p class="text-gray-400">Recoverable</p><p class="font-bold">₹{{ recoverable }}</p></div>
-  <div class="card rounded-xl p-3"><p class="text-gray-400">Recovered</p><p class="font-bold text-green-400">₹{{ recovered }}</p></div>
-  <div class="card rounded-xl p-3"><p class="text-gray-400">Outstanding</p><p class="font-bold text-amber-400">₹{{ outstanding }}</p></div>
+{% if error %}<div class="bg-red-950 border border-red-700 text-red-200 rounded-xl p-3 mb-4 text-sm">{{ error }}</div>{% endif %}
+
+<div class="flex gap-3">
+  <a href="/expenses/{{ expense.id }}/edit" class="border border-gray-700 px-4 py-2 rounded hover:border-gold">Edit</a>
+  <form method="post" action="/expenses/{{ expense.id }}/delete" onsubmit="return confirm('Delete this expense? This cannot be undone.')">
+    <button class="border border-red-700 text-red-400 px-4 py-2 rounded">Delete</button>
+  </form>
 </div>
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-  {% for a in expense.allocations %}
-  <div class="card rounded-xl p-4">
-    <div class="flex justify-between items-start mb-1">
-      <p class="font-medium">{{ a.player.name }}</p>
-      <span class="text-xs px-2 py-0.5 rounded {{ 'bg-green-900 text-green-300' if a.status.value=='paid' else 'bg-amber-900 text-amber-300' }}">{{ a.status.value }}</span>
-    </div>
-    <p class="text-sm text-gray-400">₹{{ a.amount }}</p>
-    {% if a.status.value == 'due' %}
-    <form method="post" action="/expense-allocations/{{ a.id }}/pay" class="mt-2"><button class="bg-green-700 text-white text-xs px-2 py-1 rounded">Mark Paid</button></form>
-    {% endif %}
-  </div>
-  {% endfor %}
-</div>
-{% endif %}
 {% endblock %}

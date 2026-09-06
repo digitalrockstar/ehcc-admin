@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="text-2xl font-bold text-gold mb-4">Edit Expense</h1>
+{% if error %}<div class="bg-red-950 border border-red-700 text-red-200 rounded-xl p-3 mb-4 text-sm">{{ error }}</div>{% endif %}
+<form method="post" action="/expenses/{{ expense.id }}/edit" class="max-w-xl space-y-4">
+  <div>
+    <label class="block text-sm text-gray-400 mb-1">Category</label>
+    <select name="category" class="w-full bg-ink border border-gray-700 rounded px-3 py-2">
+      {% for c in categories %}<option value="{{ c }}" {{ 'selected' if c == expense.category }}>{{ c }}</option>{% endfor %}
+    </select>
+  </div>
+  <div>
+    <label class="block text-sm text-gray-400 mb-1">Amount (₹)</label>
+    <input type="text" inputmode="decimal" pattern="[0-9]*.?[0-9]*" name="amount" value="{{ expense.amount }}" required class="w-full bg-ink border border-gray-700 rounded px-3 py-2">
+  </div>
+  <div>
+    <label class="block text-sm text-gray-400 mb-1">Payment Source</label>
+    <select name="payment_source" onchange="document.getElementById('paidByWrap').classList.toggle('hidden', this.value !== 'player')" class="w-full bg-ink border border-gray-700 rounded px-3 py-2">
+      <option value="account" {{ 'selected' if expense.payment_source.value == 'account' }}>Team Account</option>
+      <option value="player" {{ 'selected' if expense.payment_source.value == 'player' }}>Player (personally paid)</option>
+    </select>
+  </div>
+  <div id="paidByWrap" class="{{ 'hidden' if expense.payment_source.value != 'player' }}">
+    <label class="block text-sm text-gray-400 mb-1">Paid By</label>
+    <select name="paid_by_player_id" class="w-full bg-ink border border-gray-700 rounded px-3 py-2">
+      {% for p in players %}<option value="{{ p.id }}" {{ 'selected' if expense.paid_by_player_id == p.id }}>{{ p.name }}</option>{% endfor %}
+    </select>
+  </div>
+  <button class="bg-gold text-ink font-semibold px-4 py-2 rounded">Save Changes</button>
+</form>
+{% endblock %}

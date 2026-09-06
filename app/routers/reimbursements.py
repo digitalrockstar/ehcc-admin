@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from .. import models
 from ..database import get_db
 from ..deps import templates, get_current_team
-from ..services.expense_service import reimburse_player_for_expense
+from ..services.expense_service import reimburse_player_for_expense, undo_reimbursement
 
 router = APIRouter(dependencies=[Depends(require_admin)])
 
@@ -28,4 +28,10 @@ def list_reimbursements(request: Request, db: Session = Depends(get_db)):
 @router.post("/reimbursements/{expense_id}")
 def reimburse(expense_id: int, db: Session = Depends(get_db)):
     reimburse_player_for_expense(db, expense_id)
+    return RedirectResponse("/reimbursements", status_code=303)
+
+
+@router.post("/reimbursements/{expense_id}/undo")
+def undo(expense_id: int, db: Session = Depends(get_db)):
+    undo_reimbursement(db, expense_id)
     return RedirectResponse("/reimbursements", status_code=303)

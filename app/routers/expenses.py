@@ -8,7 +8,7 @@ from .. import models
 from ..database import get_db
 from ..deps import templates, get_current_team
 from ..services.expense_service import (
-    create_team_expense, allocate_expense_to_players, pay_expense_allocation,
+    create_team_expense, update_team_expense, delete_team_expense,
 )
 from ..services.category_service import list_expense_categories
 from ..services.player_service import get_players_sorted
@@ -49,22 +49,47 @@ def create_expense_submit(
 def expense_detail(expense_id: int, request: Request, db: Session = Depends(get_db)):
     team = get_current_team(db)
     expense = db.query(models.TeamExpense).get(expense_id)
+    return templates.TemplateResponse("expense_detail.html", {"request": request, "team": team, "expense": expense})
+
+
+@router.get("/expenses/{expense_id}/edit")
+def edit_expense_form(expense_id: int, request: Request, db: Session = Depends(get_db)):
+    team = get_current_team(db)
+    expense = db.query(models.TeamExpense).get(expense_id)
     players = get_players_sorted(db, team.id, active_only=True)
-    recovered = sum(float(a.amount) for a in expense.allocations if a.status == models.PaymentStatus.paid)
-    recoverable = sum(float(a.amount) for a in expense.allocations)
-    return templates.TemplateResponse("expense_detail.html", {
-        "request": request, "team": team, "expense": expense, "players": players,
-        "recovered": recovered, "recoverable": recoverable, "outstanding": recoverable - recovered,
+    categories = [c.name for c in list_expense_categories(db, team.id)]
+    return templates.TemplateResponse("expense_edit.html", {
+        "request": request, "team": team, "expense": expense, "players": players, "categories": categories,
     })
 
 
-@router.post("/expenses/{expense_id}/allocate")
-def allocate(expense_id: int, player_ids_in_order: List[int] = Form(...), db: Session = Depends(get_db)):
-    allocate_expense_to_players(db, expense_id, player_ids_in_order)
+@router.post("/expenses/{expense_id}/edit")
+def edit_expense_submit(
+    expense_id: int, request: Request, category: str = Form(...), amount: float = Form(...),
+    payment_source: str = Form(...), paid_by_player_id: int = Form(None), db: Session = Depends(get_db),
+):
+    team = get_current_team(db)
+    try:
+        update_team_expense(db, expense_id, category, amount, payment_source, paid_by_player_id)
+    except ValueError as e:
+        expense = db.query(models.TeamExpense).get(expense_id)
+        players = get_players_sorted(db, team.id, active_only=True)
+        categories = [c.name for c in list_expense_categories(db, team.id)]
+        return templates.TemplateResponse("expense_edit.html", {
+            "request": request, "team": team, "expense": expense, "players": players,
+            "categories": categories, "error": str(e),
+        })
     return RedirectResponse(f"/expenses/{expense_id}", status_code=303)
 
 
-@router.post("/expense-allocations/{allocation_id}/pay")
-def pay_allocation(allocation_id: int, db: Session = Depends(get_db)):
-    alloc = pay_expense_allocation(db, allocation_id)
-    return RedirectResponse(f"/expenses/{alloc.expense_id}", status_code=303)
+@router.post("/expenses/{expense_id}/delete")
+def delete_expense_submit(expense_id: int, request: Request, db: Session = Depends(get_db)):
+    try:
+        delete_team_expense(db, expense_id)
+    except ValueError as e:
+        team = get_current_team(db)
+        expense = db.query(models.TeamExpense).get(expense_id)
+        return templates.TemplateResponse("expense_detail.html", {
+            "request": request, "team": team, "expense": expense, "error": str(e),
+        })
+    return RedirectResponse("/expenses", status_code=303)
