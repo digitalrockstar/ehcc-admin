@@ -1,3 +1,4 @@
+from datetime import date
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from .. import models
@@ -5,6 +6,17 @@ from .calculations import calculate_match_surplus, calculate_outstanding_fees
 
 
 def get_account_balance(db: Session, team_id: int) -> float:
+    """Cash actually available today - excludes transactions dated in the future."""
+    team = db.query(models.Team).get(team_id)
+    total = db.query(func.coalesce(func.sum(models.Transaction.amount), 0)).filter(
+        models.Transaction.team_id == team_id, models.Transaction.date <= date.today(),
+    ).scalar()
+    return float(team.starting_balance) + float(total)
+
+
+def get_future_balance(db: Session, team_id: int) -> float:
+    """Projected balance once every recorded transaction (including
+    future-dated ones) has actually landed."""
     team = db.query(models.Team).get(team_id)
     total = db.query(func.coalesce(func.sum(models.Transaction.amount), 0)).filter(
         models.Transaction.team_id == team_id
@@ -70,6 +82,7 @@ def get_dashboard_summary(db: Session, team_id: int) -> dict:
     return {
         "starting_balance": float(db.query(models.Team).get(team_id).starting_balance),
         "account": account,
+        "future_balance": get_future_balance(db, team_id),
         "cash_collections": float(collections),
         "cash_expenses": abs(float(cash_expenses)),
         "additional_income": float(adhoc_income) + match_surplus_total,

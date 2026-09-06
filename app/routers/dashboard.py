@@ -19,6 +19,10 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
     recent_matches = db.query(models.Match).filter(models.Match.team_id == team.id).order_by(
         models.Match.match_date.desc()
     ).limit(5).all()
+    recent_transactions = db.query(models.Transaction).filter(models.Transaction.team_id == team.id).order_by(
+        models.Transaction.date.desc(), models.Transaction.id.desc()
+    ).limit(10).all()
     return templates.TemplateResponse("dashboard.html", {
-        "request": request, "team": team, "summary": summary, "recent_matches": recent_matches,
+        "request": request, "team": team, "summary": summary,
+        "recent_matches": recent_matches, "recent_transactions": recent_transactions,
     })

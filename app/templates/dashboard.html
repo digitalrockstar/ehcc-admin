@@ -2,7 +2,7 @@
 {% block content %}
 <h1 class="text-2xl font-bold text-gold mb-4">Dashboard</h1>
 
-<div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
   <div class="card rounded-xl p-4">
     <p class="text-xs text-gray-400 uppercase">Cash Available</p>
     <p class="text-2xl font-bold text-green-400">₹{{ "%.2f"|format(summary.account) }}</p>
@@ -14,6 +14,10 @@
   <div class="card rounded-xl p-4">
     <p class="text-xs text-gray-400 uppercase">Team Owes Players</p>
     <p class="text-2xl font-bold text-red-400">₹{{ "%.2f"|format(summary.team_owes_players) }}</p>
+  </div>
+  <div class="card rounded-xl p-4">
+    <p class="text-xs text-gray-400 uppercase">Future Balance</p>
+    <p class="text-2xl font-bold text-gold">₹{{ "%.2f"|format(summary.future_balance) }}</p>
   </div>
 </div>
 
@@ -31,6 +35,18 @@
   </a>
   {% else %}
   <p class="p-4 text-gray-500">No matches yet. <a href="/matches/new" class="text-gold">Create one</a>.</p>
+  {% endfor %}
+</div>
+
+<h2 class="text-lg font-semibold mt-8 mb-3">Transaction History</h2>
+<div class="card rounded-xl divide-y divide-gray-800">
+  {% for t in recent_transactions %}
+  <div class="p-3 flex justify-between text-sm">
+    <span class="text-gray-400">{{ t.date }} · {{ t.description or t.type.value }}</span>
+    <span class="font-semibold {{ 'text-green-400' if t.amount >= 0 else 'text-red-400' }}">{{ '+' if t.amount >= 0 }}₹{{ "%.2f"|format(t.amount) }}</span>
+  </div>
+  {% else %}
+  <p class="p-4 text-gray-500">No transactions yet.</p>
   {% endfor %}
 </div>
 {% endblock %}
