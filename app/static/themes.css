@@ -57,6 +57,21 @@ body[data-theme="sandstone"] {
   --text: #3a2b16; --text-dim: #7a6647; --text-faint: #a5906c;
 }
 
+body[data-theme="blossom"] {
+  --ink: #fdf1f5; --card: #ffffff; --accent: #e0447e; --border: #f6d9e4;
+  --text: #3a1220; --text-dim: #8a4a5e; --text-faint: #b98394;
+}
+
+body[data-theme="seafoam"] {
+  --ink: #f0faf6; --card: #ffffff; --accent: #0f9d78; --border: #cdece0;
+  --text: #0d2b22; --text-dim: #4c7a68; --text-faint: #83a99a;
+}
+
+body[data-theme="linen"] {
+  --ink: #f7f5fb; --card: #ffffff; --accent: #6c5ce7; --border: #e3ddf2;
+  --text: #241f38; --text-dim: #5c5470; --text-faint: #8d84a3;
+}
+
 /* --- vibrant themes --- */
 
 body[data-theme="sunset"] {
@@ -67,6 +82,21 @@ body[data-theme="sunset"] {
 body[data-theme="neon"] {
   --ink: #060b12; --card: #0c1622; --accent: #39ff88; --border: #123a2c;
   --text: #e4fff0; --text-dim: #7fd9a8; --text-faint: #4f9b74;
+}
+
+body[data-theme="tropical"] {
+  --ink: #04302e; --card: #0a4a45; --accent: #ff9f1c; --border: #0d6b62;
+  --text: #e7fffb; --text-dim: #7fd9c9; --text-faint: #4ea393;
+}
+
+body[data-theme="electric-violet"] {
+  --ink: #160a30; --card: #241145; --accent: #c77dff; --border: #3a1c66;
+  --text: #f2e9ff; --text-dim: #c6a6f0; --text-faint: #9873c4;
+}
+
+body[data-theme="citrus"] {
+  --ink: #2a1a00; --card: #3d2600; --accent: #ffd60a; --border: #5c3d00;
+  --text: #fff6e0; --text-dim: #e0b96b; --text-faint: #a98a4a;
 }
 
 body { color: var(--text); }
@@ -86,8 +116,11 @@ body input, body select, body textarea { background-color: var(--ink) !important
 /* Native date/time picker icon is invisible on dark backgrounds by
    default (browser renders a black icon). color-scheme fixes this by
    telling the browser which palette its native controls should use. */
-body:not([data-theme="light"]):not([data-theme="sky"]):not([data-theme="sandstone"]) input[type="date"] { color-scheme: dark; }
+body:not([data-theme="light"]):not([data-theme="sky"]):not([data-theme="sandstone"]):not([data-theme="blossom"]):not([data-theme="seafoam"]):not([data-theme="linen"]) input[type="date"] { color-scheme: dark; }
 body[data-theme="light"] input[type="date"],
 body[data-theme="sky"] input[type="date"],
-body[data-theme="sandstone"] input[type="date"] { color-scheme: light; }
+body[data-theme="sandstone"] input[type="date"],
+body[data-theme="blossom"] input[type="date"],
+body[data-theme="seafoam"] input[type="date"],
+body[data-theme="linen"] input[type="date"] { color-scheme: light; }
 input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; opacity: 0.9; }

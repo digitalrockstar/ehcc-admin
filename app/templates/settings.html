@@ -19,8 +19,10 @@
 </form>
 
 <h2 class="font-semibold mb-2">Theme</h2>
-<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
-  {% for t in themes %}
+{% for group_name, group_themes in theme_groups.items() %}
+<h3 class="text-sm text-gray-400 mb-2 mt-4">{{ group_name }}</h3>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+  {% for t in group_themes %}
   <form method="post" action="/theme">
     <input type="hidden" name="theme" value="{{ t }}">
     <button class="w-full card rounded-lg p-3 text-sm text-left border-2 {{ 'border-gold' if t == current_theme else 'border-transparent' }} hover:border-gold transition">
@@ -30,6 +32,7 @@
   </form>
   {% endfor %}
 </div>
+{% endfor %}
 
 <h2 class="font-semibold mb-2">Team Expense Categories</h2>
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-3">

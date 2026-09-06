@@ -10,17 +10,18 @@ from ..services.category_service import list_expense_categories, list_income_typ
 
 router = APIRouter(dependencies=[Depends(require_admin)])
 
-THEMES = [
-    "dark", "light", "cricket-green", "midnight", "maroon", "royal-blue", "monochrome", "luxury-gold",
-    "sky", "sandstone", "sunset", "neon",
-]
+THEME_GROUPS = {
+    "Light": ["light", "sky", "sandstone", "blossom", "seafoam", "linen"],
+    "Dark": ["dark", "cricket-green", "midnight", "maroon", "royal-blue", "monochrome", "luxury-gold"],
+    "Vibrant": ["sunset", "neon", "tropical", "electric-violet", "citrus"],
+}
 
 
 @router.get("/settings")
 def settings_page(request: Request, db: Session = Depends(get_db)):
     team = get_current_team(db)
     return templates.TemplateResponse("settings.html", {
-        "request": request, "team": team, "themes": THEMES,
+        "request": request, "team": team, "theme_groups": THEME_GROUPS,
         "current_theme": request.cookies.get("ehcc_theme", "dark"),
         "expense_categories": list_expense_categories(db, team.id),
         "income_types": list_income_types(db, team.id),
@@ -94,7 +95,7 @@ def reset_data(request: Request, confirmation_text: str = Form(""), db: Session 
     team = get_current_team(db)
     if confirmation_text.strip().upper() != "RESET":
         return templates.TemplateResponse("settings.html", {
-            "request": request, "team": team, "themes": THEMES,
+            "request": request, "team": team, "theme_groups": THEME_GROUPS,
             "current_theme": request.cookies.get("ehcc_theme", "dark"),
             "expense_categories": list_expense_categories(db, team.id),
             "income_types": list_income_types(db, team.id),
