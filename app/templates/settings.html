@@ -85,4 +85,22 @@
     <button class="bg-red-700 text-white font-semibold px-4 py-2 rounded text-sm">Delete All Data</button>
   </form>
 </div>
+
+<div class="card rounded-xl p-6 max-w-md border border-red-900 mt-4">
+  {% if reset_before_error %}
+  <p class="text-red-400 text-sm mb-3">{{ reset_before_error }}</p>
+  {% endif %}
+  <p class="text-sm text-gray-400 mb-3">
+    Deletes matches, expenses, and income created before a given time (IST) - and their
+    linked transactions - while keeping everything created at or after it. Useful for
+    clearing test data before go-live without wiping data entered since.
+  </p>
+  <form method="post" action="/settings/reset-before" class="space-y-2">
+    <label class="block text-xs text-gray-500">Remove everything created before (IST)</label>
+    <input type="datetime-local" name="cutoff" value="{{ default_cutoff }}" required class="w-full bg-ink border border-gray-700 rounded px-3 py-2">
+    <label class="block text-xs text-gray-500 mt-2">Type <span class="text-red-400 font-semibold">RESET</span> to confirm</label>
+    <input name="confirmation_text" required class="w-full bg-ink border border-red-800 rounded px-3 py-2">
+    <button class="bg-red-700 text-white font-semibold px-4 py-2 rounded text-sm">Delete Data Before This Time</button>
+  </form>
+</div>
 {% endblock %}

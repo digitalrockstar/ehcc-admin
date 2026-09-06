@@ -52,6 +52,7 @@ class Player(Base):
     name = Column(String, nullable=False)
     contact_number = Column(String, nullable=True)
     status = Column(Enum(PlayerStatus), default=PlayerStatus.active, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
     team = relationship("Team", back_populates="players")
 
@@ -155,6 +156,7 @@ class AdHocIncome(Base):
     amount = Column(Numeric(12, 2), nullable=False)
     match_id = Column(Integer, ForeignKey("matches.id"), nullable=True)
     notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 
 class TransactionType(str, enum.Enum):

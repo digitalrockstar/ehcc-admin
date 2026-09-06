@@ -103,3 +103,42 @@ def reset_all_data(db: Session) -> None:
     ]:
         db.query(model).delete()
     db.commit()
+
+
+def reset_data_before(db: Session, team_id: int, cutoff_utc) -> None:
+    """Delete matches/expenses/income (and their transactions/allocations/
+    reimbursements) created before cutoff_utc, keeping anything created at
+    or after it. The Team row itself and players still referenced by kept
+    records are left alone - this is a partial cleanup, not a full wipe."""
+    old_match_ids = [m.id for m in db.query(models.Match).filter(
+        models.Match.team_id == team_id, models.Match.created_at < cutoff_utc)]
+    old_expense_ids = [e.id for e in db.query(models.TeamExpense).filter(
+        models.TeamExpense.team_id == team_id, models.TeamExpense.created_at < cutoff_utc)]
+    old_income_ids = [i.id for i in db.query(models.AdHocIncome).filter(
+        models.AdHocIncome.team_id == team_id, models.AdHocIncome.created_at < cutoff_utc)]
+
+    if old_match_ids:
+        db.query(models.Transaction).filter(models.Transaction.match_id.in_(old_match_ids)).delete(synchronize_session=False)
+        db.query(models.MatchParticipant).filter(models.MatchParticipant.match_id.in_(old_match_ids)).delete(synchronize_session=False)
+        db.query(models.Match).filter(models.Match.id.in_(old_match_ids)).delete(synchronize_session=False)
+    if old_expense_ids:
+        db.query(models.Transaction).filter(models.Transaction.expense_id.in_(old_expense_ids)).delete(synchronize_session=False)
+        db.query(models.ExpenseAllocation).filter(models.ExpenseAllocation.expense_id.in_(old_expense_ids)).delete(synchronize_session=False)
+        db.query(models.Reimbursement).filter(models.Reimbursement.expense_id.in_(old_expense_ids)).delete(synchronize_session=False)
+        db.query(models.TeamExpense).filter(models.TeamExpense.id.in_(old_expense_ids)).delete(synchronize_session=False)
+    if old_income_ids:
+        db.query(models.Transaction).filter(models.Transaction.income_id.in_(old_income_ids)).delete(synchronize_session=False)
+        db.query(models.AdHocIncome).filter(models.AdHocIncome.id.in_(old_income_ids)).delete(synchronize_session=False)
+    db.commit()
+
+    # Players created before cutoff with nothing left referencing them
+    for p in db.query(models.Player).filter(models.Player.team_id == team_id, models.Player.created_at < cutoff_utc).all():
+        referenced = (
+            db.query(models.MatchParticipant).filter(models.MatchParticipant.player_id == p.id).first()
+            or db.query(models.ExpenseAllocation).filter(models.ExpenseAllocation.player_id == p.id).first()
+            or db.query(models.TeamExpense).filter(models.TeamExpense.paid_by_player_id == p.id).first()
+            or db.query(models.Reimbursement).filter(models.Reimbursement.player_id == p.id).first()
+        )
+        if not referenced:
+            db.delete(p)
+    db.commit()
