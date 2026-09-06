@@ -42,11 +42,14 @@
       <p class="font-medium">{{ p.player.name }}</p>
       <span class="text-xs px-2 py-0.5 rounded {{ 'bg-green-900 text-green-300' if p.status.value=='paid' else 'bg-amber-900 text-amber-300' }}">{{ p.status.value }}</span>
     </div>
-    <p class="text-sm text-gray-400">Fee ₹{{ p.fee_amount }}{% if p.amount_paid and p.amount_paid != p.fee_amount %} · Paid ₹{{ p.amount_paid }}{% endif %}</p>
+    <span class="inline-block text-xs px-2 py-1 rounded-full bg-gold/15 text-gold font-medium mb-2">Fee ₹{{ p.fee_amount }}</span>
     {% if p.status.value == 'due' %}
-    <form method="post" action="/match-participants/{{ p.id }}/pay" class="flex gap-1 mt-2">
-      <input type="text" inputmode="decimal" pattern="[0-9]*.?[0-9]*" name="amount_paid" placeholder="{{ p.fee_amount }}" class="w-20 bg-ink border border-gray-700 rounded px-2 text-xs">
-      <button class="bg-green-700 text-white text-xs px-2 rounded">Mark Paid</button>
+    <form method="post" action="/match-participants/{{ p.id }}/pay">
+      <button class="w-full bg-green-700 text-white text-xs px-2 py-1.5 rounded">Mark Paid</button>
+    </form>
+    {% else %}
+    <form method="post" action="/match-participants/{{ p.id }}/undo-pay">
+      <button class="w-full border border-gray-700 text-gray-400 hover:text-red-400 hover:border-red-800 text-xs px-2 py-1.5 rounded">Undo</button>
     </form>
     {% endif %}
   </div>

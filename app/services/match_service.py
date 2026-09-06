@@ -62,6 +62,27 @@ def mark_match_fee_paid(db: Session, participant_id: int, amount_paid: float = N
     return p
 
 
+def undo_match_fee_payment(db: Session, participant_id: int) -> models.MatchParticipant:
+    """Reverse a mark-paid: restore due status and delete the matching
+    cash transaction so the account balance is undone along with it."""
+    p = db.query(models.MatchParticipant).get(participant_id)
+    if p.status != models.PaymentStatus.paid:
+        return p
+    txn = db.query(models.Transaction).filter(
+        models.Transaction.type == models.TransactionType.match_fee_paid,
+        models.Transaction.match_id == p.match_id,
+        models.Transaction.party_player_id == p.player_id,
+    ).order_by(models.Transaction.id.desc()).first()
+    if txn:
+        db.delete(txn)
+    p.status = models.PaymentStatus.due
+    p.amount_paid = None
+    p.payment_date = None
+    db.commit()
+    db.refresh(p)
+    return p
+
+
 def get_match_financials(db: Session, match_id: int) -> dict:
     match = db.query(models.Match).get(match_id)
     obligations = sum(float(p.fee_amount) for p in match.participants)

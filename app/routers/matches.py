@@ -8,8 +8,8 @@ from .. import models
 from ..database import get_db
 from ..deps import templates, get_current_team
 from ..services.match_service import (
-    create_match, pay_match_expense_from_account, mark_match_fee_paid, get_match_financials, cancel_match,
-    preview_match_edit, apply_match_edit, ConfirmationRequired, InvalidEdit,
+    create_match, pay_match_expense_from_account, mark_match_fee_paid, undo_match_fee_payment,
+    get_match_financials, cancel_match, preview_match_edit, apply_match_edit, ConfirmationRequired, InvalidEdit,
 )
 from ..services.player_service import get_players_sorted
 
@@ -117,6 +117,12 @@ def edit_match_submit(
 
 
 @router.post("/match-participants/{participant_id}/pay")
-def pay_fee(participant_id: int, amount_paid: float = Form(None), db: Session = Depends(get_db)):
-    p = mark_match_fee_paid(db, participant_id, amount_paid)
+def pay_fee(participant_id: int, db: Session = Depends(get_db)):
+    p = mark_match_fee_paid(db, participant_id)
+    return RedirectResponse(f"/matches/{p.match_id}", status_code=303)
+
+
+@router.post("/match-participants/{participant_id}/undo-pay")
+def undo_pay_fee(participant_id: int, db: Session = Depends(get_db)):
+    p = undo_match_fee_payment(db, participant_id)
     return RedirectResponse(f"/matches/{p.match_id}", status_code=303)
