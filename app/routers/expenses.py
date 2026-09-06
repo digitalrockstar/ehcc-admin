@@ -10,10 +10,9 @@ from ..deps import templates, get_current_team
 from ..services.expense_service import (
     create_team_expense, allocate_expense_to_players, pay_expense_allocation,
 )
+from ..services.category_service import list_expense_categories
 
 router = APIRouter(dependencies=[Depends(require_admin)])
-
-DEFAULT_CATEGORIES = ["Cricket Balls", "Gloves", "Stumps", "Bats", "Jerseys", "Equipment", "Other Team Expenses"]
 
 
 @router.get("/expenses")
@@ -31,10 +30,9 @@ def new_expense_form(request: Request, db: Session = Depends(get_db)):
     players = db.query(models.Player).filter(
         models.Player.team_id == team.id, models.Player.status == models.PlayerStatus.active
     ).all()
-    categories = {c.name for c in db.query(models.ExpenseCategory).filter(
-        models.ExpenseCategory.team_id == team.id)} | set(DEFAULT_CATEGORIES)
+    categories = [c.name for c in list_expense_categories(db, team.id)]
     return templates.TemplateResponse("expense_new.html", {
-        "request": request, "team": team, "players": players, "categories": sorted(categories),
+        "request": request, "team": team, "players": players, "categories": categories,
     })
 
 

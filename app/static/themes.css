@@ -58,3 +58,10 @@ body [class*="divide-gray-800"] > * + * { border-color: var(--border) !important
 body [class*="bg-gray-700"] { background-color: color-mix(in srgb, var(--border) 70%, var(--card)) !important; }
 body [class*="bg-gray-800"] { background-color: color-mix(in srgb, var(--border) 40%, var(--card)) !important; }
 body input, body select, body textarea { background-color: var(--ink) !important; color: var(--text) !important; }
+
+/* Native date/time picker icon is invisible on dark backgrounds by
+   default (browser renders a black icon). color-scheme fixes this by
+   telling the browser which palette its native controls should use. */
+body:not([data-theme="light"]) input[type="date"] { color-scheme: dark; }
+body[data-theme="light"] input[type="date"] { color-scheme: light; }
+input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; opacity: 0.9; }

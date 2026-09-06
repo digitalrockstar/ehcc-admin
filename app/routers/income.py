@@ -7,10 +7,9 @@ from .. import models
 from ..database import get_db
 from ..deps import templates, get_current_team
 from ..services.expense_service import add_adhoc_income
+from ..services.category_service import list_income_types
 
 router = APIRouter(dependencies=[Depends(require_admin)])
-
-DEFAULT_TYPES = ["Team Contribution", "Sponsorship", "Donation", "Miscellaneous Income"]
 
 
 @router.get("/income")
@@ -19,10 +18,9 @@ def list_income(request: Request, db: Session = Depends(get_db)):
     income = db.query(models.AdHocIncome).filter(models.AdHocIncome.team_id == team.id).order_by(
         models.AdHocIncome.date.desc()
     ).all()
-    types = {i.name for i in db.query(models.IncomeType).filter(
-        models.IncomeType.team_id == team.id)} | set(DEFAULT_TYPES)
+    types = [t.name for t in list_income_types(db, team.id)]
     return templates.TemplateResponse("income.html", {
-        "request": request, "team": team, "income": income, "types": sorted(types),
+        "request": request, "team": team, "income": income, "types": types,
     })
 
 

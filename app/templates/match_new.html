@@ -9,11 +9,11 @@
   <div class="grid grid-cols-2 gap-3">
     <div>
       <label class="block text-sm text-gray-400 mb-1">Ground Fees (₹)</label>
-      <input type="number" step="0.01" name="ground_fees" required class="w-full bg-ink border border-gray-700 rounded px-3 py-2">
+      <input type="text" inputmode="decimal" pattern="[0-9]*.?[0-9]*" name="ground_fees" required class="w-full bg-ink border border-gray-700 rounded px-3 py-2">
     </div>
     <div>
       <label class="block text-sm text-gray-400 mb-1">Additional Amount (₹)</label>
-      <input type="number" step="0.01" name="additional_amount" value="0" class="w-full bg-ink border border-gray-700 rounded px-3 py-2">
+      <input type="text" inputmode="decimal" pattern="[0-9]*.?[0-9]*" name="additional_amount" value="0" class="w-full bg-ink border border-gray-700 rounded px-3 py-2">
     </div>
   </div>
   <div>

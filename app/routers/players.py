@@ -1,4 +1,7 @@
-from fastapi import APIRouter, Depends, Request, Form
+import csv
+import io
+from urllib.parse import quote
+from fastapi import APIRouter, Depends, Request, Form, UploadFile, File
 from ..auth import require_admin
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
@@ -12,10 +15,12 @@ router = APIRouter(dependencies=[Depends(require_admin)])
 
 
 @router.get("/players")
-def list_players(request: Request, db: Session = Depends(get_db)):
+def list_players(request: Request, db: Session = Depends(get_db), upload_summary: str = None):
     team = get_current_team(db)
     rows = list_players_with_balances(db, team.id)
-    return templates.TemplateResponse("players.html", {"request": request, "team": team, "rows": rows})
+    return templates.TemplateResponse("players.html", {
+        "request": request, "team": team, "rows": rows, "upload_summary": upload_summary,
+    })
 
 
 @router.post("/players")
@@ -24,6 +29,53 @@ def add_player(name: str = Form(...), contact_number: str = Form(None), db: Sess
     db.add(models.Player(team_id=team.id, name=name, contact_number=contact_number or None))
     db.commit()
     return RedirectResponse("/players", status_code=303)
+
+
+@router.post("/players/upload-csv")
+def upload_players_csv(file: UploadFile = File(...), db: Session = Depends(get_db)):
+    team = get_current_team(db)
+    raw = file.file.read().decode("utf-8-sig", errors="ignore")
+    reader = csv.DictReader(io.StringIO(raw))
+    # normalize header names: accept player_name/mob_no with flexible case/spacing
+    fieldmap = {(h or "").strip().lower(): h for h in (reader.fieldnames or [])}
+    name_col = fieldmap.get("player_name")
+    mobile_col = fieldmap.get("mob_no")
+
+    if not name_col:
+        return RedirectResponse(
+            "/players?upload_summary=" + quote("CSV must have a player_name column."), status_code=303
+        )
+
+    existing_names = {p.name.strip().lower() for p in db.query(models.Player).filter(models.Player.team_id == team.id)}
+    added, skipped_duplicate, skipped_blank, bad_mobile = 0, 0, 0, 0
+
+    for row in reader:
+        name = (row.get(name_col) or "").strip()
+        if not name:
+            skipped_blank += 1
+            continue
+        if name.lower() in existing_names:
+            skipped_duplicate += 1
+            continue
+
+        mobile = (row.get(mobile_col) or "").strip() if mobile_col else ""
+        if mobile and not (mobile.isdigit() and len(mobile) == 10):
+            bad_mobile += 1
+            mobile = ""
+
+        db.add(models.Player(team_id=team.id, name=name, contact_number=mobile or None))
+        existing_names.add(name.lower())
+        added += 1
+
+    db.commit()
+    summary = f"Added {added} player(s)."
+    if skipped_duplicate:
+        summary += f" Skipped {skipped_duplicate} duplicate(s)."
+    if skipped_blank:
+        summary += f" Skipped {skipped_blank} blank row(s)."
+    if bad_mobile:
+        summary += f" {bad_mobile} number(s) weren't 10 digits, added without contact."
+    return RedirectResponse(f"/players?upload_summary={quote(summary)}", status_code=303)
 
 
 @router.post("/players/{player_id}/toggle-status")

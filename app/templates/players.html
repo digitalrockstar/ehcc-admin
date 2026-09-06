@@ -2,10 +2,23 @@
 {% block content %}
 <h1 class="text-2xl font-bold text-gold mb-4">Players</h1>
 
-<form method="post" action="/players" class="card rounded-xl p-4 mb-6 flex gap-3 flex-wrap">
+{% if upload_summary %}
+<div class="bg-green-950 border border-green-800 text-green-200 rounded-xl p-3 mb-4 text-sm">{{ upload_summary }}</div>
+{% endif %}
+
+<form method="post" action="/players" class="card rounded-xl p-4 mb-4 flex gap-3 flex-wrap">
   <input name="name" placeholder="Player name" required class="bg-ink border border-gray-700 rounded px-3 py-2 flex-1 min-w-[150px]">
   <input name="contact_number" placeholder="Contact (optional, 10 digits)" pattern="[0-9]{10}" class="bg-ink border border-gray-700 rounded px-3 py-2 flex-1 min-w-[150px]">
   <button class="bg-gold text-ink font-semibold px-4 py-2 rounded">Add Player</button>
+</form>
+
+<form method="post" action="/players/upload-csv" enctype="multipart/form-data" class="card rounded-xl p-4 mb-6 flex gap-3 flex-wrap items-center">
+  <div class="text-sm text-gray-400 flex-1 min-w-[200px]">
+    <p class="font-medium text-gray-200">Bulk import via CSV</p>
+    <p>Columns: <code class="text-gold">player_name</code>, <code class="text-gold">mob_no</code> (mob_no optional, must be 10 digits)</p>
+  </div>
+  <input type="file" name="file" accept=".csv" required class="text-sm">
+  <button class="bg-gold text-ink font-semibold px-4 py-2 rounded text-sm">Upload</button>
 </form>
 
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
