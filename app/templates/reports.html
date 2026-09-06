@@ -2,6 +2,29 @@
 {% block content %}
 <h1 class="text-2xl font-bold text-gold mb-4">Reports</h1>
 
+<h2 class="font-semibold mb-2">Match-wise Summary</h2>
+<div class="card rounded-xl overflow-hidden text-sm mb-8">
+  <div class="grid grid-cols-5 gap-2 px-3 py-2 text-xs text-gray-500 border-b border-gray-800">
+    <span>Date</span><span class="text-right">Expense</span><span class="text-right">Collected</span><span class="text-right">Surplus</span><span class="text-right">Outstanding</span>
+  </div>
+  {% macro match_row(row) %}
+  <div class="grid grid-cols-5 gap-2 px-3 py-2.5 border-b border-gray-800 last:border-0">
+    <span>{{ row.match.match_date }}</span>
+    <span class="text-right">₹{{ row.total_expense }}</span>
+    <span class="text-right">₹{{ row.total_collected }}</span>
+    <span class="text-gold text-right">₹{{ row.match_surplus }}</span>
+    <span class="text-amber-400 text-right">₹{{ row.outstanding }}</span>
+  </div>
+  {% endmacro %}
+  {% for row in match_rows[:5] %}{{ match_row(row) }}{% else %}<p class="p-4 text-gray-500">No matches.</p>{% endfor %}
+  {% if match_rows|length > 5 %}
+  <details>
+    <summary class="px-3 py-2 text-xs text-gold cursor-pointer select-none">Show all {{ match_rows|length }} matches ▾</summary>
+    {% for row in match_rows[5:] %}{{ match_row(row) }}{% endfor %}
+  </details>
+  {% endif %}
+</div>
+
 <h2 class="font-semibold mb-2">Player-wise Outstanding</h2>
 <div class="card rounded-xl overflow-hidden mb-8 text-sm">
   <div class="grid grid-cols-4 gap-2 px-3 py-2 text-xs text-gray-500 border-b border-gray-800">
@@ -15,22 +38,6 @@
     <span class="font-semibold text-right">₹{{ row.net }}</span>
   </div>
   {% else %}<p class="p-4 text-gray-500">No players.</p>{% endfor %}
-</div>
-
-<h2 class="font-semibold mb-2">Match-wise Summary</h2>
-<div class="card rounded-xl overflow-hidden text-sm">
-  <div class="grid grid-cols-5 gap-2 px-3 py-2 text-xs text-gray-500 border-b border-gray-800">
-    <span>Date</span><span class="text-right">Expense</span><span class="text-right">Collected</span><span class="text-right">Surplus</span><span class="text-right">Outstanding</span>
-  </div>
-  {% for row in match_rows %}
-  <div class="grid grid-cols-5 gap-2 px-3 py-2.5 border-b border-gray-800 last:border-0">
-    <span>{{ row.match.match_date }}</span>
-    <span class="text-right">₹{{ row.total_expense }}</span>
-    <span class="text-right">₹{{ row.total_collected }}</span>
-    <span class="text-gold text-right">₹{{ row.match_surplus }}</span>
-    <span class="text-amber-400 text-right">₹{{ row.outstanding }}</span>
-  </div>
-  {% else %}<p class="p-4 text-gray-500">No matches.</p>{% endfor %}
 </div>
 
 <h2 class="font-semibold mb-2 mt-8">Transaction Ledger</h2>

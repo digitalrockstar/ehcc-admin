@@ -1,6 +1,6 @@
 import os
 import secrets
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
 # auto_error=False: without this, FastAPI 401s on a missing Authorization
@@ -9,13 +9,14 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 security = HTTPBasic(auto_error=False)
 
 
-def require_admin(credentials: HTTPBasicCredentials = Depends(security)):
-    """Single-admin HTTP Basic Auth. Credentials come from env vars so
-    nothing sensitive lives in code or git history.
+def require_admin(request: Request, credentials: HTTPBasicCredentials = Depends(security)):
+    """HTTP Basic Auth with two tiers, both from env vars:
+    - ADMIN_USERNAME/ADMIN_PASSWORD: full read+write access.
+    - VIEW_ACCESS_USER/VIEW_ACCESS_PWD: read-only. Any GET is allowed;
+      any mutating request (POST/PUT/DELETE) gets a 403.
 
-    If ADMIN_USERNAME/ADMIN_PASSWORD are not set, auth is skipped - this
-    keeps local dev frictionless but means production deploys MUST set
-    both env vars (documented in render.yaml and README).
+    If ADMIN_USERNAME/ADMIN_PASSWORD are not set, auth is skipped entirely -
+    keeps local dev frictionless, but production MUST set both.
     """
     admin_user = os.getenv("ADMIN_USERNAME")
     admin_pass = os.getenv("ADMIN_PASSWORD")
@@ -29,12 +30,27 @@ def require_admin(credentials: HTTPBasicCredentials = Depends(security)):
             headers={"WWW-Authenticate": "Basic"},
         )
 
-    correct_user = secrets.compare_digest(credentials.username, admin_user)
-    correct_pass = secrets.compare_digest(credentials.password, admin_pass)
-    if not (correct_user and correct_pass):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid credentials",
-            headers={"WWW-Authenticate": "Basic"},
-        )
-    return True
+    is_admin = (
+        secrets.compare_digest(credentials.username, admin_user)
+        and secrets.compare_digest(credentials.password, admin_pass)
+    )
+    if is_admin:
+        return True
+
+    view_user = os.getenv("VIEW_ACCESS_USER")
+    view_pass = os.getenv("VIEW_ACCESS_PWD")
+    is_viewer = (
+        view_user and view_pass
+        and secrets.compare_digest(credentials.username, view_user)
+        and secrets.compare_digest(credentials.password, view_pass)
+    )
+    if is_viewer:
+        if request.method in ("GET", "HEAD"):
+            return True
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="View-only access - this action requires admin login.")
+
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid credentials",
+        headers={"WWW-Authenticate": "Basic"},
+    )
