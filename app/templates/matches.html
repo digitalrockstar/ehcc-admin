@@ -12,6 +12,7 @@
       <span class="text-xs px-2 py-0.5 rounded {{ 'bg-green-900 text-green-300' if row.match.status.value=='completed' else 'bg-gray-700' if row.match.status.value=='upcoming' else 'bg-red-900 text-red-300' }}">{{ row.match.status.value }}</span>
     </div>
     <div class="text-sm space-y-0.5 text-gray-400">
+      {% if row.match.notes %}<p class="text-gray-300">{{ row.match.notes }}</p>{% endif %}
       <p>Expense ₹{{ "%.0f"|format(row.total_expense) }} · {{ row.match.participants|length }} players</p>
       <p class="text-amber-400">Outstanding ₹{{ "%.0f"|format(row.outstanding) }}</p>
       {% if row.match_surplus > 0 %}<p class="text-gold">Surplus ₹{{ "%.0f"|format(row.match_surplus) }}</p>{% endif %}

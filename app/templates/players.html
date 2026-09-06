@@ -30,9 +30,9 @@
         <span class="text-xs px-2 py-0.5 rounded {{ 'bg-green-900 text-green-300' if row.player.status.value=='active' else 'bg-gray-700 text-gray-400' }}">{{ row.player.status.value }}</span>
       </div>
       <div class="flex gap-1.5 flex-wrap mt-2">
-        <span class="text-xs px-2 py-1 rounded bg-amber-950 text-white">Owes ₹{{ "%.0f"|format(row.owed_by) }}</span>
-        <span class="text-xs px-2 py-1 rounded bg-red-950 text-white">Owed ₹{{ "%.0f"|format(row.owed_to) }}</span>
-        <span class="text-xs px-2 py-1 rounded {{ 'bg-green-950' if row.net >= 0 else 'bg-red-950' }} text-white">Net {{ "₹%.0f"|format(row.net) if row.net >= 0 else "-₹%.0f"|format(-row.net) }}</span>
+        <span class="text-xs px-2 py-1 rounded bg-amber-700 text-white">Owes ₹{{ "%.0f"|format(row.owed_by) }}</span>
+        <span class="text-xs px-2 py-1 rounded bg-red-700 text-white">Owed ₹{{ "%.0f"|format(row.owed_to) }}</span>
+        <span class="text-xs px-2 py-1 rounded {{ 'bg-green-700' if row.net >= 0 else 'bg-red-700' }} text-white">Net {{ "₹%.0f"|format(row.net) if row.net >= 0 else "-₹%.0f"|format(-row.net) }}</span>
       </div>
     </a>
     <form method="post" action="/players/{{ row.player.id }}/toggle-status" class="mt-3">
