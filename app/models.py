@@ -179,5 +179,6 @@ class Transaction(Base):
     party_player_id = Column(Integer, ForeignKey("players.id"), nullable=True)
     match_id = Column(Integer, ForeignKey("matches.id"), nullable=True)
     expense_id = Column(Integer, ForeignKey("team_expenses.id"), nullable=True)
+    income_id = Column(Integer, ForeignKey("adhoc_income.id"), nullable=True)
     description = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)

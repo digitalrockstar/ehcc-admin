@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from .. import models
 from ..database import get_db
 from ..deps import templates, get_current_team
-from ..services.expense_service import add_adhoc_income
+from ..services.expense_service import add_adhoc_income, update_adhoc_income, delete_adhoc_income
 from ..services.category_service import list_income_types
 
 router = APIRouter(dependencies=[Depends(require_admin)])
@@ -31,4 +31,27 @@ def add_income(
 ):
     team = get_current_team(db)
     add_adhoc_income(db, team.id, date, income_type, amount, notes=notes)
+    return RedirectResponse("/income", status_code=303)
+
+
+@router.get("/income/{income_id}/edit")
+def edit_income_form(income_id: int, request: Request, db: Session = Depends(get_db)):
+    team = get_current_team(db)
+    income = db.query(models.AdHocIncome).get(income_id)
+    types = [t.name for t in list_income_types(db, team.id)]
+    return templates.TemplateResponse("income_edit.html", {"request": request, "team": team, "income": income, "types": types})
+
+
+@router.post("/income/{income_id}/edit")
+def edit_income_submit(
+    income_id: int, date: date_type = Form(...), income_type: str = Form(...),
+    amount: float = Form(...), notes: str = Form(None), db: Session = Depends(get_db),
+):
+    update_adhoc_income(db, income_id, date, income_type, amount, notes)
+    return RedirectResponse("/income", status_code=303)
+
+
+@router.post("/income/{income_id}/delete")
+def delete_income_submit(income_id: int, db: Session = Depends(get_db)):
+    delete_adhoc_income(db, income_id)
     return RedirectResponse("/income", status_code=303)

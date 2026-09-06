@@ -143,8 +143,31 @@ def add_adhoc_income(db: Session, team_id: int, income_date: date, income_type: 
     db.flush()
     db.add(models.Transaction(
         team_id=team_id, date=income_date, type=models.TransactionType.adhoc_income,
-        amount=float(amount), description=f"Ad hoc income - {income_type}",
+        amount=float(amount), income_id=income.id, description=f"Ad hoc income - {income_type}",
     ))
     db.commit()
     db.refresh(income)
     return income
+
+
+def update_adhoc_income(db: Session, income_id: int, income_date: date, income_type: str,
+                         amount: float, notes: str = None) -> models.AdHocIncome:
+    income = db.query(models.AdHocIncome).get(income_id)
+    txn = db.query(models.Transaction).filter(models.Transaction.income_id == income_id).first()
+    if txn:
+        txn.date = income_date
+        txn.amount = float(amount)
+        txn.description = f"Ad hoc income - {income_type}"
+    income.date = income_date
+    income.income_type = income_type
+    income.amount = amount
+    income.notes = notes
+    db.commit()
+    db.refresh(income)
+    return income
+
+
+def delete_adhoc_income(db: Session, income_id: int) -> None:
+    db.query(models.Transaction).filter(models.Transaction.income_id == income_id).delete()
+    db.query(models.AdHocIncome).filter(models.AdHocIncome.id == income_id).delete()
+    db.commit()
