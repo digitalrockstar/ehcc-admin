@@ -21,8 +21,8 @@
     <input name="notes" class="w-full bg-ink border border-gray-700 rounded px-3 py-2">
   </div>
   <div>
-    <label class="block text-sm text-gray-400 mb-2">Participating Players</label>
-    <div class="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-80 overflow-y-auto border border-gray-800 rounded p-3">
+    <label class="block text-sm text-gray-400 mb-2">Participating Players <span id="pcount" class="text-gold">[0]</span></label>
+    <div id="pgrid" class="grid grid-cols-2 md:grid-cols-3 gap-2 border border-gray-800 rounded p-3">
       {% for p in players %}
       <label class="cursor-pointer relative block">
         <input type="checkbox" name="player_ids" value="{{ p.id }}" class="peer hidden">
@@ -35,6 +35,13 @@
       {% endfor %}
     </div>
   </div>
+  <script>
+    (function(){
+      var grid = document.getElementById('pgrid'), count = document.getElementById('pcount');
+      function update(){ count.textContent = '[' + grid.querySelectorAll('input:checked').length + ']'; }
+      grid.addEventListener('change', update); update();
+    })();
+  </script>
   <button class="bg-gold text-ink font-semibold px-4 py-2 rounded">Create Match</button>
 </form>
 {% endblock %}
