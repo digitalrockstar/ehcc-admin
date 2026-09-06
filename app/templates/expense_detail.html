@@ -8,11 +8,12 @@
   <p class="text-sm text-gray-400 mb-2">Allocate to players (selection order sets remainder-rupee distribution):</p>
   <div class="grid grid-cols-2 md:grid-cols-3 gap-2 mb-3">
     {% for p in players %}
-    <label class="cursor-pointer">
+    <label class="cursor-pointer relative block">
       <input type="checkbox" name="player_ids_in_order" value="{{ p.id }}" class="peer hidden">
       <div class="card rounded-lg px-3 py-2 border-2 border-transparent peer-checked:border-gold peer-checked:bg-gold/10 transition text-sm">
         <p class="font-medium">{{ p.name }}</p>
       </div>
+      <span class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-gold text-ink text-xs font-bold flex items-center justify-center opacity-0 scale-75 peer-checked:opacity-100 peer-checked:scale-100 transition">✓</span>
     </label>
     {% endfor %}
   </div>

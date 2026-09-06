@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <h1 class="text-2xl font-bold text-gold mb-4">Team Setup</h1>
-<form method="post" action="/setup" class="card rounded-xl p-6 max-w-md space-y-4">
+<form method="post" action="/setup" class="max-w-md space-y-4">
   <div>
     <label class="block text-sm text-gray-400 mb-1">Team Name</label>
     <input name="name" required value="{{ team.name if team else '' }}"

@@ -24,7 +24,7 @@
 </div>
 {% endif %}
 
-<form method="post" action="/matches/{{ match.id }}/edit" class="card rounded-xl p-6 max-w-2xl space-y-4">
+<form method="post" action="/matches/{{ match.id }}/edit" class="max-w-2xl space-y-5">
   <div class="grid grid-cols-2 gap-3">
     <div>
       <label class="block text-sm text-gray-400 mb-1">Ground Fees (₹)</label>
@@ -40,7 +40,7 @@
     <label class="block text-sm text-gray-400 mb-2">Participating Players</label>
     <div class="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-80 overflow-y-auto border border-gray-800 rounded p-3">
       {% for p in all_players %}
-      <label class="cursor-pointer {{ 'opacity-60' if p.id in paid_ids }}">
+      <label class="cursor-pointer relative block {{ 'opacity-60' if p.id in paid_ids }}">
         <input type="checkbox" name="player_ids" value="{{ p.id }}" class="peer hidden"
           {{ 'checked' if p.id in selected_ids }} {{ 'disabled' if p.id in paid_ids }}>
         {% if p.id in paid_ids %}<input type="hidden" name="player_ids" value="{{ p.id }}">{% endif %}
@@ -48,6 +48,7 @@
           <p class="font-medium">{{ p.name }}</p>
           {% if p.id in paid_ids %}<p class="text-xs text-green-400">Already paid — locked</p>{% endif %}
         </div>
+        <span class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-gold text-ink text-xs font-bold flex items-center justify-center opacity-0 scale-75 peer-checked:opacity-100 peer-checked:scale-100 transition">✓</span>
       </label>
       {% endfor %}
     </div>

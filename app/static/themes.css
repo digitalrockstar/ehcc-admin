@@ -100,7 +100,40 @@ body[data-theme="citrus"] {
 }
 
 body { color: var(--text); }
-.card { background: linear-gradient(145deg, var(--card), color-mix(in srgb, var(--card) 85%, black)); border: 1px solid var(--border) !important; }
+.card {
+  background: linear-gradient(145deg, var(--card), color-mix(in srgb, var(--card) 85%, black));
+  border: 1px solid color-mix(in srgb, var(--border) 55%, transparent) !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.12), 0 10px 28px -14px rgba(0,0,0,0.35);
+  border-radius: 16px !important;
+  transition: box-shadow .18s ease, transform .18s ease;
+}
+a.card:hover, .card.hover-lift:hover {
+  box-shadow: 0 2px 4px rgba(0,0,0,0.14), 0 16px 34px -14px rgba(0,0,0,0.4);
+  transform: translateY(-1px);
+}
+
+/* Primary (gold) buttons/links get a soft glow + lift instead of a flat block */
+button.bg-gold, a.bg-gold {
+  border-radius: 12px !important;
+  box-shadow: 0 6px 18px -8px var(--accent);
+  transition: transform .15s ease, box-shadow .15s ease, filter .15s ease;
+}
+button.bg-gold:hover, a.bg-gold:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+  box-shadow: 0 10px 24px -8px var(--accent);
+}
+
+/* Inputs: rounder, roomier, with a proper focus ring instead of a flat border swap */
+body input:not([type="checkbox"]):not([type="hidden"]):not([type="file"]),
+body select, body textarea {
+  border-radius: 10px !important; padding: 0.6rem 0.85rem !important;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+body input:focus, body select:focus, body textarea:focus {
+  outline: none; border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
 
 /* Repaint hardcoded utility classes used across templates to follow the theme */
 body [class*="text-gray-100"] { color: var(--text) !important; }

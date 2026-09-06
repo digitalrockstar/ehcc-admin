@@ -11,6 +11,7 @@ from ..services.expense_service import (
     create_team_expense, allocate_expense_to_players, pay_expense_allocation,
 )
 from ..services.category_service import list_expense_categories
+from ..services.player_service import get_players_sorted
 
 router = APIRouter(dependencies=[Depends(require_admin)])
 
@@ -27,9 +28,7 @@ def list_expenses(request: Request, db: Session = Depends(get_db)):
 @router.get("/expenses/new")
 def new_expense_form(request: Request, db: Session = Depends(get_db)):
     team = get_current_team(db)
-    players = db.query(models.Player).filter(
-        models.Player.team_id == team.id, models.Player.status == models.PlayerStatus.active
-    ).all()
+    players = get_players_sorted(db, team.id, active_only=True)
     categories = [c.name for c in list_expense_categories(db, team.id)]
     return templates.TemplateResponse("expense_new.html", {
         "request": request, "team": team, "players": players, "categories": categories,
@@ -50,9 +49,7 @@ def create_expense_submit(
 def expense_detail(expense_id: int, request: Request, db: Session = Depends(get_db)):
     team = get_current_team(db)
     expense = db.query(models.TeamExpense).get(expense_id)
-    players = db.query(models.Player).filter(
-        models.Player.team_id == team.id, models.Player.status == models.PlayerStatus.active
-    ).all()
+    players = get_players_sorted(db, team.id, active_only=True)
     recovered = sum(float(a.amount) for a in expense.allocations if a.status == models.PaymentStatus.paid)
     recoverable = sum(float(a.amount) for a in expense.allocations)
     return templates.TemplateResponse("expense_detail.html", {

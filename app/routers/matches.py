@@ -11,6 +11,7 @@ from ..services.match_service import (
     create_match, pay_match_expense_from_account, mark_match_fee_paid, get_match_financials, cancel_match,
     preview_match_edit, apply_match_edit, ConfirmationRequired, InvalidEdit,
 )
+from ..services.player_service import get_players_sorted
 
 router = APIRouter(dependencies=[Depends(require_admin)])
 
@@ -28,9 +29,7 @@ def list_matches(request: Request, db: Session = Depends(get_db)):
 @router.get("/matches/new")
 def new_match_form(request: Request, db: Session = Depends(get_db)):
     team = get_current_team(db)
-    players = db.query(models.Player).filter(
-        models.Player.team_id == team.id, models.Player.status == models.PlayerStatus.active
-    ).all()
+    players = get_players_sorted(db, team.id, active_only=True)
     return templates.TemplateResponse("match_new.html", {"request": request, "team": team, "players": players})
 
 
@@ -79,9 +78,7 @@ def cancel(match_id: int, request: Request, confirmed: bool = Form(False), db: S
 def edit_match_form(match_id: int, request: Request, db: Session = Depends(get_db)):
     team = get_current_team(db)
     match = db.query(models.Match).get(match_id)
-    all_players = db.query(models.Player).filter(
-        models.Player.team_id == team.id, models.Player.status == models.PlayerStatus.active
-    ).all()
+    all_players = get_players_sorted(db, team.id, active_only=True)
     selected_ids = {p.player_id for p in match.participants}
     paid_ids = {p.player_id for p in match.participants if p.status == models.PaymentStatus.paid}
     return templates.TemplateResponse("match_edit.html", {
@@ -100,9 +97,7 @@ def edit_match_submit(
         apply_match_edit(db, match_id, ground_fees, additional_amount, player_ids, confirmed=confirmed)
     except InvalidEdit as e:
         match = db.query(models.Match).get(match_id)
-        all_players = db.query(models.Player).filter(
-            models.Player.team_id == team.id, models.Player.status == models.PlayerStatus.active
-        ).all()
+        all_players = get_players_sorted(db, team.id, active_only=True)
         paid_ids = {p.player_id for p in match.participants if p.status == models.PaymentStatus.paid}
         return templates.TemplateResponse("match_edit.html", {
             "request": request, "team": team, "match": match, "all_players": all_players,
@@ -110,9 +105,7 @@ def edit_match_submit(
         })
     except ConfirmationRequired as e:
         match = db.query(models.Match).get(match_id)
-        all_players = db.query(models.Player).filter(
-            models.Player.team_id == team.id, models.Player.status == models.PlayerStatus.active
-        ).all()
+        all_players = get_players_sorted(db, team.id, active_only=True)
         paid_ids = {p.player_id for p in match.participants if p.status == models.PaymentStatus.paid}
         return templates.TemplateResponse("match_edit.html", {
             "request": request, "team": team, "match": match, "all_players": all_players,
