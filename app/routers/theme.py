@@ -5,6 +5,7 @@ router = APIRouter()
 
 VALID_THEMES = {
     "dark", "light", "cricket-green", "midnight", "maroon", "royal-blue", "monochrome", "luxury-gold",
+    "sky", "sandstone", "sunset", "neon",
 }
 
 

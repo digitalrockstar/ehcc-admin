@@ -10,7 +10,10 @@ from ..services.category_service import list_expense_categories, list_income_typ
 
 router = APIRouter(dependencies=[Depends(require_admin)])
 
-THEMES = ["dark", "light", "cricket-green", "midnight", "maroon", "royal-blue", "monochrome", "luxury-gold"]
+THEMES = [
+    "dark", "light", "cricket-green", "midnight", "maroon", "royal-blue", "monochrome", "luxury-gold",
+    "sky", "sandstone", "sunset", "neon",
+]
 
 
 @router.get("/settings")
