@@ -19,6 +19,11 @@ def reports(request: Request, db: Session = Depends(get_db)):
     matches = db.query(models.Match).filter(models.Match.team_id == team.id).all()
     match_rows = [{"match": m, **get_match_financials(db, m.id)} for m in matches]
 
+    transactions = db.query(models.Transaction).filter(models.Transaction.team_id == team.id).order_by(
+        models.Transaction.date.desc(), models.Transaction.id.desc()
+    ).all()
+
     return templates.TemplateResponse("reports.html", {
         "request": request, "team": team, "player_rows": player_rows, "match_rows": match_rows,
+        "transactions": transactions,
     })
