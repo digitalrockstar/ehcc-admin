@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="text-2xl font-bold text-gold mb-4">Transactions</h1>
+<div class="card rounded-xl divide-y divide-gray-800">
+  {% for t in activity %}
+  <div class="p-3 flex justify-between text-sm">
+    <span class="text-gray-400">{{ t.date }} · {{ t.desc }}</span>
+    {% if t.pending %}
+    <span class="font-semibold text-gray-500">pending</span>
+    {% else %}
+    <span class="font-semibold {{ 'text-green-400' if t.amount >= 0 else 'text-red-400' }}">{{ '+' if t.amount >= 0 }}₹{{ "%.2f"|format(t.amount) }}</span>
+    {% endif %}
+  </div>
+  {% else %}
+  <p class="p-4 text-gray-500">No transactions yet.</p>
+  {% endfor %}
+</div>
+{% endblock %}

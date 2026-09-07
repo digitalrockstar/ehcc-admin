@@ -91,6 +91,29 @@ def get_dashboard_summary(db: Session, team_id: int) -> dict:
     }
 
 
+def get_activity(db: Session, team_id: int, limit: int = None) -> list:
+    """Unified activity feed: real cash transactions plus player-paid
+    expenses still awaiting reimbursement (which have no cash effect yet,
+    so aren't real Transactions, but shouldn't be invisible either)."""
+    transactions = db.query(models.Transaction).filter(models.Transaction.team_id == team_id).order_by(
+        models.Transaction.date.desc(), models.Transaction.id.desc()
+    ).all()
+    activity = [{"date": t.date, "desc": t.description or t.type.value, "amount": float(t.amount), "pending": False} for t in transactions]
+
+    pending_expenses = db.query(models.TeamExpense).filter(
+        models.TeamExpense.team_id == team_id,
+        models.TeamExpense.payment_source == models.PaymentSource.player,
+        models.TeamExpense.reimbursement_status == models.ReimbursementStatus.due,
+    ).order_by(models.TeamExpense.date.desc()).all()
+    activity += [{
+        "date": e.date, "desc": f"{e.category} - paid by {e.paid_by.name} (pending reimbursement)",
+        "amount": None, "pending": True,
+    } for e in pending_expenses]
+
+    activity.sort(key=lambda a: a["date"], reverse=True)
+    return activity[:limit] if limit else activity
+
+
 def reset_all_data(db: Session) -> None:
     """Wipe every row in every table. Used for post-testing resets before
     a real season starts. Deleted in FK-safe order; nothing is soft-deleted
