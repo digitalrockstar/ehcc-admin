@@ -9,7 +9,7 @@
   <a href="/matches/{{ row.match.id }}" class="card rounded-xl p-4 hover:border-gold border-2 border-transparent transition block">
     <div class="flex justify-between items-start mb-2">
       <p class="font-semibold">{{ row.match.match_date }}</p>
-      <span class="text-xs px-2 py-0.5 rounded {{ 'bg-green-900 text-green-300' if row.match.status.value=='completed' else 'bg-gray-700' if row.match.status.value=='upcoming' else 'bg-red-900 text-red-300' }}">{{ row.match.status.value }}</span>
+      <span class="text-xs px-2 py-0.5 rounded {{ 'bg-green-900 text-green-300' if row.match.status.value=='completed' else 'bg-amber-900 text-amber-300' if row.match.status.value=='upcoming' and row.match.match_date < today() else 'bg-gray-700' if row.match.status.value=='upcoming' else 'bg-red-900 text-red-300' }}">{{ 'past' if row.match.status.value=='upcoming' and row.match.match_date < today() else row.match.status.value }}</span>
     </div>
     <div class="text-sm space-y-0.5 text-gray-400">
       {% if row.match.notes %}<p class="text-gray-300">{{ row.match.notes }}</p>{% endif %}

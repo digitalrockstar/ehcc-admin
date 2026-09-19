@@ -1,4 +1,5 @@
 import os
+from datetime import date
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from . import models
@@ -11,6 +12,7 @@ templates = Jinja2Templates(directory="app/templates")
 # server-side cookie/HTML is correct.
 _css_path = os.path.join(os.path.dirname(__file__), "static", "themes.css")
 templates.env.globals["css_version"] = str(int(os.path.getmtime(_css_path))) if os.path.exists(_css_path) else "1"
+templates.env.globals["today"] = date.today  # callable, evaluated fresh per render
 
 
 def get_current_team(db: Session) -> models.Team:
