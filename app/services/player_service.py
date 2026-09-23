@@ -16,15 +16,17 @@ def get_last_played_map(db: Session, team_id: int) -> dict:
 
 
 def sort_players_by_recency(players: list, last_played: dict) -> list:
-    """Players with a match in the last 30 days come first, most recent
-    first; everyone else follows alphabetically."""
+    """Active players before archived players. Within each group, players
+    with a match in the last 30 days come first (most recent first), then
+    everyone else alphabetically."""
     cutoff = date.today() - timedelta(days=RECENT_DAYS)
 
     def sort_key(p):
+        status_tier = 0 if p.status == models.PlayerStatus.active else 1
         lp = last_played.get(p.id)
         if lp and lp >= cutoff:
-            return (0, -lp.toordinal())
-        return (1, p.name.lower())
+            return (status_tier, 0, -lp.toordinal())
+        return (status_tier, 1, p.name.lower())
 
     return sorted(players, key=sort_key)
 

@@ -39,5 +39,16 @@ result = [p.name for p in get_players_sorted(db, team.id)]
 print(result)
 assert result == ["Zed", "Amy", "Ancient", "Bob", "Cara"], f"unexpected order: {result}"
 print("PLAYER RECENCY SORT: PASSED")
+
+# Archive Zed and Bob -> active players stay ahead of archived, same recency/alpha rule within each group
+zed.status = models.PlayerStatus.inactive
+bob.status = models.PlayerStatus.inactive
+db.commit()
+
+result2 = [p.name for p in get_players_sorted(db, team.id)]
+print(result2)
+assert result2 == ["Amy", "Ancient", "Cara", "Zed", "Bob"], f"unexpected order: {result2}"
+print("ARCHIVE PARTITION SORT: PASSED")
+
 db.close()
 os.remove("verify3.db")

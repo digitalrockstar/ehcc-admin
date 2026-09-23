@@ -27,7 +27,7 @@
     <a href="/players/{{ row.player.id }}" class="block">
       <div class="flex justify-between items-start mb-2">
         <p class="font-semibold">{{ row.player.name }}</p>
-        <span class="text-xs px-2 py-0.5 rounded {{ 'bg-green-900 text-green-300' if row.player.status.value=='active' else 'bg-gray-700 text-gray-400' }}">{{ row.player.status.value }}</span>
+        <span class="text-xs px-2 py-0.5 rounded {{ 'bg-green-900 text-green-300' if row.player.status.value=='active' else 'bg-gray-700 text-gray-400' }}">{{ 'Active' if row.player.status.value=='active' else 'Archived' }}</span>
       </div>
       <div class="flex gap-1.5 flex-wrap mt-2">
         <span class="text-xs px-2 py-1 rounded bg-amber-700 text-white">Owes ₹{{ "%.0f"|format(row.owed_by) }}</span>
@@ -36,7 +36,7 @@
       </div>
     </a>
     <form method="post" action="/players/{{ row.player.id }}/toggle-status" class="mt-3">
-      <button class="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-2.5 py-1 rounded-full">Toggle Status</button>
+      <button class="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 px-2.5 py-1 rounded-full">{{ 'Archive' if row.player.status.value=='active' else 'Unarchive' }}</button>
     </form>
   </div>
   {% else %}
