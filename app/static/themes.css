@@ -162,3 +162,13 @@ body[data-theme="blossom"] input[type="date"],
 body[data-theme="seafoam"] input[type="date"],
 body[data-theme="linen"] input[type="date"] { color-scheme: light; }
 input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; opacity: 0.9; }
+
+body[data-theme="crimson-steel"] {
+  --ink: #16090b; --card: #221113; --accent: #ff6b6b; --border: #3a1a1d;
+  --text: #f7e6e6; --text-dim: #c99a9c; --text-faint: #8f6b6d;
+}
+
+body[data-theme="mint-slate"] {
+  --ink: #eef7f3; --card: #ffffff; --accent: #1a8a6f; --border: #d4e8e0;
+  --text: #14261f; --text-dim: #4c6a5f; --text-faint: #7c988c;
+}

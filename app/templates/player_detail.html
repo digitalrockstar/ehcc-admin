@@ -1,41 +1,56 @@
 {% extends "base.html" %}
 {% block content %}
-<h1 class="text-2xl font-bold text-gold mb-1">{{ player.name }}</h1>
-<p class="text-gray-400 mb-4">{{ player.contact_number or "No contact number" }} · {{ 'Active' if player.status.value=='active' else 'Archived' }}</p>
+{% if player %}
+<h1 class="text-xl font-bold text-gold mb-1">{{ player.player_name }}</h1>
+<p class="text-text-dim text-sm mb-4">{{ player.mob_no or '' }}</p>
 
-<div class="grid grid-cols-3 gap-4 mb-6">
-  <div class="card rounded-xl p-4"><p class="text-xs text-gray-400">Owes Team</p><p class="text-xl font-bold text-amber-400">₹{{ "%.2f"|format(owed_by_player) }}</p></div>
-  <div class="card rounded-xl p-4"><p class="text-xs text-gray-400">Team Owes</p><p class="text-xl font-bold text-red-400">₹{{ "%.2f"|format(owed_to_player) }}</p></div>
-  <div class="card rounded-xl p-4"><p class="text-xs text-gray-400">Net</p><p class="text-xl font-bold {{ 'text-green-400' if net>=0 else 'text-red-400' }}">₹{{ "%.2f"|format(net) }}</p></div>
+<div class="grid grid-cols-3 gap-3 mb-6">
+  <div class="bg-card border border-border rounded-xl p-4">
+    <div class="text-text-dim text-xs uppercase">Owes Team</div>
+    <div class="text-xl font-bold">₹{{ "%.0f"|format(totals.total_owed - totals.total_paid) }}</div>
+  </div>
+  <div class="bg-card border border-border rounded-xl p-4">
+    <div class="text-text-dim text-xs uppercase">Team Owes</div>
+    <div class="text-xl font-bold">₹{{ "%.0f"|format(totals.payable_outstanding) }}</div>
+  </div>
+  <div class="bg-card border border-border rounded-xl p-4">
+    <div class="text-text-dim text-xs uppercase">Net Position</div>
+    <div class="text-xl font-bold text-gold">₹{{ "%.0f"|format(totals.payable_outstanding - (totals.total_owed - totals.total_paid)) }}</div>
+  </div>
 </div>
 
-<h2 class="font-semibold mb-2">Match Fees</h2>
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
-  {% for f in match_fees %}
-  <a href="/matches/{{ f.match_id }}" class="card rounded-xl p-3 hover:border-gold border-2 border-transparent transition block text-sm">
-    <p class="font-medium">Match #{{ f.match_id }}</p>
-    <p class="text-gray-400">₹{{ f.fee_amount }} · <span class="{{ 'text-green-400' if f.status.value=='paid' else 'text-amber-400' }}">{{ f.status.value }}</span></p>
-  </a>
-  {% else %}<p class="text-gray-500 col-span-full text-sm">None</p>{% endfor %}
+<div class="bg-card border border-border rounded-xl p-4 mb-4">
+  <h2 class="font-semibold mb-2">Owes Team (receivables)</h2>
+  <table class="w-full text-sm">
+    <tbody>
+    {% for a in totals.receivable_allocations %}
+    <tr class="border-t border-border">
+      <td class="py-1 text-text-dim">{{ a.transaction.transaction_date }}</td>
+      <td class="py-1">{{ a.transaction.category.name if a.transaction.category else a.transaction.item_description }}</td>
+      <td class="py-1 text-right">₹{{ "%.0f"|format(a.allocated_amount) }}</td>
+      <td class="py-1 text-right">{{ 'Paid' if a.settlement_status == 1 else 'Due' }}</td>
+    </tr>
+    {% else %}<tr><td class="text-text-dim py-1">Nothing owed.</td></tr>{% endfor %}
+    </tbody>
+  </table>
 </div>
 
-<h2 class="font-semibold mb-2">Expense Shares (Receivables)</h2>
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-6">
-  {% for a in allocations %}
-  <a href="/expenses/{{ a.expense_id }}" class="card rounded-xl p-3 hover:border-gold border-2 border-transparent transition block text-sm">
-    <p class="font-medium">{{ a.expense.category }}</p>
-    <p class="text-gray-400">₹{{ a.amount }} · <span class="{{ 'text-green-400' if a.status.value=='paid' else 'text-amber-400' }}">{{ a.status.value }}</span></p>
-  </a>
-  {% else %}<p class="text-gray-500 col-span-full text-sm">None</p>{% endfor %}
+<div class="bg-card border border-border rounded-xl p-4">
+  <h2 class="font-semibold mb-2">Team Owes Player (payables)</h2>
+  <table class="w-full text-sm">
+    <tbody>
+    {% for a in totals.payable_allocations %}
+    <tr class="border-t border-border">
+      <td class="py-1 text-text-dim">{{ a.transaction.transaction_date }}</td>
+      <td class="py-1">{{ a.transaction.category.name if a.transaction.category else a.transaction.item_description }}</td>
+      <td class="py-1 text-right">₹{{ "%.0f"|format(a.allocated_amount) }}</td>
+      <td class="py-1 text-right">{{ 'Reimbursed' if a.settlement_status == 1 else 'Due' }}</td>
+    </tr>
+    {% else %}<tr><td class="text-text-dim py-1">Nothing owed to them.</td></tr>{% endfor %}
+    </tbody>
+  </table>
 </div>
-
-<h2 class="font-semibold mb-2">Personally Paid Expenses (Payables)</h2>
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-  {% for e in expenses_paid %}
-  <a href="/expenses/{{ e.id }}" class="card rounded-xl p-3 hover:border-gold border-2 border-transparent transition block text-sm">
-    <p class="font-medium">{{ e.category }}</p>
-    <p class="text-gray-400">₹{{ e.amount }} · <span class="{{ 'text-red-400' if e.reimbursement_status.value=='due' else 'text-gray-500' }}">{{ e.reimbursement_status.value }}</span></p>
-  </a>
-  {% else %}<p class="text-gray-500 col-span-full text-sm">None</p>{% endfor %}
-</div>
+{% else %}
+<p class="text-text-dim">Player not found.</p>
+{% endif %}
 {% endblock %}

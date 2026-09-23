@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="text-xl font-bold text-gold mb-4">{{ team.name }} · Add Transaction</h1>
+
+<form method="post" action="/transactions" class="flex flex-col gap-3 max-w-lg" id="txn-form">
+  <input type="hidden" name="team_id" value="{{ team.id }}">
+
+  <label class="text-sm text-text-dim">Date
+    <input type="date" name="transaction_date" value="{{ today }}" required
+           class="w-full bg-card border border-border rounded px-3 py-2 mt-1">
+  </label>
+
+  <label class="text-sm text-text-dim">Type
+    <select name="type" id="type-select" onchange="toggleType()" required
+            class="w-full bg-card border border-border rounded px-3 py-2 mt-1">
+      <option value="income">Income</option>
+      <option value="expense">Expense</option>
+      <option value="transfer">Transfer</option>
+    </select>
+  </label>
+
+  <div id="section-income">
+    <label class="text-sm text-text-dim">Category
+      <select name="category_id" class="w-full bg-card border border-border rounded px-3 py-2 mt-1">
+        {% for c in income_cats %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
+      </select>
+    </label>
+    <label class="text-sm text-text-dim block mt-2">Paid By (leave blank for external / sponsor)
+      <select name="payer_account_id" class="w-full bg-card border border-border rounded px-3 py-2 mt-1">
+        <option value="">External / Other</option>
+        {% for p in parties %}<option value="{{ p.id }}">{{ p.label }}</option>{% endfor %}
+      </select>
+    </label>
+  </div>
+
+  <div id="section-expense" class="hidden">
+    <label class="text-sm text-text-dim">Category
+      <select name="category_id" class="w-full bg-card border border-border rounded px-3 py-2 mt-1">
+        {% for c in expense_cats %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
+      </select>
+    </label>
+    <label class="text-sm text-text-dim block mt-2">Paid By
+      <select name="payer_account_id_expense" class="w-full bg-card border border-border rounded px-3 py-2 mt-1">
+        {% for p in parties %}<option value="{{ p.id }}">{{ p.label }}</option>{% endfor %}
+      </select>
+    </label>
+    <label class="text-sm text-text-dim block mt-2">Charged To (select one or more; leave the team account unchecked below if players should bear it)</label>
+    <div class="flex flex-col gap-1 mt-1 max-h-40 overflow-y-auto border border-border rounded p-2">
+      {% for p in parties %}
+      <label class="text-sm flex items-center gap-2">
+        <input type="checkbox" name="charged_to_expense" value="{{ p.id }}"> {{ p.label }}
+      </label>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div id="section-transfer" class="hidden">
+    <label class="text-sm text-text-dim">From
+      <select name="payer_account_id_transfer" class="w-full bg-card border border-border rounded px-3 py-2 mt-1">
+        {% for p in parties %}<option value="{{ p.id }}">{{ p.label }}</option>{% endfor %}
+      </select>
+    </label>
+    <label class="text-sm text-text-dim block mt-2">To
+      <select name="to_account_id" class="w-full bg-card border border-border rounded px-3 py-2 mt-1">
+        {% for p in parties %}<option value="{{ p.id }}">{{ p.label }}</option>{% endfor %}
+      </select>
+    </label>
+  </div>
+
+  <label class="text-sm text-text-dim">Item / notes
+    <input name="item_description" class="w-full bg-card border border-border rounded px-3 py-2 mt-1">
+  </label>
+
+  <label class="text-sm text-text-dim">Amount (₹)
+    <input name="amount" inputmode="decimal" required class="w-full bg-card border border-border rounded px-3 py-2 mt-1">
+  </label>
+
+  <button class="bg-gold text-ink font-semibold rounded px-3 py-2 mt-2">Save</button>
+</form>
+
+<script>
+function toggleType() {
+  const t = document.getElementById('type-select').value;
+  document.getElementById('section-income').classList.toggle('hidden', t !== 'income');
+  document.getElementById('section-expense').classList.toggle('hidden', t !== 'expense');
+  document.getElementById('section-transfer').classList.toggle('hidden', t !== 'transfer');
+}
+// unify the differently-named payer selects into the single field the
+// backend expects, right before submit, based on which section is active
+document.getElementById('txn-form').addEventListener('submit', function () {
+  const t = document.getElementById('type-select').value;
+  const form = this;
+  if (t === 'expense') {
+    const sel = form.querySelector('[name=payer_account_id_expense]');
+    const hidden = document.createElement('input');
+    hidden.type = 'hidden'; hidden.name = 'payer_account_id'; hidden.value = sel.value;
+    form.appendChild(hidden);
+    form.querySelectorAll('[name=charged_to_expense]:checked').forEach(cb => {
+      const h = document.createElement('input');
+      h.type = 'hidden'; h.name = 'charged_to'; h.value = cb.value;
+      form.appendChild(h);
+    });
+  } else if (t === 'transfer') {
+    const sel = form.querySelector('[name=payer_account_id_transfer]');
+    const hidden = document.createElement('input');
+    hidden.type = 'hidden'; hidden.name = 'payer_account_id'; hidden.value = sel.value;
+    form.appendChild(hidden);
+  }
+});
+toggleType();
+</script>
+{% endblock %}

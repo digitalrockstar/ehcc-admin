@@ -1,106 +1,77 @@
 {% extends "base.html" %}
 {% block content %}
-<h1 class="text-2xl font-bold text-gold mb-4">Settings</h1>
+<h1 class="text-xl font-bold text-gold mb-4">Settings</h1>
 
-<h2 class="font-semibold mb-2">Team</h2>
-<form method="post" action="/setup" class="max-w-md space-y-4 mb-10">
-  <div>
-    <label class="block text-sm text-gray-400 mb-1">Team Name</label>
-    <input name="name" required value="{{ team.name if team else '' }}"
-      class="w-full bg-ink border border-gray-700 rounded px-3 py-2">
-  </div>
-  <div>
-    <label class="block text-sm text-gray-400 mb-1">Starting Balance (₹)</label>
-    <input name="starting_balance" type="text" inputmode="decimal" pattern="[0-9]*.?[0-9]*" required
-      value="{{ team.starting_balance if team else 0 }}"
-      class="w-full bg-ink border border-gray-700 rounded px-3 py-2">
-  </div>
-  <button class="bg-gold text-ink font-semibold px-4 py-2 rounded hover:opacity-90">Save</button>
-</form>
-
-<h2 class="font-semibold mb-2">Theme</h2>
-{% for group_name, group_themes in theme_groups.items() %}
-<h3 class="text-sm text-gray-400 mb-2 mt-4">{{ group_name }}</h3>
-<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-  {% for t in group_themes %}
-  <form method="post" action="/theme">
-    <input type="hidden" name="theme" value="{{ t }}">
-    <button class="w-full card rounded-lg p-3 text-sm text-left border-2 {{ 'border-gold' if t == current_theme else 'border-transparent' }} hover:border-gold transition">
-      <span class="font-medium">{{ t|replace('-', ' ')|title }}</span>
-      {% if t == current_theme %}<span class="block text-xs text-gold mt-1">Active</span>{% endif %}
-    </button>
-  </form>
-  {% endfor %}
-</div>
-{% endfor %}
-
-<h2 class="font-semibold mb-2">Team Expense Categories</h2>
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-3">
-  {% for c in expense_categories %}
-  <div class="card rounded-lg p-3 flex items-center justify-between gap-2">
-    <form method="post" action="/settings/expense-categories/{{ c.id }}/edit" class="flex-1">
-      <input name="name" value="{{ c.name }}" onchange="this.form.submit()" class="w-full bg-transparent text-sm border-b border-transparent hover:border-gray-700 focus:border-gold outline-none">
-    </form>
-    <form method="post" action="/settings/expense-categories/{{ c.id }}/delete">
-      <button class="text-red-400 hover:text-red-300 text-xs">✕</button>
+<div class="grid md:grid-cols-2 gap-4">
+  <div class="bg-card border border-border rounded-xl p-4">
+    <h2 class="font-semibold mb-2">Teams</h2>
+    <table class="w-full text-sm mb-3">
+      <tbody>
+      {% for t in teams %}
+      <tr class="border-t border-border">
+        <td class="py-1">{{ t.name }}{% if t.is_archived %} <span class="text-xs text-red-400">(archived)</span>{% endif %}</td>
+        <td class="py-1 text-right">₹{{ "%.0f"|format(t.starting_balance) }} start</td>
+        <td class="py-1 text-right">
+          {% if not t.is_archived %}
+          <form method="post" action="/settings/teams/{{ t.id }}/archive" class="inline">
+            <button class="text-xs text-red-400 hover:underline" onclick="return confirm('Archive this team?')">Archive</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <form method="post" action="/settings/teams" class="flex flex-col gap-2">
+      <input name="name" placeholder="New team name" required class="bg-ink border border-border rounded px-3 py-2">
+      <input name="starting_balance" inputmode="decimal" placeholder="Starting balance" value="0"
+             class="bg-ink border border-border rounded px-3 py-2">
+      <button class="bg-gold text-ink font-semibold rounded px-3 py-2">Add team</button>
     </form>
   </div>
-  {% endfor %}
-</div>
-<form method="post" action="/settings/expense-categories" class="flex gap-2 mb-8 max-w-md">
-  <input name="name" placeholder="New category" required class="flex-1 bg-ink border border-gray-700 rounded px-3 py-2 text-sm">
-  <button class="bg-gold text-ink px-3 py-2 rounded text-sm font-semibold">Add</button>
-</form>
 
-<h2 class="font-semibold mb-2">Additional Income Types</h2>
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-3">
-  {% for t in income_types %}
-  <div class="card rounded-lg p-3 flex items-center justify-between gap-2">
-    <form method="post" action="/settings/income-types/{{ t.id }}/edit" class="flex-1">
-      <input name="name" value="{{ t.name }}" onchange="this.form.submit()" class="w-full bg-transparent text-sm border-b border-transparent hover:border-gray-700 focus:border-gold outline-none">
-    </form>
-    <form method="post" action="/settings/income-types/{{ t.id }}/delete">
-      <button class="text-red-400 hover:text-red-300 text-xs">✕</button>
+  <div class="bg-card border border-border rounded-xl p-4">
+    <h2 class="font-semibold mb-2">Categories</h2>
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <div class="text-xs text-text-dim mb-1">Income</div>
+        {% for c in income_cats %}<div class="text-sm flex justify-between {% if c.is_archived %}opacity-40{% endif %}">
+          <span>{{ c.name }}</span>
+          {% if not c.is_archived %}<form method="post" action="/settings/categories/{{ c.id }}/archive"><button class="text-xs text-red-400">✕</button></form>{% endif %}
+        </div>{% endfor %}
+        <form method="post" action="/settings/categories" class="flex gap-1 mt-2">
+          <input type="hidden" name="type" value="income">
+          <input name="name" placeholder="New" class="bg-ink border border-border rounded px-2 py-1 text-sm w-full">
+          <button class="bg-gold text-ink text-xs rounded px-2">Add</button>
+        </form>
+      </div>
+      <div>
+        <div class="text-xs text-text-dim mb-1">Expense</div>
+        {% for c in expense_cats %}<div class="text-sm flex justify-between {% if c.is_archived %}opacity-40{% endif %}">
+          <span>{{ c.name }}</span>
+          {% if not c.is_archived %}<form method="post" action="/settings/categories/{{ c.id }}/archive"><button class="text-xs text-red-400">✕</button></form>{% endif %}
+        </div>{% endfor %}
+        <form method="post" action="/settings/categories" class="flex gap-1 mt-2">
+          <input type="hidden" name="type" value="expense">
+          <input name="name" placeholder="New" class="bg-ink border border-border rounded px-2 py-1 text-sm w-full">
+          <button class="bg-gold text-ink text-xs rounded px-2">Add</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-card border border-border rounded-xl p-4">
+    <h2 class="font-semibold mb-2">Themes</h2>
+    <p class="text-text-dim text-sm">{{ themes|length }} themes available — pick one from the sidebar on any page.</p>
+  </div>
+
+  <div class="bg-card border border-border rounded-xl p-4">
+    <h2 class="font-semibold mb-2 text-red-400">Data Reset</h2>
+    <form method="post" action="/settings/reset" onsubmit="return confirm('This deletes financial records. Are you sure?')" class="flex flex-col gap-2">
+      <label class="text-xs text-text-dim">Delete everything after this date/time (leave blank to delete ALL data)</label>
+      <input type="datetime-local" name="cutoff" class="bg-ink border border-border rounded px-3 py-2">
+      <button class="bg-red-500/80 text-white text-sm rounded px-3 py-2">Delete data</button>
     </form>
   </div>
-  {% endfor %}
-</div>
-<form method="post" action="/settings/income-types" class="flex gap-2 mb-8 max-w-md">
-  <input name="name" placeholder="New income type" required class="flex-1 bg-ink border border-gray-700 rounded px-3 py-2 text-sm">
-  <button class="bg-gold text-ink px-3 py-2 rounded text-sm font-semibold">Add</button>
-</form>
-
-<h2 class="font-semibold mb-2 text-red-400">Danger Zone</h2>
-<div class="card rounded-xl p-6 max-w-md border border-red-900">
-  {% if reset_error %}
-  <p class="text-red-400 text-sm mb-3">{{ reset_error }}</p>
-  {% endif %}
-  <p class="text-sm text-gray-400 mb-3">
-    Permanently deletes every team, player, match, expense, income, and transaction record.
-    Meant for wiping test data before a real season starts. This cannot be undone.
-  </p>
-  <form method="post" action="/settings/reset-data" class="space-y-2">
-    <label class="block text-xs text-gray-500">Type <span class="text-red-400 font-semibold">RESET</span> to confirm</label>
-    <input name="confirmation_text" required class="w-full bg-ink border border-red-800 rounded px-3 py-2">
-    <button class="bg-red-700 text-white font-semibold px-4 py-2 rounded text-sm">Delete All Data</button>
-  </form>
-</div>
-
-<div class="card rounded-xl p-6 max-w-md border border-red-900 mt-4">
-  {% if reset_before_error %}
-  <p class="text-red-400 text-sm mb-3">{{ reset_before_error }}</p>
-  {% endif %}
-  <p class="text-sm text-gray-400 mb-3">
-    Deletes matches, expenses, and income created before a given time (IST) - and their
-    linked transactions - while keeping everything created at or after it. Useful for
-    clearing test data before go-live without wiping data entered since.
-  </p>
-  <form method="post" action="/settings/reset-before" class="space-y-2">
-    <label class="block text-xs text-gray-500">Remove everything created before (IST)</label>
-    <input type="datetime-local" name="cutoff" value="{{ default_cutoff }}" required class="w-full bg-ink border border-gray-700 rounded px-3 py-2">
-    <label class="block text-xs text-gray-500 mt-2">Type <span class="text-red-400 font-semibold">RESET</span> to confirm</label>
-    <input name="confirmation_text" required class="w-full bg-ink border border-red-800 rounded px-3 py-2">
-    <button class="bg-red-700 text-white font-semibold px-4 py-2 rounded text-sm">Delete Data Before This Time</button>
-  </form>
 </div>
 {% endblock %}

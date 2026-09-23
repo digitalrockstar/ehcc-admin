@@ -17,30 +17,49 @@
 <script src="https://unpkg.com/htmx.org@1.9.12"></script>
 <link rel="stylesheet" href="/static/themes.css?v={{ css_version }}">
 </head>
-<body data-theme="{{ request.cookies.get('ehcc_theme', 'dark') }}" class="bg-ink min-h-screen">
+<body data-theme="{{ request.cookies.get('ehcc_theme', 'dark') }}" class="bg-ink text-white min-h-screen font-sans">
 
 <input type="checkbox" id="nav-toggle" class="peer hidden">
 <label for="nav-toggle" class="fixed inset-0 bg-black/60 z-40 hidden peer-checked:block md:hidden"></label>
 
-<aside class="fixed inset-y-0 left-0 z-50 w-64 bg-card border-r border-gray-800 p-4 flex flex-col gap-1
+<aside class="fixed inset-y-0 left-0 z-50 w-64 bg-card border-r border-border p-4 flex flex-col gap-1
               transform -translate-x-full peer-checked:translate-x-0 md:translate-x-0 transition-transform duration-200">
   <div class="flex items-center justify-between mb-4">
-    <a href="/" class="text-gold font-bold text-lg tracking-wide">EHCC{% if team %} · {{ team.name }}{% endif %}</a>
+    <a href="/" class="text-gold font-bold text-lg tracking-wide">EHCC</a>
     <label for="nav-toggle" class="md:hidden cursor-pointer text-2xl leading-none px-2">&times;</label>
   </div>
-  <a href="/" class="px-3 py-2 rounded hover:bg-gray-800/50 hover:text-gold text-sm flex items-center gap-2"><span>📊</span>Dashboard</a>
-  <a href="/matches" class="px-3 py-2 rounded hover:bg-gray-800/50 hover:text-gold text-sm flex items-center gap-2"><span>🏏</span>Matches</a>
-  <a href="/players" class="px-3 py-2 rounded hover:bg-gray-800/50 hover:text-gold text-sm flex items-center gap-2"><span>👥</span>Players</a>
-  <a href="/expenses" class="px-3 py-2 rounded hover:bg-gray-800/50 hover:text-gold text-sm flex items-center gap-2"><span>🧾</span>Team Expenses</a>
-  <a href="/reimbursements" class="px-3 py-2 rounded hover:bg-gray-800/50 hover:text-gold text-sm flex items-center gap-2"><span>💸</span>Reimbursements</a>
-  <a href="/income" class="px-3 py-2 rounded hover:bg-gray-800/50 hover:text-gold text-sm flex items-center gap-2"><span>➕</span>Additional Income</a>
-  <a href="/reports" class="px-3 py-2 rounded hover:bg-gray-800/50 hover:text-gold text-sm flex items-center gap-2"><span>📈</span>Reports</a>
-  <a href="/transactions" class="px-3 py-2 rounded hover:bg-gray-800/50 hover:text-gold text-sm flex items-center gap-2"><span>📜</span>Transactions</a>
-  <a href="/settings" class="px-3 py-2 rounded hover:bg-gray-800/50 hover:text-gold text-sm flex items-center gap-2"><span>⚙️</span>Settings</a>
+
+  {% if teams %}
+  <form method="post" action="/team-switch" class="mb-3">
+    <select name="team_id" onchange="this.form.submit()"
+            class="w-full bg-ink border border-border rounded px-2 py-2 text-sm">
+      {% for t in teams %}
+      <option value="{{ t.id }}" {% if team and t.id == team.id %}selected{% endif %}>{{ t.name }}</option>
+      {% endfor %}
+    </select>
+  </form>
+  {% endif %}
+
+  <a href="/{{ '?team_id=' ~ team.id if team else '' }}" class="px-3 py-2 rounded hover:bg-black/20 hover:text-gold text-sm flex items-center gap-2">📊 Dashboard</a>
+  <a href="/transactions/new{{ '?team_id=' ~ team.id if team else '' }}" class="px-3 py-2 rounded hover:bg-black/20 hover:text-gold text-sm flex items-center gap-2">➕ Add Transaction</a>
+  <a href="/transactions{{ '?team_id=' ~ team.id if team else '' }}" class="px-3 py-2 rounded hover:bg-black/20 hover:text-gold text-sm flex items-center gap-2">📜 Transactions</a>
+  <a href="/players{{ '?team_id=' ~ team.id if team else '' }}" class="px-3 py-2 rounded hover:bg-black/20 hover:text-gold text-sm flex items-center gap-2">👥 Players</a>
+  <a href="/settings" class="px-3 py-2 rounded hover:bg-black/20 hover:text-gold text-sm flex items-center gap-2">⚙️ Settings</a>
+
+  <div class="mt-auto pt-3 border-t border-border">
+    <form method="post" action="/theme" class="flex flex-col gap-1">
+      <label class="text-xs text-text-dim px-3">Theme</label>
+      <select name="theme" onchange="this.form.submit()" class="bg-ink border border-border rounded px-2 py-1 text-xs mx-3">
+        {% for th in ['dark','light','cricket-green','midnight','maroon','royal-blue','monochrome','luxury-gold','sky','sandstone','blossom','seafoam','linen','sunset','neon','tropical','electric-violet','citrus','crimson-steel','mint-slate'] %}
+        <option value="{{ th }}" {% if request.cookies.get('ehcc_theme','dark') == th %}selected{% endif %}>{{ th }}</option>
+        {% endfor %}
+      </select>
+    </form>
+  </div>
 </aside>
 
 <div class="md:pl-64 min-h-screen">
-  <header class="md:hidden flex items-center gap-3 p-4 border-b border-gray-800 sticky top-0 bg-ink z-30">
+  <header class="md:hidden flex items-center gap-3 p-4 border-b border-border sticky top-0 bg-ink z-30">
     <label for="nav-toggle" class="cursor-pointer text-2xl leading-none">&#9776;</label>
     <a href="/" class="text-gold font-bold">EHCC{% if team %} · {{ team.name }}{% endif %}</a>
   </header>

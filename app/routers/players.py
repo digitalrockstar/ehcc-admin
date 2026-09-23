@@ -1,106 +1,114 @@
 import csv
 import io
-from urllib.parse import quote
-from fastapi import APIRouter, Depends, Request, Form, UploadFile, File
-from ..auth import require_admin
+from fastapi import APIRouter, Depends, Form, Request, UploadFile, File
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import func
-from .. import models
-from ..database import get_db
-from ..deps import templates, get_current_team
-from ..services.player_service import list_players_with_balances, get_player_balance
 
-router = APIRouter(dependencies=[Depends(require_admin)])
+from ..database import get_db
+from ..auth import require_admin
+from ..deps import templates, get_selected_team, all_teams
+from .. import models
+from ..services.ledger_service import player_account, player_totals, log
+
+router = APIRouter()
 
 
 @router.get("/players")
-def list_players(request: Request, db: Session = Depends(get_db), upload_summary: str = None):
-    team = get_current_team(db)
-    rows = list_players_with_balances(db, team.id)
+def list_players(request: Request, db: Session = Depends(get_db)):
+    team = get_selected_team(request, db)
+    rows = []
+    if team:
+        players = db.query(models.Player).filter_by(team_id=team.id, is_archived=False).all()
+        for p in players:
+            totals = player_totals(db, p)
+            rows.append({"player": p, **totals})
+        rows.sort(key=lambda r: r["net_outstanding"], reverse=True)
     return templates.TemplateResponse("players.html", {
-        "request": request, "team": team, "rows": rows, "upload_summary": upload_summary,
+        "request": request, "team": team, "teams": all_teams(db), "rows": rows,
     })
 
 
 @router.post("/players")
-def add_player(name: str = Form(...), contact_number: str = Form(None), db: Session = Depends(get_db)):
-    team = get_current_team(db)
-    db.add(models.Player(team_id=team.id, name=name, contact_number=contact_number or None))
-    db.commit()
-    return RedirectResponse("/players", status_code=303)
+def add_player(request: Request, player_name: str = Form(...), mob_no: str = Form(""),
+               db: Session = Depends(get_db), _: bool = Depends(require_admin)):
+    team = get_selected_team(request, db)
+    if team:
+        p = models.Player(team_id=team.id, player_name=player_name.strip(), mob_no=mob_no.strip() or None)
+        db.add(p)
+        db.flush()
+        player_account(db, p)
+        log(db, "admin", "create", "player", p.id, player_name)
+        db.commit()
+    return RedirectResponse(f"/players?team_id={team.id if team else ''}", status_code=303)
 
 
-@router.post("/players/upload-csv")
-def upload_players_csv(file: UploadFile = File(...), db: Session = Depends(get_db)):
-    team = get_current_team(db)
-    raw = file.file.read().decode("utf-8-sig", errors="ignore")
-    reader = csv.DictReader(io.StringIO(raw))
-    # normalize header names: accept player_name/mob_no with flexible case/spacing
-    fieldmap = {(h or "").strip().lower(): h for h in (reader.fieldnames or [])}
-    name_col = fieldmap.get("player_name")
-    mobile_col = fieldmap.get("mob_no")
-
-    if not name_col:
-        return RedirectResponse(
-            "/players?upload_summary=" + quote("CSV must have a player_name column."), status_code=303
-        )
-
-    existing_names = {p.name.strip().lower() for p in db.query(models.Player).filter(models.Player.team_id == team.id)}
-    added, skipped_duplicate, skipped_blank, bad_mobile = 0, 0, 0, 0
-
-    for row in reader:
-        name = (row.get(name_col) or "").strip()
-        if not name:
-            skipped_blank += 1
-            continue
-        if name.lower() in existing_names:
-            skipped_duplicate += 1
-            continue
-
-        mobile = (row.get(mobile_col) or "").strip() if mobile_col else ""
-        if mobile and not (mobile.isdigit() and len(mobile) == 10):
-            bad_mobile += 1
-            mobile = ""
-
-        db.add(models.Player(team_id=team.id, name=name, contact_number=mobile or None))
-        existing_names.add(name.lower())
-        added += 1
-
-    db.commit()
-    summary = f"Added {added} player(s)."
-    if skipped_duplicate:
-        summary += f" Skipped {skipped_duplicate} duplicate(s)."
-    if skipped_blank:
-        summary += f" Skipped {skipped_blank} blank row(s)."
-    if bad_mobile:
-        summary += f" {bad_mobile} number(s) weren't 10 digits, added without contact."
-    return RedirectResponse(f"/players?upload_summary={quote(summary)}", status_code=303)
+@router.post("/players/{player_id}/edit")
+def edit_player(player_id: int, player_name: str = Form(...), mob_no: str = Form(""),
+                 db: Session = Depends(get_db), _: bool = Depends(require_admin)):
+    p = db.query(models.Player).get(player_id)
+    if p:
+        p.player_name = player_name.strip()
+        p.mob_no = mob_no.strip() or None
+        log(db, "admin", "edit", "player", p.id)
+        db.commit()
+    return RedirectResponse(f"/players/{player_id}", status_code=303)
 
 
-@router.post("/players/{player_id}/toggle-status")
-def toggle_status(player_id: int, db: Session = Depends(get_db)):
-    player = db.query(models.Player).get(player_id)
-    player.status = (
-        models.PlayerStatus.inactive if player.status == models.PlayerStatus.active
-        else models.PlayerStatus.active
-    )
-    db.commit()
-    return RedirectResponse("/players", status_code=303)
+@router.post("/players/{player_id}/archive")
+def archive_player(player_id: int, db: Session = Depends(get_db), _: bool = Depends(require_admin)):
+    p = db.query(models.Player).get(player_id)
+    team_id = p.team_id if p else ""
+    if p:
+        p.is_archived = True
+        log(db, "admin", "archive", "player", p.id)
+        db.commit()
+    return RedirectResponse(f"/players?team_id={team_id}", status_code=303)
+
+
+@router.post("/players/{player_id}/delete")
+def delete_player(player_id: int, db: Session = Depends(get_db), _: bool = Depends(require_admin)):
+    p = db.query(models.Player).get(player_id)
+    team_id = p.team_id if p else ""
+    if p:
+        acc = db.query(models.Account).filter_by(kind="player", player_id=p.id).first()
+        has_history = acc and db.query(models.Allocation).filter_by(account_id=acc.id).first()
+        if has_history:
+            p.is_archived = True  # never hard-delete a player with financial history
+        else:
+            if acc:
+                db.delete(acc)
+            db.delete(p)
+        log(db, "admin", "delete", "player", player_id)
+        db.commit()
+    return RedirectResponse(f"/players?team_id={team_id}", status_code=303)
+
+
+@router.post("/players/import-csv")
+def import_csv(request: Request, file: UploadFile = File(...),
+                db: Session = Depends(get_db), _: bool = Depends(require_admin)):
+    team = get_selected_team(request, db)
+    if team:
+        content = file.file.read().decode("utf-8-sig")
+        reader = csv.DictReader(io.StringIO(content))
+        for row in reader:
+            name = (row.get("player_name") or row.get("name") or "").strip()
+            if not name:
+                continue
+            mob = (row.get("mob_no") or row.get("mobile") or "").strip() or None
+            p = models.Player(team_id=team.id, player_name=name, mob_no=mob)
+            db.add(p)
+            db.flush()
+            player_account(db, p)
+        log(db, "admin", "csv-import", "player", None, file.filename)
+        db.commit()
+    return RedirectResponse(f"/players?team_id={team.id if team else ''}", status_code=303)
 
 
 @router.get("/players/{player_id}")
 def player_detail(player_id: int, request: Request, db: Session = Depends(get_db)):
-    player = db.query(models.Player).get(player_id)
-    team = get_current_team(db)
-
-    match_fees = db.query(models.MatchParticipant).filter(models.MatchParticipant.player_id == player_id).all()
-    allocations = db.query(models.ExpenseAllocation).filter(models.ExpenseAllocation.player_id == player_id).all()
-    expenses_paid = db.query(models.TeamExpense).filter(models.TeamExpense.paid_by_player_id == player_id).all()
-    balance = get_player_balance(db, player_id)
-
+    p = db.query(models.Player).get(player_id)
+    team = p.team if p else get_selected_team(request, db)
+    totals = player_totals(db, p) if p else {}
     return templates.TemplateResponse("player_detail.html", {
-        "request": request, "team": team, "player": player, "match_fees": match_fees,
-        "allocations": allocations, "expenses_paid": expenses_paid,
-        "owed_by_player": balance["owed_by"], "owed_to_player": balance["owed_to"], "net": balance["net"],
+        "request": request, "team": team, "teams": all_teams(db), "player": p, "totals": totals,
     })

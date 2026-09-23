@@ -1,186 +1,124 @@
-import enum
 from datetime import datetime, date
 from sqlalchemy import (
-    Column, Integer, String, Numeric, Date, DateTime, ForeignKey, Enum, Text, Boolean
+    Column, Integer, String, Numeric, Date, DateTime, Boolean,
+    ForeignKey, Text, UniqueConstraint,
 )
 from sqlalchemy.orm import relationship
 from .database import Base
 
 
-class MatchStatus(str, enum.Enum):
-    upcoming = "upcoming"
-    completed = "completed"
-    cancelled = "cancelled"
-
-
-class PaymentStatus(str, enum.Enum):
-    due = "due"
-    paid = "paid"
-
-
-class PaymentSource(str, enum.Enum):
-    account = "account"
-    player = "player"
-
-
-class ReimbursementStatus(str, enum.Enum):
-    na = "na"
-    due = "due"
-    paid = "paid"
-
-
-class PlayerStatus(str, enum.Enum):
-    active = "active"
-    inactive = "inactive"
-
-
 class Team(Base):
     __tablename__ = "teams"
     id = Column(Integer, primary_key=True)
-    name = Column(String, nullable=False)
+    name = Column(String, nullable=False, unique=True)
     starting_balance = Column(Numeric(12, 2), nullable=False, default=0)
+    is_archived = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    account = relationship("Account", uselist=False, back_populates="team")
     players = relationship("Player", back_populates="team")
-    matches = relationship("Match", back_populates="team")
 
 
 class Player(Base):
     __tablename__ = "players"
     id = Column(Integer, primary_key=True)
     team_id = Column(Integer, ForeignKey("teams.id"), nullable=False)
-    name = Column(String, nullable=False)
-    contact_number = Column(String, nullable=True)
-    status = Column(Enum(PlayerStatus), default=PlayerStatus.active, nullable=False)
+    player_name = Column(String, nullable=False)
+    mob_no = Column(String, nullable=True)
+    is_archived = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     team = relationship("Team", back_populates="players")
+    account = relationship("Account", uselist=False, back_populates="player")
 
 
-class ExpenseCategory(Base):
-    __tablename__ = "expense_categories"
+class Account(Base):
+    """Unifies team accounts and player accounts so either can be used
+    anywhere an account/party is required (Section 4/8)."""
+    __tablename__ = "accounts"
     id = Column(Integer, primary_key=True)
-    team_id = Column(Integer, ForeignKey("teams.id"), nullable=False)
-    name = Column(String, nullable=False)
+    kind = Column(String, nullable=False)  # 'team' | 'player'
+    team_id = Column(Integer, ForeignKey("teams.id"), nullable=True, unique=True)
+    player_id = Column(Integer, ForeignKey("players.id"), nullable=True, unique=True)
 
-
-class IncomeType(Base):
-    __tablename__ = "income_types"
-    id = Column(Integer, primary_key=True)
-    team_id = Column(Integer, ForeignKey("teams.id"), nullable=False)
-    name = Column(String, nullable=False)
-
-
-class Match(Base):
-    __tablename__ = "matches"
-    id = Column(Integer, primary_key=True)
-    team_id = Column(Integer, ForeignKey("teams.id"), nullable=False)
-    match_date = Column(Date, nullable=False)
-    status = Column(Enum(MatchStatus), default=MatchStatus.upcoming, nullable=False)
-    notes = Column(Text, nullable=True)
-    ground_fees = Column(Numeric(12, 2), nullable=False, default=0)
-    additional_amount = Column(Numeric(12, 2), nullable=False, default=0)
-    expense_paid_from_account = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-    team = relationship("Team", back_populates="matches")
-    participants = relationship("MatchParticipant", back_populates="match", cascade="all, delete-orphan")
+    team = relationship("Team", back_populates="account")
+    player = relationship("Player", back_populates="account")
 
     @property
-    def total_expense(self):
-        return self.ground_fees + self.additional_amount
+    def display_name(self):
+        if self.kind == "team":
+            return self.team.name if self.team else "Team account"
+        return self.player.player_name if self.player else "Player"
 
 
-class MatchParticipant(Base):
-    __tablename__ = "match_participants"
+class Category(Base):
+    __tablename__ = "categories"
     id = Column(Integer, primary_key=True)
-    match_id = Column(Integer, ForeignKey("matches.id"), nullable=False)
-    player_id = Column(Integer, ForeignKey("players.id"), nullable=False)
-    fee_amount = Column(Numeric(12, 2), nullable=False)
-    amount_paid = Column(Numeric(12, 2), nullable=True)
-    status = Column(Enum(PaymentStatus), default=PaymentStatus.due, nullable=False)
-    payment_date = Column(Date, nullable=True)
-
-    match = relationship("Match", back_populates="participants")
-    player = relationship("Player")
-
-
-class TeamExpense(Base):
-    __tablename__ = "team_expenses"
-    id = Column(Integer, primary_key=True)
-    team_id = Column(Integer, ForeignKey("teams.id"), nullable=False)
-    date = Column(Date, nullable=False)
-    category = Column(String, nullable=False)
-    amount = Column(Numeric(12, 2), nullable=False)
-    payment_source = Column(Enum(PaymentSource), nullable=False)
-    paid_by_player_id = Column(Integer, ForeignKey("players.id"), nullable=True)
-    reimbursement_status = Column(Enum(ReimbursementStatus), default=ReimbursementStatus.na, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-    paid_by = relationship("Player", foreign_keys=[paid_by_player_id])
-    allocations = relationship("ExpenseAllocation", back_populates="expense", cascade="all, delete-orphan")
-    reimbursement = relationship("Reimbursement", back_populates="expense", uselist=False)
-
-
-class ExpenseAllocation(Base):
-    __tablename__ = "expense_allocations"
-    id = Column(Integer, primary_key=True)
-    expense_id = Column(Integer, ForeignKey("team_expenses.id"), nullable=False)
-    player_id = Column(Integer, ForeignKey("players.id"), nullable=False)
-    amount = Column(Numeric(12, 2), nullable=False)
-    status = Column(Enum(PaymentStatus), default=PaymentStatus.due, nullable=False)
-    payment_date = Column(Date, nullable=True)
-
-    expense = relationship("TeamExpense", back_populates="allocations")
-    player = relationship("Player")
-
-
-class Reimbursement(Base):
-    __tablename__ = "reimbursements"
-    id = Column(Integer, primary_key=True)
-    expense_id = Column(Integer, ForeignKey("team_expenses.id"), nullable=False)
-    player_id = Column(Integer, ForeignKey("players.id"), nullable=False)
-    amount = Column(Numeric(12, 2), nullable=False)
-    date = Column(Date, nullable=False)
-
-    expense = relationship("TeamExpense", back_populates="reimbursement")
-    player = relationship("Player")
-
-
-class AdHocIncome(Base):
-    __tablename__ = "adhoc_income"
-    id = Column(Integer, primary_key=True)
-    team_id = Column(Integer, ForeignKey("teams.id"), nullable=False)
-    date = Column(Date, nullable=False)
-    income_type = Column(String, nullable=False)
-    amount = Column(Numeric(12, 2), nullable=False)
-    match_id = Column(Integer, ForeignKey("matches.id"), nullable=True)
-    notes = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-
-class TransactionType(str, enum.Enum):
-    starting_balance = "starting_balance"
-    match_expense_account = "match_expense_account"
-    match_fee_paid = "match_fee_paid"
-    team_expense_account = "team_expense_account"
-    player_receivable_paid = "player_receivable_paid"
-    reimbursement = "reimbursement"
-    adhoc_income = "adhoc_income"
+    type = Column(String, nullable=False)  # 'income' | 'expense'
+    name = Column(String, nullable=False)
+    is_archived = Column(Boolean, nullable=False, default=False)
+    __table_args__ = (UniqueConstraint("type", "name", name="uq_category_type_name"),)
 
 
 class Transaction(Base):
-    """Single source of truth ledger. Every actual cash movement affecting
-    the Team account is recorded here exactly once (Section 27 / 44)."""
     __tablename__ = "transactions"
     id = Column(Integer, primary_key=True)
     team_id = Column(Integer, ForeignKey("teams.id"), nullable=False)
-    date = Column(Date, nullable=False, default=date.today)
-    type = Column(Enum(TransactionType), nullable=False)
-    amount = Column(Numeric(12, 2), nullable=False)  # signed: + inflow, - outflow
-    party_player_id = Column(Integer, ForeignKey("players.id"), nullable=True)
-    match_id = Column(Integer, ForeignKey("matches.id"), nullable=True)
-    expense_id = Column(Integer, ForeignKey("team_expenses.id"), nullable=True)
-    income_id = Column(Integer, ForeignKey("adhoc_income.id"), nullable=True)
-    description = Column(String, nullable=True)
+    transaction_date = Column(Date, nullable=False, default=date.today)
+    type = Column(String, nullable=False)  # 'income' | 'expense' | 'transfer'
+    category_id = Column(Integer, ForeignKey("categories.id"), nullable=True)
+    item_description = Column(String, nullable=True)
+    amount = Column(Numeric(12, 2), nullable=False)
+    status = Column(String, nullable=False, default="active")  # active|voided|reversed
+    reversal_of_id = Column(Integer, ForeignKey("transactions.id"), nullable=True)
+    surplus_amount = Column(Numeric(12, 2), nullable=False, default=0)
+
+    # who physically paid / who is the transfer source (single account)
+    payer_account_id = Column(Integer, ForeignKey("accounts.id"), nullable=True)
+    # transfer destination (single account); for income, recipient is always the team account
+    recipient_account_id = Column(Integer, ForeignKey("accounts.id"), nullable=True)
+
     created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    team = relationship("Team")
+    category = relationship("Category")
+    payer_account = relationship("Account", foreign_keys=[payer_account_id])
+    recipient_account = relationship("Account", foreign_keys=[recipient_account_id])
+    allocations = relationship("Allocation", back_populates="transaction", foreign_keys="Allocation.transaction_id")
+
+
+class Allocation(Base):
+    """Per-account amount owed arising from an expense charged to one or
+    more players, or a payable owed to a player who personally paid.
+    direction: 'receivable' (account owes team) or 'payable' (team owes account)."""
+    __tablename__ = "allocations"
+    id = Column(Integer, primary_key=True)
+    transaction_id = Column(Integer, ForeignKey("transactions.id"), nullable=False)
+    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False)
+    direction = Column(String, nullable=False)  # 'receivable' | 'payable'
+    allocated_amount = Column(Numeric(12, 2), nullable=False)
+    settlement_status = Column(Integer, nullable=False, default=0)  # 0 or 1
+    settled_transaction_id = Column(Integer, ForeignKey("transactions.id"), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    transaction = relationship("Transaction", back_populates="allocations", foreign_keys=[transaction_id])
+    account = relationship("Account")
+    settled_transaction = relationship("Transaction", foreign_keys=[settled_transaction_id])
+
+
+class AuditLog(Base):
+    __tablename__ = "audit_log"
+    id = Column(Integer, primary_key=True)
+    actor = Column(String, nullable=True)
+    action = Column(String, nullable=False)
+    entity_type = Column(String, nullable=False)
+    entity_id = Column(Integer, nullable=True)
+    details = Column(Text, nullable=True)
+    ts = Column(DateTime, default=datetime.utcnow)
+
+
+class AppSetting(Base):
+    __tablename__ = "app_settings"
+    key = Column(String, primary_key=True)
+    value = Column(String, nullable=True)
