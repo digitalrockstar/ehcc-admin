@@ -35,14 +35,21 @@
 </aside>
 <div class="backdrop" id="backdrop"></div>
 <main class="container">
-  {% if show_teambar %}
-  <form class="teambar" method="get" action="{{ teambar_path }}">
-    <label for="team-select">Team</label>
-    <select id="team-select" name="team" data-team-switch="{{ teambar_path }}">
-      {% for t in teams %}<option value="{{ t.id }}" {% if team and t.id == team.id %}selected{% endif %}>{{ t.name }}{% if t.status != 'active' %} (archived){% endif %}</option>{% endfor %}
-    </select>
-    <noscript><button class="btn small">Go</button></noscript>
-  </form>
+  {% if show_teambar and teams %}
+  <div class="teambar"><span class="cap">Team</span>
+    {% if teams|length < 4 %}
+    <nav class="segmented" aria-label="Team">
+      {% for t in teams %}<a class="chip{% if team and t.id == team.id %} on{% endif %}" href="{{ teambar_path }}?team={{ t.id }}"{% if team and t.id == team.id %} aria-current="true"{% endif %}><span>{{ t.name }}{% if t.status != 'active' %} (archived){% endif %}</span></a>{% endfor %}
+    </nav>
+    {% else %}
+    <form method="get" action="{{ teambar_path }}">
+      <select id="team-select" name="team" aria-label="Team" data-team-switch="{{ teambar_path }}">
+        {% for t in teams %}<option value="{{ t.id }}" {% if team and t.id == team.id %}selected{% endif %}>{{ t.name }}{% if t.status != 'active' %} (archived){% endif %}</option>{% endfor %}
+      </select>
+      <noscript><button class="btn small">Go</button></noscript>
+    </form>
+    {% endif %}
+  </div>
   {% endif %}
   {% for kind, msg in flashes %}<div class="flash {{ kind }}" role="status">{{ msg }}</div>{% endfor %}
   {% block content %}{% endblock %}

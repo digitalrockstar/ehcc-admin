@@ -7,48 +7,40 @@
       action="{{ ('/transactions/%d/edit' % txn.id) if txn else '/transactions/new' }}">
   {{ ui.csrf_input() }}
   <input type="hidden" name="next" value="{{ ('/transactions/%d' % txn.id) if txn else ('/transactions?team=%d' % team.id) }}">
-  <label>Team
-    {% if txn %}<select disabled><option>{{ team.name }}</option></select><input type="hidden" name="team_id" value="{{ team.id }}">
-    {% else %}<select name="team_id" data-team-switch="/transactions/new" required>
-      {% for t in teams if t.status == 'active' %}<option value="{{ t.id }}" {% if t.id == team.id %}selected{% endif %}>{{ t.name }}</option>{% endfor %}</select>{% endif %}
-  </label>
-  <label>Date <input type="date" name="transaction_date" value="{{ f.transaction_date }}" required></label>
-  <label>Type
-    {% if txn %}<select id="f-type" disabled><option>{{ f.type|capitalize }}</option></select><input type="hidden" id="f-type-val" name="type" value="{{ f.type }}">
-    {% else %}<select id="f-type" name="type" required>{% for t in ['income','expense','transfer'] %}<option value="{{ t }}" {% if f.type == t %}selected{% endif %}>{{ t|capitalize }}</option>{% endfor %}</select>{% endif %}
-  </label>
-  <label data-for="expense income" {% if f.type == 'transfer' %}hidden{% endif %}>Item / Cost
-    <select id="f-category" name="category_id" data-current="{{ f.category_id or '' }}">
+  <div class="field"><span class="cap">Team</span>
+    {% if txn %}{{ ui.choice('team_display', [(team.id, team.name)], team.id, 'Team', disabled=True) }}<input type="hidden" name="team_id" value="{{ team.id }}">
+    {% else %}{{ ui.choice('team_id', team_opts, team.id, 'Team', 'f-team', required=True, attrs='data-team-switch="/transactions/new"') }}{% endif %}
+  </div>
+  <label class="field"><span class="cap">Date</span><input type="date" name="transaction_date" value="{{ f.transaction_date }}" required></label>
+  <div class="field"><span class="cap">Type</span>
+    {% if txn %}{{ ui.choice('type_display', type_opts, f.type, 'Type', disabled=True) }}<input type="hidden" name="type" value="{{ f.type }}">
+    {% else %}{{ ui.choice('type', type_opts, f.type, 'Type', 'f-type', required=True) }}{% endif %}
+  </div>
+  <div class="field" data-for="expense income" {% if f.type == 'transfer' %}hidden{% endif %}>
+    <label class="cap" for="f-category">Item / Cost</label>
+    <select id="f-category" name="category_id">
       <option value="">Select</option>
       {% for c in cat_json if c.kind == f.type %}<option value="{{ c.id }}" data-other="{{ 1 if c.other else '' }}" {% if f.category_id == c.id %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
     </select>
-  </label>
-  <label id="desc-wrap">Description <span class="hint" id="desc-hint"></span>
+  </div>
+  <label class="field" id="desc-wrap"><span class="cap">Description <span class="hint" id="desc-hint"></span></span>
     <input name="item_description" id="f-desc" maxlength="200" value="{{ f.item_description }}" placeholder="Free text. Required for 'Other'">
   </label>
 
-  <label data-for="expense" {% if f.type != 'expense' %}hidden{% endif %}>Paid by
-    <select name="paid_by" {% if f.type != 'expense' %}disabled{% endif %}>
-      <option value="">Select</option>
-      {% for a in parties %}<option value="{{ a.id }}" {% if f.paid_by == a.id %}selected{% endif %}>{{ a.name }}{% if a.kind == 'team' %} (team account){% endif %}</option>{% endfor %}
-    </select>
-  </label>
-  <label data-for="income" {% if f.type != 'income' %}hidden{% endif %}>Paid by
-    <select name="paid_by" {% if f.type != 'income' %}disabled{% endif %}>
-      <option value="">External (money comes from outside the team)</option>
-      {% for a in parties if a.kind == 'player' %}<option value="{{ a.id }}" {% if f.paid_by == a.id %}selected{% endif %}>{{ a.name }}</option>{% endfor %}
-    </select>
-    <span class="hint">Money lands in {{ team.name }} account. Pick a player when this is a player contribution.</span>
-  </label>
-  <label data-for="transfer" {% if f.type != 'transfer' %}hidden{% endif %}>Account in (receives)
-    <select name="account_in" {% if f.type != 'transfer' %}disabled{% endif %}>
-      <option value="">Select</option>{% for a in parties %}<option value="{{ a.id }}" {% if f.account_in == a.id %}selected{% endif %}>{{ a.name }}</option>{% endfor %}</select>
-  </label>
-  <label data-for="transfer" {% if f.type != 'transfer' %}hidden{% endif %}>Account out (pays)
-    <select name="account_out" {% if f.type != 'transfer' %}disabled{% endif %}>
-      <option value="">Select</option>{% for a in parties %}<option value="{{ a.id }}" {% if f.account_out == a.id %}selected{% endif %}>{{ a.name }}</option>{% endfor %}</select>
-  </label>
-  <label>Amount (INR) <input name="amount" inputmode="decimal" value="{{ f.amount }}" placeholder="0.00" required></label>
+  <div class="field" data-for="expense" {% if f.type != 'expense' %}hidden{% endif %}><span class="cap">Paid by</span>
+    {{ ui.choice('paid_by', party_opts, f.paid_by, 'Paid by', 'f-paid-by', placeholder='Select', required=True, disabled=(f.type != 'expense')) }}
+  </div>
+  <div class="field" data-for="income" {% if f.type != 'income' %}hidden{% endif %}><span class="cap">Paid by</span>
+    {{ ui.choice('paid_by_income', income_opts, f.paid_by, 'Paid by', 'f-paid-by-income', disabled=(f.type != 'income')) }}
+    <span class="hint">Money lands in the {{ team.name }} account. Pick a player when this is a player contribution.</span>
+  </div>
+  <div class="field" data-for="transfer" {% if f.type != 'transfer' %}hidden{% endif %}><span class="cap">Account in (receives)</span>
+    {{ ui.choice('account_in', party_opts, f.account_in, 'Account in', 'f-acc-in', placeholder='Select', disabled=(f.type != 'transfer')) }}
+  </div>
+  <div class="field" data-for="transfer" {% if f.type != 'transfer' %}hidden{% endif %}><span class="cap">Account out (pays)</span>
+    {{ ui.choice('account_out', party_opts, f.account_out, 'Account out', 'f-acc-out', placeholder='Select', disabled=(f.type != 'transfer')) }}
+  </div>
+  <label class="field"><span class="cap">Amount (INR)</span><input name="amount" inputmode="decimal" value="{{ f.amount }}" placeholder="0.00" required></label>
 
   <fieldset class="span" data-for="expense" {% if f.type != 'expense' %}hidden disabled{% endif %}>
     <legend>To be charged to <b id="sel-count">0 selected</b></legend>

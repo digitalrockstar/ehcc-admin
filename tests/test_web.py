@@ -203,3 +203,31 @@ def test_fonts_are_self_hosted(client):
 def test_digit_font_is_scaled_down(client):
     css = client.get("/static/app.css").text
     assert css.count("size-adjust:88%") == 3
+
+
+def test_choice_controls_buttons_under_four_dropdown_otherwise(admin, db, team):
+    from app.services import masters
+    html = admin.get(f"/transactions/new?team_id={team.id}").text
+    assert 'role="radiogroup" aria-label="Type"' in html and 'name="type" value="expense"' in html   # 3 options: buttons
+    assert 'aria-label="Team"' in html and 'name="team_id" value="%d"' % team.id in html            # 1 team: buttons
+    assert '<select name="paid_by"' in html                                                        # 7 parties: dropdown
+    assert 'class="segmented" aria-label="Team"' in admin.get("/").text                             # team bar as buttons
+    for n in ("B", "C", "D"):
+        masters.create_team(db, f"Team {n}", "t")
+    db.commit()                                                                                    # now 4 teams
+    home = admin.get("/").text
+    assert 'id="team-select"' in home and 'class="segmented" aria-label="Team"' not in home
+    assert '<select name="team_id"' in admin.get(f"/transactions/new?team_id={team.id}").text
+    tx = admin.get("/transactions").text
+    assert '<select name="type"' in tx                                                             # All + 3 = 4 options
+    assert 'role="radiogroup" aria-label="Show"' in tx                                             # 2 options: buttons
+
+
+def test_income_paid_by_uses_its_own_field(admin, db, team):
+    bala = account_of(db, team.id, "Bala").id
+    r = admin.post("/transactions/new", data={
+        "csrf_token": admin.csrf, "team_id": team.id, "transaction_date": "2026-09-05", "type": "income",
+        "category_id": cat(db, "Team Contribution", "income").id, "amount": "200", "paid_by_income": bala})
+    assert r.status_code == 303
+    t = db.scalars(select(m.Transaction)).one()
+    assert [ta.account_id for ta in t.accounts if ta.role == "paid_by"] == [bala]

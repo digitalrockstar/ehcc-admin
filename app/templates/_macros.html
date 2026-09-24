@@ -1,5 +1,22 @@
 {% macro csrf_input() %}<input type="hidden" name="csrf_token" value="{{ csrf }}">{% endmacro %}
 
+{# Choice control: fewer than 4 options render as buttons, otherwise a styled dropdown. options = [(value, label), ...] #}
+{% macro choice(name, options, value, label='', id=None, placeholder=None, required=False, attrs='', disabled=False) -%}
+{%- set cur = (value if value is not none else '')|string -%}
+{%- if options|length < 4 -%}
+<div class="segmented" role="radiogroup" aria-label="{{ label }}">
+  {%- for v, l in options %}
+  <label class="chip"><input type="radio" name="{{ name }}" value="{{ v }}" {{ 'checked' if v|string == cur }} {{ 'required' if required }} {{ 'disabled' if disabled }} {{ attrs|safe }}><span>{{ l }}</span></label>
+  {%- endfor %}
+</div>
+{%- else -%}
+<select name="{{ name }}" {% if id %}id="{{ id }}"{% endif %} aria-label="{{ label }}" {{ 'required' if required }} {{ 'disabled' if disabled }} {{ attrs|safe }}>
+  {%- if placeholder %}<option value="">{{ placeholder }}</option>{% endif -%}
+  {%- for v, l in options %}<option value="{{ v }}" {{ 'selected' if v|string == cur }}>{{ l }}</option>{% endfor -%}
+</select>
+{%- endif -%}
+{%- endmacro %}
+
 {% macro action(url, label, next, cls='btn small', confirm=None, extra=None) %}
 <form method="post" action="{{ url }}" class="inline"{% if confirm %} data-confirm="{{ confirm }}"{% endif %}>
   {{ csrf_input() }}<input type="hidden" name="next" value="{{ next }}">

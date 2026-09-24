@@ -84,12 +84,12 @@ fieldset{border:1px solid var(--border);border-radius:.6rem;padding:.8rem}legend
 @media (max-width:640px){body{font-size:15px}.container{padding:.6rem}th,td{padding:.45rem .5rem}}
 
 .chips{display:flex;flex-wrap:wrap;gap:.5rem;margin:.5rem 0}
-label.chip,.formgrid label.chip,.stack label.chip{position:relative;display:inline-flex;flex-direction:row;align-items:center;padding:.45rem 2rem .45rem .8rem;border:1.5px solid var(--border);border-radius:.6rem;background:var(--surface);color:var(--text);font-weight:500;cursor:pointer;user-select:none}
+label.chip,.formgrid label.chip,.stack label.chip,a.chip{position:relative;display:inline-flex;flex-direction:row;align-items:center;padding:.45rem 2rem .45rem .8rem;border:1.5px solid var(--border);border-radius:.6rem;background:var(--surface);color:var(--text);font-weight:500;cursor:pointer;user-select:none;text-decoration:none}
 label.chip input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
-label.chip::after,.chipbtn::after,.chipstate::after{content:"";position:absolute;top:.2rem;right:.25rem;width:1rem;height:1rem;border-radius:50%;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:.68rem;font-weight:700;line-height:1}
-label.chip:has(input:checked),.chipstate.on{background:var(--primary);color:var(--primary-text);border-color:var(--primary)}
-label.chip:has(input:checked)::after,.chipstate.on::after{content:"\2713";background:var(--primary-text);color:var(--primary);border-color:var(--primary-text)}
-label.chip:has(input:focus-visible){outline:3px solid var(--accent);outline-offset:2px}
+label.chip::after,a.chip::after,.chipbtn::after,.chipstate::after{content:"";position:absolute;top:.2rem;right:.25rem;width:1rem;height:1rem;border-radius:50%;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:.68rem;font-weight:700;line-height:1}
+label.chip:has(input:checked),a.chip.on,.chipstate.on{background:var(--primary);color:var(--primary-text);border-color:var(--primary)}
+label.chip:has(input:checked)::after,a.chip.on::after,.chipstate.on::after{content:"\2713";background:var(--primary-text);color:var(--primary);border-color:var(--primary-text)}
+label.chip:has(input:focus-visible),a.chip:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .chipbtn,.chipstate{position:relative;display:inline-flex;align-items:center;padding:.2rem 1.7rem .2rem .7rem;border:1.5px solid var(--border);border-radius:.5rem;background:var(--surface);color:var(--text);font-size:.85rem;font-weight:600}
 .chipbtn{cursor:pointer}.chipbtn:hover{border-color:var(--primary)}.chipstate{cursor:default}
 .flash{transition:opacity .5s ease}.flash.fade{opacity:0}
@@ -123,3 +123,17 @@ h1,h2,h3,h4,legend,.brand,thead th,.sw-head{font-family:"Num","Heading","Open Sa
 h1{font-size:1.3rem}h2{font-size:1rem}h3{font-size:.92rem}
 tr.dategroup th{text-transform:none;letter-spacing:0}
 .brand{font-size:1rem}
+
+/* Choice controls: <4 options are buttons, otherwise a themed dropdown */
+.field{display:flex;flex-direction:column;gap:.25rem}
+.cap{font-weight:600}
+.field .hint{font-weight:400}
+.segmented{display:flex;flex-wrap:wrap;gap:.5rem}
+.teambar{flex-wrap:wrap}
+.filters{align-items:flex-end}
+select{-webkit-appearance:none;appearance:none;min-height:2.4rem;padding:.4rem 2.3rem .4rem .75rem;border:1.5px solid var(--border);border-radius:.6rem;background-color:var(--surface);
+  background-image:linear-gradient(45deg,transparent 50%,var(--text) 50%),linear-gradient(135deg,var(--text) 50%,transparent 50%);
+  background-position:calc(100% - 1.15rem) 52%,calc(100% - .8rem) 52%;background-size:.36rem .36rem,.36rem .36rem;background-repeat:no-repeat;cursor:pointer;text-overflow:ellipsis}
+select:hover:not(:disabled){border-color:var(--primary)}
+select:disabled{opacity:.6;cursor:not-allowed}
+select option{background:var(--surface);color:var(--text)}

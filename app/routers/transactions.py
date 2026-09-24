@@ -11,7 +11,7 @@ from ..services import ledger
 from ..services.ledger import LedgerError, TxnInput
 from ..services.masters import parse_amount
 from ..services.views import describe, load_transactions_query
-from ..web import flash, page, redirect, resolve_team
+from ..web import all_teams, flash, page, redirect, resolve_team
 
 router = APIRouter()
 PAGE_SIZE = 100
@@ -30,14 +30,15 @@ def parse_form(form, team_id: int) -> TxnInput:
     return TxnInput(
         team_id=team_id, date=date, type=str(form.get("type", "")), amount=parse_amount(form.get("amount")),
         category_id=_int(form.get("category_id")), item_description=str(form.get("item_description", "")),
-        paid_by=_int(form.get("paid_by")), charged_to=[i for i in (_int(x) for x in form.getlist("charged_to")) if i],
+        paid_by=_int(form.get("paid_by_income" if form.get("type") == "income" else "paid_by")), charged_to=[i for i in (_int(x) for x in form.getlist("charged_to")) if i],
         account_in=_int(form.get("account_in")), account_out=_int(form.get("account_out")))
 
 
 def prefill_from_form(form) -> dict:
     return {"transaction_date": form.get("transaction_date", ""), "type": form.get("type", "expense"),
             "category_id": _int(form.get("category_id")), "item_description": form.get("item_description", ""),
-            "amount": form.get("amount", ""), "paid_by": _int(form.get("paid_by")),
+            "amount": form.get("amount", ""),
+            "paid_by": _int(form.get("paid_by")) or _int(form.get("paid_by_income")),
             "charged_to": [i for i in (_int(x) for x in form.getlist("charged_to")) if i],
             "account_in": _int(form.get("account_in")), "account_out": _int(form.get("account_out"))}
 
@@ -61,7 +62,14 @@ def form_page(request, db, team, f, *, txn=None, status_code=200, error=None):
                 for c in cats if c.status == "active" or c.id == keep]
     if error:
         flash(request, error, "err")
+    label = lambda a: a.name + (" (team account)" if a.kind == "team" else "")
+    party_opts = [(a.id, label(a)) for a in parties]
+    player_opts = [(a.id, a.name) for a in parties if a.kind == "player"]
+    team_opts = [(t.id, t.name) for t in all_teams(db) if t.status == "active"]
+    type_opts = [("income", "Income"), ("expense", "Expense"), ("transfer", "Transfer")]
     return page(request, db, "transaction_form.html", team=team, f=f, txn=txn, parties=parties,
+                party_opts=party_opts, income_opts=[("", "External")] + player_opts, team_opts=team_opts,
+                type_opts=type_opts,
                 cat_json=cat_json, step=int(ledger.rounding_step(db)), teambar_path="/transactions",
                 status_code=status_code)
 

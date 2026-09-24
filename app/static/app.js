@@ -38,7 +38,7 @@ function initTxnForm(form) {
   const hint = form.querySelector('#desc-hint');
   const amount = form.elements.amount;
   const checks = () => Array.from(form.querySelectorAll('input[name=charged_to]'));
-  const typeNow = () => form.elements.type.value;
+  const typeNow = () => (form.querySelector('input[name=type]:checked') || form.querySelector('input[type=hidden][name=type]')).value;
   const money = paise => '₹' + (paise / 100).toLocaleString('en-IN', {maximumFractionDigits: 2});
 
   function otherSelected() {
@@ -83,8 +83,7 @@ function initTxnForm(form) {
     refreshDesc();
     preview();
   }
-  const typeSel = form.querySelector('#f-type');
-  if (typeSel && !typeSel.disabled) typeSel.addEventListener('change', applyType);
+  form.querySelectorAll('[name=type]:not([type=hidden])').forEach(t => t.addEventListener('change', applyType));
   catSel && catSel.addEventListener('change', refreshDesc);
   amount.addEventListener('input', preview);
   form.addEventListener('change', e => { if (e.target.name === 'charged_to') preview(); });

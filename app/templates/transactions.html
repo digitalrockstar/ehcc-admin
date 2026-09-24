@@ -11,11 +11,10 @@
 </div>
 <form class="filters" method="get" action="/transactions">
   <input type="hidden" name="team" value="{{ team.id }}">
-  <label>Type <select name="type" data-autosubmit>
-    <option value="all">All</option>{% for t in ['income','expense','transfer'] %}<option value="{{ t }}" {% if type == t %}selected{% endif %}>{{ t|capitalize }}</option>{% endfor %}</select></label>
-  <label>Show <select name="show" data-autosubmit>
-    <option value="all" {% if show == 'all' %}selected{% endif %}>Active and voided</option>
-    <option value="active" {% if show == 'active' %}selected{% endif %}>Active only</option></select></label>
+  <div class="field"><span class="cap">Type</span>
+    {{ ui.choice('type', [('all', 'All'), ('income', 'Income'), ('expense', 'Expense'), ('transfer', 'Transfer')], type, 'Type', attrs='data-autosubmit') }}</div>
+  <div class="field"><span class="cap">Show</span>
+    {{ ui.choice('show', [('all', 'Active and voided'), ('active', 'Active only')], show, 'Show', attrs='data-autosubmit') }}</div>
   <noscript><button class="btn small">Filter</button></noscript>
 </form>
 {% if rows %}
