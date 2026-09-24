@@ -231,3 +231,31 @@ def test_income_paid_by_uses_its_own_field(admin, db, team):
     assert r.status_code == 303
     t = db.scalars(select(m.Transaction)).one()
     assert [ta.account_id for ta in t.accounts if ta.role == "paid_by"] == [bala]
+
+
+def test_settle_net_card_button_and_warnings(admin, db, team):
+    from .conftest import expense as mk
+    mk(db, team, 2421, "Akshay", ["Bala"])
+    mk(db, team, 318, "team", ["Akshay"], category="Nets")
+    aid = account_of(db, team.id, "Akshay").player_id
+    page_ = admin.get(f"/players/{aid}").text
+    assert "Pending settlement" in page_ and "Settle net" in page_ and "₹2,103" in page_
+    assert "still owes the team" in page_                                   # reimburse confirm warns
+    tx = admin.get(f"/transactions?team={team.id}").text
+    assert "settle net" in tx and "still owes the team" in tx               # list warns and links to the player
+    r = post(admin, f"/players/{aid}/settle-net")
+    assert r.status_code == 303
+    after = admin.get(f"/players/{aid}").text
+    assert "Pending settlement" not in after and "Net settlement received" in after
+    assert "Net settlement for Akshay" in admin.get(f"/transactions?team={team.id}").text
+    assert post(admin, f"/players/{aid}/settle-net").status_code == 303     # nothing left: flashed, no error
+    assert len(db.scalars(select(m.Transaction).where(m.Transaction.type == "transfer")).all()) == 1
+
+
+def test_viewer_sees_pending_summary_but_no_button(client, db, team):
+    from .conftest import expense as mk
+    mk(db, team, 1000, "Akshay", ["Bala"])
+    aid = account_of(db, team.id, "Akshay").player_id
+    html = client.get(f"/players/{aid}").text
+    assert "Pending settlement" in html and "Settle net" not in html
+    assert client.post(f"/players/{aid}/settle-net").status_code == 403

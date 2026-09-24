@@ -10,6 +10,18 @@
   <div class="card stat accent"><div class="lbl">Net outstanding</div><div class="val">{{ ui.net(net) }}</div>
     <div class="hint">Minus: player owes the team. Plus: team owes the player.</div></div>
 </section>
+{% if pend.owed_n or pend.reimb_n %}
+<div class="card" id="settle-net"><h2>Pending settlement</h2>
+  <dl class="facts">
+    <dt>Team owes {{ player.player_name }}</dt><dd>{{ pend.reimb|inr }} <span class="muted">for {{ pend.reimb_n }} unreimbursed expense{{ 's' if pend.reimb_n != 1 }}</span></dd>
+    <dt>{{ player.player_name }} owes team</dt><dd>{{ pend.owed|inr }} <span class="muted">across {{ pend.owed_n }} uncollected share{{ 's' if pend.owed_n != 1 }}</span></dd>
+    <dt>Difference</dt><dd><b>{% if pend.net > 0 %}Team pays {{ player.player_name }} {{ pend.net|inr }}{% elif pend.net < 0 %}{{ player.player_name }} pays team {{ (-pend.net)|inr }}{% else %}Nothing to pay, the two cancel out{% endif %}</b></dd>
+  </dl>
+  {% if is_admin %}
+    <p>{{ ui.action('/players/%d/settle-net' % player.id, 'Settle net ' ~ ((pend.net|abs)|inr), request.url.path, 'btn', 'Settle everything pending for %s with one transfer of %s?' % (player.player_name, ((pend.net|abs)|inr))) }}</p>
+    <p class="hint">One transfer for the difference, and every reimbursement and collection above is marked settled together. Undoing any of them undoes the whole batch. Or settle items one by one with the buttons below.</p>
+  {% endif %}
+</div>{% endif %}
 <div class="card flush scroll"><table>
   <thead><tr><th>Date</th><th>Type</th><th>Item / Category</th><th class="num">Amount</th><th>Role</th><th>Settlement</th><th class="num">Balance</th></tr></thead>
   <tbody>
@@ -21,11 +33,11 @@
       <td>
         {% if t.status == 'active' and e.role == 'Owed' %}
           {% if e.settled %}<span class="chipstate on">PAID</span>
-          {% elif is_admin and e.alloc.account.kind == 'player' %}{{ ui.action('/allocations/%d/collect' % e.alloc.id, 'Collect', request.url.path, 'chipbtn', 'Collect %s in full?' % (e.alloc.allocated_amount|inr)) }}
+          {% elif is_admin and e.alloc.account.kind == 'player' %}{{ ui.action('/allocations/%d/collect' % e.alloc.id, 'Collect', request.url.path, 'chipbtn', 'Collect %s in full?' % (e.alloc.allocated_amount|inr) ~ ((' The team owes %s %s for expenses they paid. To settle only the difference, use Settle net at the top of this page.' % (player.player_name, pend.reimb|inr)) if pend.reimb else '')) }}
           {% else %}<span class="chipstate">Pending</span>{% endif %}
         {% elif t.status == 'active' and e.role == 'Paid' and e.reimburse %}
           {% if e.settled %}<span class="chipstate on">Reimbursed</span>
-          {% elif is_admin %}{{ ui.action('/transactions/%d/reimburse' % t.id, 'Reimburse', request.url.path, 'chipbtn', 'Reimburse %s in full?' % (t.amount|inr)) }}
+          {% elif is_admin %}{{ ui.action('/transactions/%d/reimburse' % t.id, 'Reimburse', request.url.path, 'chipbtn', 'Reimburse %s in full?' % (t.amount|inr) ~ ((' %s still owes the team %s. To pay only the difference, use Settle net at the top of this page.' % (player.player_name, pend.owed|inr)) if pend.owed else '')) }}
           {% else %}<span class="chipstate">Not reimbursed</span>{% endif %}
         {% endif %}
       </td>

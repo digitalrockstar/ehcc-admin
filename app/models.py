@@ -180,6 +180,7 @@ class Settlement(Base):
     allocation_id: Mapped[int | None] = mapped_column(ForeignKey("allocations.id", ondelete="SET NULL"))
     amount: Mapped[Decimal] = mapped_column(MONEY)
     settlement_transaction_id: Mapped[int | None] = mapped_column(ForeignKey("transactions.id"), unique=True)
+    batch_id: Mapped[str | None] = mapped_column(String(32), index=True)
     status: Mapped[str] = mapped_column(String(10), default="active")
     created_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     reversed_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))

@@ -2,11 +2,12 @@
 from __future__ import annotations
 
 import datetime as dt
+import uuid
 from dataclasses import dataclass, field
 from decimal import ROUND_CEILING, Decimal, InvalidOperation
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import delete, func, select, update
+from sqlalchemy import delete, exists, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
@@ -255,9 +256,9 @@ def _payer_account(t: m.Transaction) -> m.Account | None:
     return None
 
 
-def _make_transfer(db: Session, t: m.Transaction, out_acct: m.Account, in_acct: m.Account,
+def _make_transfer(db: Session, team_id: int, out_acct: m.Account, in_acct: m.Account,
                    amount: Decimal, note: str, actor: str) -> m.Transaction:
-    tr = m.Transaction(team_id=t.team_id, transaction_date=today_ist(), type="transfer",
+    tr = m.Transaction(team_id=team_id, transaction_date=today_ist(), type="transfer",
                        item_description=note, amount=amount, status="active", created_by=actor)
     tr.accounts.append(m.TransactionAccount(account_id=out_acct.id, role="account_out"))
     tr.accounts.append(m.TransactionAccount(account_id=in_acct.id, role="account_in"))
@@ -281,7 +282,7 @@ def reimburse(db: Session, txn_id: int, actor: str) -> m.Settlement:
     team_acct = get_team_account(db, t.team_id)
     try:
         with db.begin_nested():
-            tr = _make_transfer(db, t, team_acct, payer, t.amount, f"Reimbursement for #{t.id}", actor)
+            tr = _make_transfer(db, t.team_id, team_acct, payer, t.amount, f"Reimbursement for #{t.id}", actor)
             s = m.Settlement(kind="reimbursement", transaction_id=t.id, account_id=payer.id,
                              amount=t.amount, settlement_transaction_id=tr.id, status="active")
             db.add(s)
@@ -309,7 +310,7 @@ def collect(db: Session, allocation_id: int, actor: str) -> m.Settlement:
     team_acct = get_team_account(db, t.team_id)
     try:
         with db.begin_nested():
-            tr = _make_transfer(db, t, a.account, team_acct, a.allocated_amount,
+            tr = _make_transfer(db, t.team_id, a.account, team_acct, a.allocated_amount,
                                 f"Collection for #{t.id}", actor)
             s = m.Settlement(kind="collection", transaction_id=t.id, account_id=a.account_id,
                              allocation_id=a.id, amount=a.allocated_amount,
@@ -339,31 +340,49 @@ def collect_all(db: Session, txn_id: int, actor: str) -> int:
 
 def _reverse_row(db: Session, s: m.Settlement, actor: str, reason: str | None) -> None:
     now = m.utcnow()
-    tr = db.get(m.Transaction, s.settlement_transaction_id)
+    tr = db.get(m.Transaction, s.settlement_transaction_id) if s.settlement_transaction_id else None
     if tr is not None and tr.status == "active":
         tr.status = "reversed"
         tr.voided_at, tr.voided_by, tr.void_reason = now, actor, reason or "Settlement reversed"
     s.status = "reversed"
     s.reversed_at = now
     if s.allocation_id:
-        a = db.get(m.Allocation, s.allocation_id)
-        if a is not None:
-            a.settlement_status = 0
-            a.settled_transaction_id = None
-    log(db, actor, "settlement.reverse", "settlement", s.id, tr.team_id if tr else None,
-        {"kind": s.kind, "amount": s.amount, "parent": s.transaction_id, "reason": reason})
+        al = db.get(m.Allocation, s.allocation_id)
+        if al is not None:
+            al.settlement_status = 0
+            al.settled_transaction_id = None
+    parent = db.get(m.Transaction, s.transaction_id)
+    log(db, actor, "settlement.reverse", "settlement", s.id, parent.team_id if parent else None,
+        {"kind": s.kind, "amount": s.amount, "parent": s.transaction_id, "batch": s.batch_id, "reason": reason})
 
 
-def reverse_settlement(db: Session, settlement_id: int, actor: str, reason: str | None = None) -> None:
+def _active_group(db: Session, s: m.Settlement) -> list[m.Settlement]:
+    """A net settlement is one batch: its rows are reversed together."""
+    if s.batch_id:
+        return list(db.scalars(select(m.Settlement).where(m.Settlement.batch_id == s.batch_id,
+                                                          m.Settlement.status == "active")
+                               .order_by(m.Settlement.id).execution_options(populate_existing=True)).all())
+    return [s]
+
+
+def _lock_all(db: Session, ids) -> None:
+    for i in sorted(set(ids)):
+        _lock_txn(db, i)
+
+
+def reverse_settlement(db: Session, settlement_id: int, actor: str, reason: str | None = None) -> int:
     s0 = db.get(m.Settlement, settlement_id)
     if s0 is None:
         raise LedgerError("Settlement not found.")
-    _lock_txn(db, s0.transaction_id)
+    _lock_all(db, [s0.transaction_id] + [g.transaction_id for g in _active_group(db, s0)])
     s = db.scalar(select(m.Settlement).where(m.Settlement.id == settlement_id)
                   .with_for_update().execution_options(populate_existing=True))
     if s.status != "active":
         raise LedgerError("This settlement is already reversed.")
-    _reverse_row(db, s, actor, reason)
+    group = _active_group(db, s)
+    for row in group:
+        _reverse_row(db, row, actor, reason)
+    return len(group)
 
 
 def void_transaction(db: Session, txn_id: int, actor: str, reason: str | None = None) -> str:
@@ -373,18 +392,133 @@ def void_transaction(db: Session, txn_id: int, actor: str, reason: str | None = 
     if link is not None:
         reverse_settlement(db, link.id, actor, reason)
         return "settlement reversed"
+    linked = db.scalars(select(m.Settlement).where(m.Settlement.transaction_id == txn_id,
+                                                   m.Settlement.status == "active")).all()
+    ids = {txn_id}
+    for s in linked:
+        ids.update(g.transaction_id for g in _active_group(db, s))
+    _lock_all(db, ids)
     t = _lock_txn(db, txn_id)
     if t.status != "active":
         raise LedgerError("This transaction is already voided or reversed.")
     t.status = "voided"
     t.voided_at, t.voided_by, t.void_reason = m.utcnow(), actor, reason
-    for s in db.scalars(select(m.Settlement).where(m.Settlement.transaction_id == t.id,
-                                                   m.Settlement.status == "active")).all():
-        _reverse_row(db, s, actor, "Parent transaction voided")
+    seen: set[int] = set()
+    for s in linked:
+        for row in _active_group(db, s):
+            if row.id not in seen and row.status == "active":
+                seen.add(row.id)
+                _reverse_row(db, row, actor, "Parent transaction voided")
     db.flush()
     log(db, actor, "transaction.void", "transaction", t.id, t.team_id,
         {"reason": reason, "amount": t.amount, "type": t.type})
     return "voided"
+
+
+# ---------------------------------------------------------------- pending and net settlement
+
+def pending_positions(db: Session, team_id: int) -> dict[int, dict]:
+    """Per player account: what the team still owes them (unreimbursed expenses they paid)
+    and what they still owe the team (uncollected shares)."""
+    out: dict[int, dict] = {}
+
+    def slot(aid):
+        return out.setdefault(aid, {"owed": ZERO, "owed_n": 0, "reimb": ZERO, "reimb_n": 0, "net": ZERO})
+
+    for aid, total, n in db.execute(
+            select(m.Allocation.account_id, func.sum(m.Allocation.allocated_amount), func.count())
+            .join(m.Transaction, m.Transaction.id == m.Allocation.transaction_id)
+            .join(m.Account, m.Account.id == m.Allocation.account_id)
+            .where(m.Transaction.team_id == team_id, m.Transaction.status == "active",
+                   m.Transaction.type == "expense", m.Allocation.settlement_status == 0, m.Account.kind == "player")
+            .group_by(m.Allocation.account_id)).all():
+        slot(aid).update(owed=q2(total), owed_n=n)
+    reimbursed = exists().where(m.Settlement.transaction_id == m.Transaction.id,
+                                m.Settlement.kind == "reimbursement", m.Settlement.status == "active")
+    for aid, total, n in db.execute(
+            select(m.TransactionAccount.account_id, func.sum(m.Transaction.amount), func.count())
+            .join(m.Transaction, m.Transaction.id == m.TransactionAccount.transaction_id)
+            .join(m.Account, m.Account.id == m.TransactionAccount.account_id)
+            .where(m.Transaction.team_id == team_id, m.Transaction.status == "active",
+                   m.Transaction.type == "expense", m.TransactionAccount.role == "paid_by",
+                   m.Account.kind == "player", ~reimbursed)
+            .group_by(m.TransactionAccount.account_id)).all():
+        slot(aid).update(reimb=q2(total), reimb_n=n)
+    for v in out.values():
+        v["net"] = v["reimb"] - v["owed"]
+    return out
+
+
+def pending_of(pending: dict | None, account_id: int | None) -> dict:
+    empty = {"owed": ZERO, "owed_n": 0, "reimb": ZERO, "reimb_n": 0, "net": ZERO}
+    return (pending or {}).get(account_id, empty)
+
+
+def _pending_items(db: Session, acct: m.Account):
+    reimbursed = exists().where(m.Settlement.transaction_id == m.Transaction.id,
+                                m.Settlement.kind == "reimbursement", m.Settlement.status == "active")
+    exps = db.scalars(
+        select(m.Transaction).join(m.TransactionAccount, m.TransactionAccount.transaction_id == m.Transaction.id)
+        .where(m.TransactionAccount.role == "paid_by", m.TransactionAccount.account_id == acct.id,
+               m.Transaction.status == "active", m.Transaction.type == "expense", ~reimbursed)
+        .order_by(m.Transaction.id).execution_options(populate_existing=True)).all()
+    allocs = db.scalars(
+        select(m.Allocation).join(m.Transaction, m.Transaction.id == m.Allocation.transaction_id)
+        .where(m.Allocation.account_id == acct.id, m.Allocation.settlement_status == 0,
+               m.Transaction.status == "active", m.Transaction.type == "expense")
+        .order_by(m.Allocation.id).execution_options(populate_existing=True)).all()
+    return list(exps), list(allocs)
+
+
+def settle_net(db: Session, player_id: int, actor: str) -> dict:
+    """Settle everything pending for a player with ONE transfer for the difference.
+    Reimbursements and collections are marked settled together and reverse together."""
+    p = db.get(m.Player, player_id)
+    if p is None:
+        raise LedgerError("Player not found.")
+    acct = p.account
+    exps, allocs = _pending_items(db, acct)
+    if not exps and not allocs:
+        raise LedgerError(f"Nothing is pending for {p.player_name}.")
+    _lock_all(db, [t.id for t in exps] + [a.transaction_id for a in allocs])
+    exps, allocs = _pending_items(db, acct)
+    if not exps and not allocs:
+        raise LedgerError(f"Nothing is pending for {p.player_name}.")
+    reimb_total = sum((t.amount for t in exps), ZERO)
+    coll_total = sum((a.allocated_amount for a in allocs), ZERO)
+    net = q2(reimb_total - coll_total)
+    team_acct = get_team_account(db, p.team_id)
+    batch = uuid.uuid4().hex
+    try:
+        with db.begin_nested():
+            tr = None
+            note = f"Net settlement for {p.player_name}"
+            if net > 0:
+                tr = _make_transfer(db, p.team_id, team_acct, acct, net, note, actor)
+            elif net < 0:
+                tr = _make_transfer(db, p.team_id, acct, team_acct, -net, note, actor)
+            first = True
+            for t in exps:
+                db.add(m.Settlement(kind="reimbursement", transaction_id=t.id, account_id=acct.id, amount=t.amount,
+                                    settlement_transaction_id=tr.id if (tr and first) else None,
+                                    batch_id=batch, status="active"))
+                first = False
+            for a in allocs:
+                db.add(m.Settlement(kind="collection", transaction_id=a.transaction_id, account_id=acct.id,
+                                    allocation_id=a.id, amount=a.allocated_amount,
+                                    settlement_transaction_id=tr.id if (tr and first) else None,
+                                    batch_id=batch, status="active"))
+                first = False
+                a.settlement_status = 1
+                a.settled_transaction_id = tr.id if tr else None
+            db.flush()
+    except IntegrityError:
+        raise LedgerError("Something on this player was settled at the same time. Reload and try again.")
+    log(db, actor, "settlement.net", "player", p.id, p.team_id,
+        {"net": net, "reimbursed": reimb_total, "collected": coll_total, "items": len(exps) + len(allocs),
+         "batch": batch, "transfer_id": tr.id if tr else None})
+    return {"net": net, "reimbursed": reimb_total, "collected": coll_total, "items": len(exps) + len(allocs),
+            "player": p.player_name}
 
 
 # ---------------------------------------------------------------- balances
@@ -491,11 +625,13 @@ def player_history(db: Session, player: m.Player) -> tuple[list[dict], Decimal]:
                            "reimburse": t.type == "expense", "settled": s is not None, "settlement": s})
         if ("account_out", acct.id) in roles:
             s = by_transfer.get(t.id)
-            events.append({"t": t, "role": "Collected from player" if s and s.kind == "collection" else "Transfer out",
+            events.append({"t": t, "role": ("Net settlement paid" if s and s.batch_id else
+                                            "Collected from player" if s and s.kind == "collection" else "Transfer out"),
                            "delta": -t.amount if active else ZERO, "amount": t.amount, "link": s})
         if ("account_in", acct.id) in roles:
             s = by_transfer.get(t.id)
-            events.append({"t": t, "role": "Reimbursed" if s and s.kind == "reimbursement" else "Transfer in",
+            events.append({"t": t, "role": ("Net settlement received" if s and s.batch_id else
+                                            "Reimbursed" if s and s.kind == "reimbursement" else "Transfer in"),
                            "delta": t.amount if active else ZERO, "amount": t.amount, "link": s})
     running = ZERO
     for e in events:
@@ -511,6 +647,20 @@ def reset_data(db: Session, actor: str, *, since: dt.datetime | None) -> dict:
     cond = (m.Transaction.created_at >= since) if since else (m.Transaction.id > 0)
     ids = select(m.Transaction.id).where(cond)
     n_txn = db.scalar(select(func.count()).select_from(m.Transaction).where(cond))
+    # Net-settlement batches touching anything being deleted are removed whole, reopening what survives.
+    batch_rows = db.scalars(select(m.Settlement).where(m.Settlement.batch_id.in_(
+        select(m.Settlement.batch_id).where(m.Settlement.batch_id.is_not(None),
+                                            m.Settlement.transaction_id.in_(ids)
+                                            | m.Settlement.settlement_transaction_id.in_(ids))))).all()
+    for s_ in batch_rows:
+        if s_.allocation_id:
+            al = db.get(m.Allocation, s_.allocation_id)
+            if al:
+                al.settlement_status, al.settled_transaction_id = 0, None
+    db.flush()
+    for s_ in batch_rows:
+        db.delete(s_)
+    db.flush()
     # Settlement transfers being removed whose parent stays: put the parent back to unsettled.
     orphaned = db.scalars(select(m.Settlement).where(
         m.Settlement.settlement_transaction_id.in_(ids), m.Settlement.transaction_id.not_in(ids))).all()

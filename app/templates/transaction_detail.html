@@ -19,7 +19,8 @@
     <dt>Charged to / Account out</dt><dd>{{ row.col2 }}</dd>
     {% if t.type == 'expense' and t.allocations|length > 1 %}<dt>Rounding surplus</dt><dd>{{ t.surplus_amount|inr }}</dd>{% endif %}
     {% if t.status != 'active' %}<dt>{{ t.status|capitalize }}</dt><dd>{{ t.voided_at|ist }} by {{ t.voided_by }}{% if t.void_reason %}. {{ t.void_reason }}{% endif %}</dd>{% endif %}
-    {% if parent %}<dt>Created by</dt><dd>{{ row.link.kind|capitalize }} on <a href="/transactions/{{ parent.id }}">#{{ parent.id }}</a></dd>{% endif %}
+    {% if row.link and row.link.batch_id %}<dt>Created by</dt><dd>Net settlement for {{ row.link.account.name }}</dd>
+    {% elif parent %}<dt>Created by</dt><dd>{{ row.link.kind|capitalize }} on <a href="/transactions/{{ parent.id }}">#{{ parent.id }}</a></dd>{% endif %}
   </dl>
 </div>
 
@@ -32,7 +33,7 @@
       <td>{% if a.account.kind == 'team' %}<span class="muted">Team pays directly</span>
         {% elif a.settlement_status == 1 %}<span class="chipstate on">PAID</span>
         {% elif t.status != 'active' %}<span class="muted">Void</span>
-        {% elif is_admin %}{{ ui.action('/allocations/%d/collect' % a.id, 'Collect', request.url.path, 'chipbtn', 'Collect %s in full?' % (a.allocated_amount|inr)) }}
+        {% elif is_admin %}{% set pw = (pend.get(a.account_id) or {}).get('reimb', 0) %}{{ ui.action('/allocations/%d/collect' % a.id, 'Collect', request.url.path, 'chipbtn', 'Collect %s in full?' % (a.allocated_amount|inr) ~ ((' The team owes this player %s for expenses they paid. To settle only the difference, use Settle net on their player page.' % (pw|inr)) if pw else '')) }}
         {% else %}<span class="chipstate">Pending</span>{% endif %}</td></tr>
   {% endfor %}</tbody></table></div>
   {% if is_admin and t.status == 'active' and row.coll and row.coll.done < row.coll.total %}
@@ -43,7 +44,7 @@
 
 {% if is_admin and t.status == 'active' %}
 <div class="card"><h2>{{ 'Reverse settlement' if row.link else 'Void transaction' }}</h2>
-  <p class="hint">{% if row.link %}This reverses the {{ row.link.kind }} and reopens the balance.{% else %}Voiding keeps the record for audit, removes it from balances, and reverses any reimbursement or collections linked to it.{% endif %}</p>
+  <p class="hint">{% if row.link and row.link.batch_id %}This undoes the whole net settlement and reopens every reimbursement and collection settled with it.{% elif row.link %}This reverses the {{ row.link.kind }} and reopens the balance.{% else %}Voiding keeps the record for audit, removes it from balances, and reverses any reimbursement or collections linked to it.{% endif %}</p>
   <form method="post" action="/transactions/{{ t.id }}/void" class="inline-form" data-confirm="{{ 'Reverse this settlement?' if row.link else 'Void this transaction?' }}">
     {{ ui.csrf_input() }}<input name="reason" maxlength="200" placeholder="Reason (optional)">
     <button class="btn danger">{{ 'Reverse' if row.link else 'Void' }}</button></form>

@@ -273,3 +273,122 @@ def test_reset_since_reopens_parent_when_only_settlement_removed(db, team):
     assert db.get(m.Transaction, t.id) is not None
     assert db.get(m.Allocation, a.id).settlement_status == 0
     assert db.scalars(select(m.Settlement)).all() == []
+
+
+# ---------------------------------------------------------------- net settlement
+
+def _owed_and_owing(db, team, owed_to_player, player_owes):
+    """Akshay fronted `owed_to_player` (charged to Bala) and owes `player_owes` (paid by the team)."""
+    expense(db, team, owed_to_player, "Akshay", ["Bala"])
+    expense(db, team, player_owes, "team", ["Akshay"], category="Nets")
+    return account_of(db, team.id, "Akshay")
+
+
+def test_pending_positions(db, team):
+    a = _owed_and_owing(db, team, 2421, 318)
+    p = ledger.pending_of(ledger.pending_positions(db, team.id), a.id)
+    assert (p["reimb"], p["owed"], p["net"]) == (D("2421.00"), D("318.00"), D("2103.00"))
+    assert (p["reimb_n"], p["owed_n"]) == (1, 1)
+
+
+def test_settle_net_pays_only_the_difference_in_one_transfer(db, team):
+    a = _owed_and_owing(db, team, 2421, 318)
+    res = ledger.settle_net(db, a.player_id, "t")
+    db.commit()
+    assert res["net"] == D("2103.00") and res["items"] == 2
+    transfers = db.scalars(select(m.Transaction).where(m.Transaction.type == "transfer")).all()
+    assert len(transfers) == 1 and transfers[0].amount == D("2103.00")
+    pos = ledger.account_positions(db, team.id)[a.id]
+    assert pos["net"] == D("0.00")                                   # player is fully square
+    assert ledger.team_summary(db, team.id)["balance"] == D("-2421.00")   # 318 the team paid directly + 2103 net
+    p = ledger.pending_of(ledger.pending_positions(db, team.id), a.id)
+    assert p["reimb_n"] == 0 and p["owed_n"] == 0
+    with pytest.raises(LedgerError):
+        ledger.settle_net(db, a.player_id, "t")                      # nothing left
+    db.rollback()
+    with pytest.raises(LedgerError):
+        ledger.reimburse(db, db.scalars(select(m.Transaction).where(m.Transaction.type == "expense")).first().id, "t")
+    db.rollback()
+
+
+def test_settle_net_direction_when_player_owes_more(db, team):
+    a = _owed_and_owing(db, team, 100, 500)
+    res = ledger.settle_net(db, a.player_id, "t")
+    db.commit()
+    assert res["net"] == D("-400.00")
+    tr = db.scalars(select(m.Transaction).where(m.Transaction.type == "transfer")).one()
+    assert tr.amount == D("400.00")
+    assert [x.account_id for x in tr.accounts if x.role == "account_out"] == [a.id]     # player pays the team
+    assert ledger.account_positions(db, team.id)[a.id]["net"] == D("0.00")
+    assert ledger.team_summary(db, team.id)["balance"] == D("400.00") - D("500.00")     # team paid 500 for nets, got 400
+
+
+def test_settle_net_when_it_cancels_out_moves_no_cash(db, team):
+    a = _owed_and_owing(db, team, 500, 500)
+    res = ledger.settle_net(db, a.player_id, "t")
+    db.commit()
+    assert res["net"] == 0
+    assert db.scalars(select(m.Transaction).where(m.Transaction.type == "transfer")).all() == []
+    assert ledger.account_positions(db, team.id)[a.id]["net"] == D("0.00")
+    p = ledger.pending_of(ledger.pending_positions(db, team.id), a.id)
+    assert p["reimb_n"] == 0 and p["owed_n"] == 0
+
+
+def test_undoing_one_item_undoes_the_whole_batch(db, team):
+    a = _owed_and_owing(db, team, 2421, 318)
+    ledger.settle_net(db, a.player_id, "t")
+    db.commit()
+    rows = db.scalars(select(m.Settlement).order_by(m.Settlement.id)).all()
+    assert len(rows) == 2 and len({r.batch_id for r in rows}) == 1
+    ledger.reverse_settlement(db, rows[1].id, "t")                   # undo via the collection row
+    db.commit()
+    db.expire_all()
+    assert all(r.status == "reversed" for r in db.scalars(select(m.Settlement)).all())
+    assert all(x.status == "reversed" for x in db.scalars(select(m.Transaction).where(m.Transaction.type == "transfer")))
+    assert all(al.settlement_status == 0 for al in db.scalars(select(m.Allocation)))
+    p = ledger.pending_of(ledger.pending_positions(db, team.id), a.id)
+    assert p["net"] == D("2103.00")
+    ledger.settle_net(db, a.player_id, "t")                           # can be settled again
+    db.commit()
+
+
+def test_voiding_the_net_transfer_or_a_parent_reverses_the_batch(db, team):
+    a = _owed_and_owing(db, team, 2421, 318)
+    ledger.settle_net(db, a.player_id, "t")
+    db.commit()
+    tr = db.scalars(select(m.Transaction).where(m.Transaction.type == "transfer")).one()
+    ledger.void_transaction(db, tr.id, "t")
+    db.commit()
+    assert {r.status for r in db.scalars(select(m.Settlement))} == {"reversed"}
+    ledger.settle_net(db, a.player_id, "t")
+    db.commit()
+    fronted = db.scalars(select(m.Transaction).where(m.Transaction.type == "expense", m.Transaction.amount == D("2421"))).one()
+    ledger.void_transaction(db, fronted.id, "t", "wrong")
+    db.commit()
+    db.expire_all()
+    assert all(x.status != "active" for x in db.scalars(select(m.Transaction).where(m.Transaction.type == "transfer")))
+    open_share = db.scalars(select(m.Allocation).where(m.Allocation.account_id == a.id)).one()
+    assert open_share.settlement_status == 0                          # the 318 reopens
+
+
+def test_reset_since_removes_a_batch_whole(db, team):
+    a = _owed_and_owing(db, team, 2421, 318)
+    import time
+    cutoff = m.utcnow() + dt.timedelta(seconds=1)
+    time.sleep(1.2)
+    ledger.settle_net(db, a.player_id, "t")
+    db.commit()
+    ledger.reset_data(db, "t", since=cutoff)
+    db.commit()
+    db.expire_all()
+    assert db.scalars(select(m.Settlement)).all() == []
+    assert all(al.settlement_status == 0 for al in db.scalars(select(m.Allocation)))
+    assert len(db.scalars(select(m.Transaction)).all()) == 2          # both expenses survive
+
+
+def test_player_history_labels_net_settlement(db, team):
+    a = _owed_and_owing(db, team, 2421, 318)
+    ledger.settle_net(db, a.player_id, "t")
+    db.commit()
+    events, net = ledger.player_history(db, a.player)
+    assert "Net settlement received" in [e["role"] for e in events] and net == 0

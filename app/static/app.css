@@ -137,3 +137,5 @@ select{-webkit-appearance:none;appearance:none;min-height:2.4rem;padding:.4rem 2
 select:hover:not(:disabled){border-color:var(--primary)}
 select:disabled{opacity:.6;cursor:not-allowed}
 select option{background:var(--surface);color:var(--text)}
+
+.hint.warn{display:block;margin:.1rem 0 .3rem;color:var(--accent)}

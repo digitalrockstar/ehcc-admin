@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from .. import models as m
 from ..db import get_db
+from ..formatting import inr
 from ..security import admin_form, admin_name
 from ..services import ledger, masters
 from ..services.ledger import LedgerError
@@ -30,8 +31,9 @@ def player_detail(player_id: int, request: Request, db: Session = Depends(get_db
     team = resolve_team(request, db, force=p.team)
     events, net = ledger.player_history(db, p)
     owed = sum((e["delta"] for e in events if e["role"] == "Owed"), ledger.ZERO)
+    pend = ledger.pending_of(ledger.pending_positions(db, p.team_id), p.account.id)
     return page(request, db, "player_detail.html", team=team, player=p, events=events, net=net,
-                owed=owed, paid=owed - net, teambar_path="/players")
+                owed=owed, paid=owed - net, pend=pend, teambar_path="/players")
 
 
 def _team_from(form, db):
@@ -84,6 +86,19 @@ async def import_csv(request: Request, form=Depends(admin_form), db: Session = D
     for err in res["errors"][:5]:
         flash(request, err, "err")
     return redirect(request, form, "/players")
+
+
+@router.post("/players/{player_id}/settle-net")
+def settle_net(player_id: int, request: Request, form=Depends(admin_form), db: Session = Depends(get_db)):
+    def msg(r):
+        who, net = r["player"], r["net"]
+        if net > 0:
+            return f"Net settlement done. The team paid {who} {inr(net)} in one transfer."
+        if net < 0:
+            return f"Net settlement done. {who} paid the team {inr(-net)} in one transfer."
+        return f"Settled {r['items']} items with no cash movement. What the team owed {who} and what {who} owed the team cancel out."
+    return _run(request, form, db, lambda: ledger.settle_net(db, player_id, admin_name(request)), msg,
+                f"/players/{player_id}")
 
 
 @router.post("/players/{player_id}/edit")

@@ -5,6 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload, selectinload
 
 from .. import models as m
+from .ledger import pending_of
 
 
 def party_label(accts: list[m.Account]) -> str:
@@ -33,7 +34,7 @@ def load_transactions_query():
     )
 
 
-def describe(db: Session, txns: list[m.Transaction]) -> list[dict]:
+def describe(db: Session, txns: list[m.Transaction], pending: dict | None = None) -> list[dict]:
     ids = [t.id for t in txns]
     parents: dict[int, list[m.Settlement]] = {}
     links: dict[int, m.Settlement] = {}
@@ -60,11 +61,17 @@ def describe(db: Session, txns: list[m.Transaction]) -> list[dict]:
             if paid_by and paid_by[0].kind == "player":
                 s = next((x for x in parents.get(t.id, []) if x.kind == "reimbursement"), None)
                 row["reimb"], row["reimb_s"] = ("paid" if s else "pay"), s
+                if not s:
+                    row.update(reimb_warn=pending_of(pending, paid_by[0].id)["owed"], reimb_pid=paid_by[0].player_id,
+                               reimb_who=paid_by[0].name)
             player_allocs = [a for a in t.allocations if a.account.kind == "player"]
             if player_allocs:
+                who = player_allocs[0].account
                 row["coll"] = {"total": len(player_allocs),
                                "done": sum(1 for a in player_allocs if a.settlement_status == 1),
                                "single": player_allocs[0] if len(player_allocs) == 1 else None,
+                               "warn": pending_of(pending, who.id)["reimb"] if len(player_allocs) == 1 else 0,
+                               "pid": who.player_id, "who": who.name,
                                "single_s": next((x for x in parents.get(t.id, [])
                                                  if x.kind == "collection" and len(player_allocs) == 1), None)}
         rows.append(row)

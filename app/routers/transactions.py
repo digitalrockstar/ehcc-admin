@@ -90,7 +90,8 @@ def list_transactions(request: Request, type: str = "all", show: str = "all", p:
     p = max(p, 1)
     txns = db.scalars(q.order_by(m.Transaction.transaction_date.desc(), m.Transaction.id.desc())
                       .limit(PAGE_SIZE).offset((p - 1) * PAGE_SIZE)).unique().all()
-    return page(request, db, "transactions.html", team=team, rows=describe(db, list(txns)),
+    pending = ledger.pending_positions(db, team.id)
+    return page(request, db, "transactions.html", team=team, rows=describe(db, list(txns), pending),
                 account=ledger.get_team_account(db, team.id), type=type, show=show, p=p,
                 pages=max(1, -(-total // PAGE_SIZE)), total=total)
 
@@ -160,12 +161,14 @@ def detail(txn_id: int, request: Request, db: Session = Depends(get_db)):
     if t is None:
         raise HTTPException(404, "Transaction not found.")
     team = resolve_team(request, db, force=t.team)
-    row = describe(db, [t])[0]
+    pending = ledger.pending_positions(db, t.team_id)
+    row = describe(db, [t], pending)[0]
     history = db.scalars(select(m.AuditLog).where(
         ((m.AuditLog.entity_type == "transaction") & (m.AuditLog.entity_id == t.id))
     ).order_by(m.AuditLog.id)).all()
-    parent = db.get(m.Transaction, row["link"].transaction_id) if row["link"] else None
-    return page(request, db, "transaction_detail.html", team=team, row=row, history=history, parent=parent,
+    link = row["link"]
+    parent = db.get(m.Transaction, link.transaction_id) if link and not link.batch_id else None
+    return page(request, db, "transaction_detail.html", team=team, row=row, history=history, parent=parent, pend=pending,
                 teambar_path="/transactions")
 
 
