@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block title %}{{ player.player_name }}{% endblock %}
+{% block content %}
+<p><a href="/players?team={{ team.id }}">&larr; Players</a></p>
+<div class="head"><h1>{{ player.player_name }} <span class="muted small">{{ team.name }}{% if player.status == 'archived' %} &middot; archived{% endif %}</span></h1></div>
+<section class="cards">
+  <div class="card stat"><div class="lbl">Total owed</div><div class="val">{{ owed|inr }}</div></div>
+  <div class="card stat"><div class="lbl">Total paid</div><div class="val">{{ paid|inr }}</div></div>
+  <div class="card stat accent"><div class="lbl">Net outstanding</div><div class="val">{{ ui.net(net) }}</div>
+    <div class="hint">Owed minus paid</div></div>
+</section>
+<div class="card flush scroll"><table>
+  <thead><tr><th>Date</th><th>Type</th><th>Item / Category</th><th class="num">Amount</th><th>Role</th><th>Settlement</th><th class="num">Balance</th></tr></thead>
+  <tbody>
+  {% for e in events %}{% set t = e.t %}
+    <tr class="{{ 'voided' if t.status != 'active' }}">
+      <td>{{ t.transaction_date|dmy }}</td><td>{{ t.type|capitalize }} {{ ui.status(t) }}</td>
+      <td><a href="/transactions/{{ t.id }}">{{ item_label(t) }}</a></td>
+      <td class="num">{{ e.amount|inr }}</td><td>{{ e.role }}</td>
+      <td>
+        {% if t.status == 'active' and e.role == 'Owed' %}
+          {% if e.settled %}<span class="badge pos">PAID</span>
+          {% elif is_admin and e.alloc.account.kind == 'player' %}{{ ui.action('/allocations/%d/collect' % e.alloc.id, 'Collect', request.url.path, 'btn small', 'Collect %s in full?' % (e.alloc.allocated_amount|inr)) }}
+          {% else %}<span class="badge">Pending</span>{% endif %}
+        {% elif t.status == 'active' and e.role == 'Paid' and e.reimburse %}
+          {% if e.settled %}<span class="badge pos">Reimbursed</span>
+          {% elif is_admin %}{{ ui.action('/transactions/%d/reimburse' % t.id, 'Reimburse', request.url.path, 'btn small', 'Reimburse %s in full?' % (t.amount|inr)) }}
+          {% else %}<span class="badge">Not reimbursed</span>{% endif %}
+        {% endif %}
+      </td>
+      <td class="num">{% if t.status == 'active' %}{{ ui.net(e.running) }}{% else %}<span class="muted">—</span>{% endif %}</td>
+    </tr>
+  {% else %}<tr><td colspan="7" class="muted">No transactions for this player yet.</td></tr>{% endfor %}
+  </tbody></table></div>
+<p class="hint">Owed adds to the balance. Money the player paid, or handed to the team, takes it down. A negative balance is a credit: the team owes the player.</p>
+{% endblock %}

@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block title %}Settings{% endblock %}
+{% block content %}
+<h1>Settings</h1>
+<nav class="tabs jump"><a href="#teams">Teams</a><a href="#categories">Categories</a><a href="#themes">Themes</a><a href="#rounding">Rounding</a><a href="#reset">Data reset</a><a href="/audit">Audit log</a></nav>
+
+<section class="card" id="teams"><h2>Teams and team accounts</h2>
+  <p class="hint">Each team gets its own team account when it is created. The starting balance belongs to that account.</p>
+  <div class="scroll"><table>
+    <thead><tr><th>Team</th><th>Team account</th><th>Status</th><th class="num">Players</th><th>Starting balance</th><th></th></tr></thead>
+    <tbody>{% for r in rows %}
+      <tr class="{{ 'voided' if r.team.status == 'archived' }}">
+        <td><form method="post" action="/settings/teams/{{ r.team.id }}/edit" class="inline-form">{{ ui.csrf_input() }}
+          <input name="name" value="{{ r.team.name }}" maxlength="80" required aria-label="Team name"><button class="btn small ghost">Rename</button></form></td>
+        <td>{{ r.account.name }}</td><td>{{ r.team.status|capitalize }}</td><td class="num">{{ r.players }}</td>
+        <td><form method="post" action="/settings/teams/{{ r.team.id }}/opening-balance" class="inline-form">{{ ui.csrf_input() }}
+          <input name="amount" value="{{ r.opening }}" inputmode="decimal" aria-label="Starting balance"><button class="btn small ghost">Save</button></form></td>
+        <td>{{ ui.action('/settings/teams/%d/archive' % r.team.id, 'Restore' if r.team.status == 'archived' else 'Archive', '/settings#teams', 'linkbtn', 'Archive this team? Its history stays.' if r.team.status == 'active' else None, {'archive': '0' if r.team.status == 'archived' else '1'}) }}</td>
+      </tr>{% else %}<tr><td colspan="6" class="muted">No teams yet. Add the first one below.</td></tr>{% endfor %}</tbody></table></div>
+  <h3>Add team</h3>
+  <form method="post" action="/settings/teams/add" class="inline-form">{{ ui.csrf_input() }}
+    <input name="name" placeholder="Team name" maxlength="80" required>
+    <input name="opening" placeholder="Starting balance (optional)" inputmode="decimal">
+    <button class="btn">Create team and account</button></form>
+</section>
+
+<section class="card" id="categories"><h2>Categories</h2>
+  <div class="two">
+  {% for kind in ['expense', 'income'] %}
+    <div><h3>{{ kind|capitalize }}</h3>
+      <ul class="catlist">{% for c in categories if c.kind == kind %}
+        <li class="{{ 'voided' if c.status == 'archived' }}">
+          <form method="post" action="/settings/categories/{{ c.id }}/edit" class="inline-form">{{ ui.csrf_input() }}
+            <input name="name" value="{{ c.name }}" maxlength="60" required aria-label="Category name"><button class="btn small ghost">Rename</button></form>
+          {{ ui.action('/settings/categories/%d/archive' % c.id, 'Restore' if c.status == 'archived' else 'Archive', '/settings#categories', 'linkbtn', None, {'archive': '0' if c.status == 'archived' else '1'}) }}
+        </li>{% endfor %}</ul>
+      <form method="post" action="/settings/categories/add" class="inline-form">{{ ui.csrf_input() }}<input type="hidden" name="kind" value="{{ kind }}">
+        <input name="name" placeholder="New {{ kind }} category" maxlength="60" required><button class="btn small">Add</button></form>
+    </div>
+  {% endfor %}
+  </div>
+  <p class="hint">A category named Other always asks for a free-text description on the transaction.</p>
+</section>
+
+<section class="card" id="themes"><h2>Themes</h2>
+  <p class="hint">{{ themes|length }} themes. Every text colour is checked against its background for readability.</p>
+  <div class="themes">
+    {% for th in themes %}
+    <form method="post" action="/settings/theme">{{ ui.csrf_input() }}<input type="hidden" name="theme" value="{{ th.slug }}">
+      <button class="swatch {{ 'on' if th.slug == current_theme }}" style="{% for k, v in th.vars.items() %}{{ k }}:{{ v }};{% endfor %}" aria-label="Apply theme {{ th.label }}">
+        <span class="sw-head">{{ th.label }}</span><span class="sw-body">Aa 1,234</span>
+        <span class="sw-chip">Primary</span></button></form>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="card" id="rounding"><h2>Allocation rounding</h2>
+  <p>When an expense is split across several parties, each share is rounded up to the nearest amount below. The difference is kept as team surplus.</p>
+  <form method="post" action="/settings/rounding" class="inline-form">{{ ui.csrf_input() }}
+    <label>Round up to nearest ₹ <input name="step" value="{{ step }}" inputmode="numeric" size="4"></label><button class="btn small">Save</button></form>
+</section>
+
+<section class="card danger-zone" id="reset"><h2>Data reset</h2>
+  <p>Deletes transactions, allocations and settlements. Teams, players, categories and starting balances stay. The audit log is never deleted and records this reset.</p>
+  <form method="post" action="/settings/reset" class="stack" data-confirm="This permanently deletes ledger data. Continue?">{{ ui.csrf_input() }}
+    <label class="check"><input type="radio" name="scope" value="all" checked> Delete all transactions</label>
+    <label class="check"><input type="radio" name="scope" value="since"> Delete transactions recorded on or after
+      <input type="datetime-local" name="since"> (India time)</label>
+    <label>Type DELETE to confirm <input name="confirm" autocomplete="off"></label>
+    <button class="btn danger">Delete data</button></form>
+</section>
+{% endblock %}

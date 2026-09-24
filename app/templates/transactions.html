@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block title %}Transactions{% endblock %}
+{% block content %}
+{% if not team %}
+  <div class="card narrow"><h1>No teams yet</h1><p>Create a team in Settings first.</p></div>
+{% else %}
+<div class="head">
+  <h1>Transactions <span class="muted small">{{ team.name }} &middot; {{ account.name }}</span></h1>
+  {% if is_admin and team.status == 'active' %}<a class="btn" href="/transactions/new?team_id={{ team.id }}">+ Add transaction</a>{% endif %}
+</div>
+<form class="filters" method="get" action="/transactions">
+  <input type="hidden" name="team" value="{{ team.id }}">
+  <label>Type <select name="type" data-autosubmit>
+    <option value="all">All</option>{% for t in ['income','expense','transfer'] %}<option value="{{ t }}" {% if type == t %}selected{% endif %}>{{ t|capitalize }}</option>{% endfor %}</select></label>
+  <label>Show <select name="show" data-autosubmit>
+    <option value="all" {% if show == 'all' %}selected{% endif %}>Active and voided</option>
+    <option value="active" {% if show == 'active' %}selected{% endif %}>Active only</option></select></label>
+  <noscript><button class="btn small">Filter</button></noscript>
+</form>
+{% if rows %}
+<div class="card flush scroll"><table class="txns">
+  <thead><tr><th>#</th><th>Type</th><th>Item / Category</th><th class="num">Amount</th><th>Paid By / Account In</th><th>Charged To / Account Out</th><th>Reimbursement / Collection</th>{% if is_admin %}<th></th>{% endif %}</tr></thead>
+  <tbody>
+  {% set ns = namespace(d=None) %}
+  {% for r in rows %}
+    {% if ns.d != r.t.transaction_date %}{% set ns.d = r.t.transaction_date %}
+      <tr class="dategroup"><th colspan="{{ 8 if is_admin else 7 }}">{{ r.t.transaction_date|dmy }} <span class="muted">&middot; {{ team.name }} &middot; {{ account.name }}</span></th></tr>
+    {% endif %}
+    <tr class="{{ 'voided' if r.t.status != 'active' }}">
+      <td class="muted">{{ r.t.id }}</td>
+      <td>{{ r.t.type|capitalize }} {{ ui.status(r.t) }}</td>
+      <td><a href="/transactions/{{ r.t.id }}">{{ r.item }}</a></td>
+      <td class="num">{{ r.t.amount|inr }}</td>
+      <td>{{ r.col1 }}</td><td>{{ r.col2 }}</td>
+      <td>{{ ui.settle(r, request.url.path ~ '?' ~ request.url.query) }}</td>
+      {% if is_admin %}<td class="acts">
+        {% if r.t.status == 'active' and not r.link %}<a href="/transactions/{{ r.t.id }}/edit">Edit</a>{% endif %}
+        <a href="/transactions/new?copy_from={{ r.t.id }}">Copy</a></td>{% endif %}
+    </tr>
+  {% endfor %}
+  </tbody></table></div>
+{% if pages > 1 %}<p class="pager">Page {{ p }} of {{ pages }}
+  {% if p > 1 %}<a href="?team={{ team.id }}&type={{ type }}&show={{ show }}&p={{ p - 1 }}">Previous</a>{% endif %}
+  {% if p < pages %}<a href="?team={{ team.id }}&type={{ type }}&show={{ show }}&p={{ p + 1 }}">Next</a>{% endif %}</p>{% endif %}
+{% else %}<div class="card"><p class="muted">No transactions match.</p></div>{% endif %}
+{% endif %}
+{% endblock %}

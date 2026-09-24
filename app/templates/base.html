@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}EHCC Expense Tracker{% endblock %}</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <style>{{ theme_css|safe }}</style>
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="/">EHCC Expenses</a>
+  <nav>
+    <a href="/" {% if path == '/' %}class="on"{% endif %}>Dashboard</a>
+    <a href="/transactions" {% if path.startswith('/transactions') and path != '/transactions/new' %}class="on"{% endif %}>Transactions</a>
+    <a href="/players" {% if path.startswith('/players') %}class="on"{% endif %}>Players</a>
+    {% if is_admin %}<a href="/transactions/new" {% if path == '/transactions/new' %}class="on"{% endif %}>+ Add</a>
+    <a href="/settings" {% if path.startswith('/settings') or path == '/audit' %}class="on"{% endif %}>Settings</a>{% endif %}
+  </nav>
+  <div class="who">
+    {% if is_admin %}<span class="muted">{{ admin_name }}</span>
+      <form method="post" action="/logout" class="inline"><input type="hidden" name="csrf_token" value="{{ csrf }}"><button class="linkbtn">Log out</button></form>
+    {% else %}<span class="muted">View only</span> <a href="/login">Admin login</a>{% endif %}
+  </div>
+</header>
+<main class="container">
+  {% if show_teambar %}
+  <form class="teambar" method="get" action="{{ teambar_path }}">
+    <label for="team-select">Team</label>
+    <select id="team-select" name="team" data-team-switch="{{ teambar_path }}">
+      {% for t in teams %}<option value="{{ t.id }}" {% if team and t.id == team.id %}selected{% endif %}>{{ t.name }}{% if t.status != 'active' %} (archived){% endif %}</option>{% endfor %}
+    </select>
+    <noscript><button class="btn small">Go</button></noscript>
+  </form>
+  {% endif %}
+  {% for kind, msg in flashes %}<div class="flash {{ kind }}" role="status">{{ msg }}</div>{% endfor %}
+  {% block content %}{% endblock %}
+</main>
+</body>
+</html>

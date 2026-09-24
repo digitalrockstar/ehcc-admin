@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% set t = row.t %}
+{% block title %}Transaction #{{ t.id }}{% endblock %}
+{% block content %}
+<div class="head"><h1>Transaction #{{ t.id }} {{ ui.status(t) }}</h1>
+  {% if is_admin %}<div class="acts">
+    {% if t.status == 'active' and not row.link %}<a class="btn small" href="/transactions/{{ t.id }}/edit">Edit</a>{% endif %}
+    <a class="btn small ghost" href="/transactions/new?copy_from={{ t.id }}">Copy as new</a></div>{% endif %}
+</div>
+<div class="card {{ 'voided' if t.status != 'active' }}">
+  <dl class="facts">
+    <dt>Team</dt><dd>{{ t.team.name }}</dd>
+    <dt>Date</dt><dd>{{ t.transaction_date|dmy }}</dd>
+    <dt>Type</dt><dd>{{ t.type|capitalize }}</dd>
+    <dt>Item / Category</dt><dd>{{ row.item }}</dd>
+    <dt>Amount</dt><dd>{{ t.amount|inr }}</dd>
+    <dt>Paid by / Account in</dt><dd>{{ row.col1 }}</dd>
+    <dt>Charged to / Account out</dt><dd>{{ row.col2 }}</dd>
+    {% if t.type == 'expense' and t.allocations|length > 1 %}<dt>Rounding surplus</dt><dd>{{ t.surplus_amount|inr }}</dd>{% endif %}
+    {% if t.status != 'active' %}<dt>{{ t.status|capitalize }}</dt><dd>{{ t.voided_at|ist }} by {{ t.voided_by }}{% if t.void_reason %}. {{ t.void_reason }}{% endif %}</dd>{% endif %}
+    {% if parent %}<dt>Created by</dt><dd>{{ row.link.kind|capitalize }} on <a href="/transactions/{{ parent.id }}">#{{ parent.id }}</a></dd>{% endif %}
+  </dl>
+</div>
+
+{% if t.type == 'expense' %}
+<div class="card"><h2>Who owes what</h2>
+  <div class="scroll"><table><thead><tr><th>Party</th><th class="num">Owes</th><th>Collection</th></tr></thead><tbody>
+  {% for a in t.allocations|sort(attribute='id') %}
+    <tr><td>{% if a.account.player %}<a href="/players/{{ a.account.player.id }}">{{ a.account.name }}</a>{% else %}{{ a.account.name }}{% endif %}</td>
+      <td class="num">{{ a.allocated_amount|inr }}</td>
+      <td>{% if a.account.kind == 'team' %}<span class="muted">Team pays directly</span>
+        {% elif a.settlement_status == 1 %}<span class="badge pos">PAID</span>
+        {% elif t.status != 'active' %}<span class="muted">Void</span>
+        {% elif is_admin %}{{ ui.action('/allocations/%d/collect' % a.id, 'Collect', request.url.path, 'btn small', 'Collect %s in full?' % (a.allocated_amount|inr)) }}
+        {% else %}<span class="badge">Pending</span>{% endif %}</td></tr>
+  {% endfor %}</tbody></table></div>
+  {% if is_admin and t.status == 'active' and row.coll and row.coll.done < row.coll.total %}
+    <p>{{ ui.action('/transactions/%d/collect-all' % t.id, 'Collect from everyone left', request.url.path, 'btn', 'Collect in full from every player who has not paid?') }}</p>{% endif %}
+  {% if row.reimb %}<h3>Reimbursement to payer</h3><p>{{ ui.settle({'t': t, 'reimb': row.reimb, 'reimb_s': row.reimb_s, 'coll': None, 'link': None}, request.url.path) }}</p>{% endif %}
+</div>
+{% endif %}
+
+{% if is_admin and t.status == 'active' %}
+<div class="card"><h2>{{ 'Reverse settlement' if row.link else 'Void transaction' }}</h2>
+  <p class="hint">{% if row.link %}This reverses the {{ row.link.kind }} and reopens the balance.{% else %}Voiding keeps the record for audit, removes it from balances, and reverses any reimbursement or collections linked to it.{% endif %}</p>
+  <form method="post" action="/transactions/{{ t.id }}/void" class="inline-form" data-confirm="{{ 'Reverse this settlement?' if row.link else 'Void this transaction?' }}">
+    {{ ui.csrf_input() }}<input name="reason" maxlength="200" placeholder="Reason (optional)">
+    <button class="btn danger">{{ 'Reverse' if row.link else 'Void' }}</button></form>
+</div>{% endif %}
+
+{% if is_admin and history %}
+<div class="card"><h2>History</h2><ul class="history">
+  {% for h in history %}<li><span class="muted">{{ h.at|ist }}</span> {{ h.action }} by {{ h.actor }}</li>{% endfor %}
+</ul></div>{% endif %}
+{% endblock %}

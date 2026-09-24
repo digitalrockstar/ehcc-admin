@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block title %}{{ 'Edit' if txn else 'Add' }} transaction{% endblock %}
+{% block content %}
+<h1>{{ ('Edit transaction #%d' % txn.id) if txn else 'Add transaction' }}</h1>
+<form method="post" id="txn-form" class="card formgrid" data-step="{{ step }}"
+      action="{{ ('/transactions/%d/edit' % txn.id) if txn else '/transactions/new' }}">
+  {{ ui.csrf_input() }}
+  <input type="hidden" name="next" value="{{ ('/transactions/%d' % txn.id) if txn else ('/transactions?team=%d' % team.id) }}">
+  <label>Team
+    {% if txn %}<select disabled><option>{{ team.name }}</option></select><input type="hidden" name="team_id" value="{{ team.id }}">
+    {% else %}<select name="team_id" data-team-switch="/transactions/new" required>
+      {% for t in teams if t.status == 'active' %}<option value="{{ t.id }}" {% if t.id == team.id %}selected{% endif %}>{{ t.name }}</option>{% endfor %}</select>{% endif %}
+  </label>
+  <label>Date <input type="date" name="transaction_date" value="{{ f.transaction_date }}" required></label>
+  <label>Type
+    {% if txn %}<select id="f-type" disabled><option>{{ f.type|capitalize }}</option></select><input type="hidden" id="f-type-val" name="type" value="{{ f.type }}">
+    {% else %}<select id="f-type" name="type" required>{% for t in ['income','expense','transfer'] %}<option value="{{ t }}" {% if f.type == t %}selected{% endif %}>{{ t|capitalize }}</option>{% endfor %}</select>{% endif %}
+  </label>
+  <label data-for="expense income" {% if f.type == 'transfer' %}hidden{% endif %}>Item / Cost
+    <select id="f-category" name="category_id" data-current="{{ f.category_id or '' }}">
+      <option value="">Select</option>
+      {% for c in cat_json if c.kind == f.type %}<option value="{{ c.id }}" data-other="{{ 1 if c.other else '' }}" {% if f.category_id == c.id %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+    </select>
+  </label>
+  <label id="desc-wrap">Description <span class="hint" id="desc-hint"></span>
+    <input name="item_description" id="f-desc" maxlength="200" value="{{ f.item_description }}" placeholder="Free text. Required for 'Other'">
+  </label>
+
+  <label data-for="expense" {% if f.type != 'expense' %}hidden{% endif %}>Paid by
+    <select name="paid_by" {% if f.type != 'expense' %}disabled{% endif %}>
+      <option value="">Select</option>
+      {% for a in parties %}<option value="{{ a.id }}" {% if f.paid_by == a.id %}selected{% endif %}>{{ a.name }}{% if a.kind == 'team' %} (team account){% endif %}</option>{% endfor %}
+    </select>
+  </label>
+  <label data-for="income" {% if f.type != 'income' %}hidden{% endif %}>Paid by
+    <select name="paid_by" {% if f.type != 'income' %}disabled{% endif %}>
+      <option value="">External (money comes from outside the team)</option>
+      {% for a in parties if a.kind == 'player' %}<option value="{{ a.id }}" {% if f.paid_by == a.id %}selected{% endif %}>{{ a.name }}</option>{% endfor %}
+    </select>
+    <span class="hint">Money lands in {{ team.name }} account. Pick a player when this is a player contribution.</span>
+  </label>
+  <label data-for="transfer" {% if f.type != 'transfer' %}hidden{% endif %}>Account in (receives)
+    <select name="account_in" {% if f.type != 'transfer' %}disabled{% endif %}>
+      <option value="">Select</option>{% for a in parties %}<option value="{{ a.id }}" {% if f.account_in == a.id %}selected{% endif %}>{{ a.name }}</option>{% endfor %}</select>
+  </label>
+  <label data-for="transfer" {% if f.type != 'transfer' %}hidden{% endif %}>Account out (pays)
+    <select name="account_out" {% if f.type != 'transfer' %}disabled{% endif %}>
+      <option value="">Select</option>{% for a in parties %}<option value="{{ a.id }}" {% if f.account_out == a.id %}selected{% endif %}>{{ a.name }}</option>{% endfor %}</select>
+  </label>
+  <label>Amount (INR) <input name="amount" inputmode="decimal" value="{{ f.amount }}" placeholder="0.00" required></label>
+
+  <fieldset class="span" data-for="expense" {% if f.type != 'expense' %}hidden disabled{% endif %}>
+    <legend>To be charged to <b id="sel-count">0 selected</b></legend>
+    <div class="quick"><button type="button" class="linkbtn" data-select="players">Select all players</button>
+      <button type="button" class="linkbtn" data-select="none">Clear</button></div>
+    <div class="checks">
+      {% for a in parties %}<label class="check"><input type="checkbox" name="charged_to" value="{{ a.id }}" data-kind="{{ a.kind }}" {% if a.id in f.charged_to %}checked{% endif %}> {{ a.name }}{% if a.kind == 'team' %} (team account){% endif %}</label>{% endfor %}
+    </div>
+    <p class="hint">Split equally across everyone selected, each share rounded up to the nearest ₹{{ step }}. The rounding difference becomes team surplus.</p>
+  </fieldset>
+  <p id="preview" class="span preview" aria-live="polite"></p>
+  <script type="application/json" id="cat-data">{{ cat_json|tojson }}</script>
+  <div class="span actions"><button class="btn">{{ 'Save changes' if txn else 'Save transaction' }}</button>
+    <a href="{{ ('/transactions/%d' % txn.id) if txn else '/transactions' }}">Cancel</a></div>
+</form>
+{% endblock %}

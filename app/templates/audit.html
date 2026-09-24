@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Audit log{% endblock %}
+{% block content %}
+<h1>Audit log</h1><p class="hint">Append-only. The database rejects edits and deletes on this table.</p>
+<div class="card flush scroll"><table>
+  <thead><tr><th>When (IST)</th><th>Who</th><th>Action</th><th>Entity</th><th>Details</th></tr></thead>
+  <tbody>{% for r in rows %}<tr><td>{{ r.at|ist }}</td><td>{{ r.actor }}</td><td>{{ r.action }}</td>
+    <td>{% if r.entity_type == 'transaction' and r.entity_id %}<a href="/transactions/{{ r.entity_id }}">transaction #{{ r.entity_id }}</a>{% else %}{{ r.entity_type }}{% if r.entity_id %} #{{ r.entity_id }}{% endif %}{% endif %}</td>
+    <td class="mono">{{ r.details|tojson if r.details else '' }}</td></tr>
+  {% else %}<tr><td colspan="5" class="muted">Nothing logged yet.</td></tr>{% endfor %}</tbody></table></div>
+{% if pages > 1 %}<p class="pager">Page {{ p }} of {{ pages }}
+  {% if p > 1 %}<a href="?p={{ p - 1 }}">Newer</a>{% endif %}{% if p < pages %}<a href="?p={{ p + 1 }}">Older</a>{% endif %}</p>{% endif %}
+{% endblock %}

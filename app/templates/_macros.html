@@ -1,0 +1,50 @@
+{% macro csrf_input() %}<input type="hidden" name="csrf_token" value="{{ csrf }}">{% endmacro %}
+
+{% macro action(url, label, next, cls='btn small', confirm=None, extra=None) %}
+<form method="post" action="{{ url }}" class="inline"{% if confirm %} data-confirm="{{ confirm }}"{% endif %}>
+  {{ csrf_input() }}<input type="hidden" name="next" value="{{ next }}">
+  {% if extra %}{% for k, v in extra.items() %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}{% endif %}
+  <button class="{{ cls }}">{{ label }}</button>
+</form>
+{% endmacro %}
+
+{% macro net(v) -%}
+  {%- if v > 0 -%}<span class="neg" title="Owes the team">{{ v|inr }}</span>
+  {%- elif v < 0 -%}<span class="pos" title="Team owes this player">{{ (-v)|inr }} credit</span>
+  {%- else -%}₹0{%- endif -%}
+{%- endmacro %}
+
+{% macro status(t) -%}
+  {%- if t.status == 'voided' %}<span class="badge">Voided</span>{% elif t.status == 'reversed' %}<span class="badge">Reversed</span>{% endif -%}
+{%- endmacro %}
+
+{% macro settle(row, next) %}
+  {% if row.link %}
+    <span class="badge">{{ 'Reimbursement' if row.link.kind == 'reimbursement' else 'Collection' }} for
+      <a href="/transactions/{{ row.link.transaction_id }}">#{{ row.link.transaction_id }}</a></span>
+  {% endif %}
+  {% if row.reimb %}
+    <div class="settle"><span class="lbl">Reimburse</span>
+      {% if row.reimb == 'paid' %}
+        <span class="badge pos">PAID</span>
+        {% if is_admin %}{{ action('/settlements/%d/reverse' % row.reimb_s.id, 'undo', next, 'linkbtn', 'Reverse this reimbursement?') }}{% endif %}
+      {% elif is_admin %}
+        {{ action('/transactions/%d/reimburse' % row.t.id, 'PAY', next, 'btn small', 'Reimburse %s in full?' % (row.t.amount|inr)) }}
+      {% else %}<span class="badge">Pending</span>{% endif %}
+    </div>
+  {% endif %}
+  {% if row.coll %}
+    <div class="settle"><span class="lbl">Collect</span>
+      {% if row.coll.single %}
+        {% if row.coll.single.settlement_status == 1 %}
+          <span class="badge pos">PAID</span>
+          {% if is_admin and row.coll.single_s %}{{ action('/settlements/%d/reverse' % row.coll.single_s.id, 'undo', next, 'linkbtn', 'Reverse this collection?') }}{% endif %}
+        {% elif is_admin %}
+          {{ action('/allocations/%d/collect' % row.coll.single.id, 'C', next, 'btn small', 'Collect %s in full?' % (row.coll.single.allocated_amount|inr)) }}
+        {% else %}<span class="badge">Pending</span>{% endif %}
+      {% else %}
+        <a href="/transactions/{{ row.t.id }}">{{ row.coll.done }}/{{ row.coll.total }} collected</a>
+      {% endif %}
+    </div>
+  {% endif %}
+{% endmacro %}

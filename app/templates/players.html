@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block title %}Players{% endblock %}
+{% block content %}
+{% if not team %}<div class="card narrow"><h1>No teams yet</h1><p>Create a team in Settings first.</p></div>
+{% else %}
+<div class="head"><h1>Players <span class="muted small">{{ team.name }}</span></h1>
+  <div class="tabs"><a href="/players?team={{ team.id }}" class="{{ 'on' if show != 'archived' }}">Active</a>
+    <a href="/players?team={{ team.id }}&show=archived" class="{{ 'on' if show == 'archived' }}">Archived</a></div></div>
+{% if is_admin %}
+<div class="card"><h2>Add player</h2>
+  <form method="post" action="/players/add" class="inline-form">{{ ui.csrf_input() }}
+    <input type="hidden" name="team_id" value="{{ team.id }}"><input type="hidden" name="next" value="/players?team={{ team.id }}">
+    <input name="player_name" placeholder="Player name" maxlength="80" required>
+    <input name="mob_no" placeholder="Mobile (optional)" inputmode="tel" maxlength="20">
+    <button class="btn">Add player</button></form>
+  <details class="import"><summary>Import from CSV</summary>
+    <form method="post" action="/players/import" enctype="multipart/form-data" class="inline-form">{{ ui.csrf_input() }}
+      <input type="hidden" name="team_id" value="{{ team.id }}"><input type="hidden" name="next" value="/players?team={{ team.id }}">
+      <input type="file" name="file" accept=".csv,text/csv" required><button class="btn">Import</button></form>
+    <p class="hint">Columns: player_name, mob_no. A header row is optional. Names already in this team are skipped.</p></details>
+</div>{% endif %}
+{% if rows %}
+<div class="card flush scroll"><table>
+  <thead><tr><th>Player</th><th>Mobile</th><th class="num">Owed</th><th class="num">Paid</th><th class="num">Net outstanding</th>{% if is_admin %}<th></th>{% endif %}</tr></thead>
+  <tbody>{% for r in rows %}{% set p = r.player %}
+    <tr data-href="/players/{{ p.id }}" class="clickable {{ 'voided' if p.status == 'archived' }}">
+      <td><a href="/players/{{ p.id }}">{{ p.player_name }}</a></td>
+      <td>{% if show_mobile %}{{ p.mob_no or '' }}{% else %}{{ mask_mobile(p.mob_no) }}{% endif %}</td>
+      <td class="num">{{ r.owed|inr }}</td><td class="num">{{ r.paid|inr }}</td><td class="num">{{ ui.net(r.net) }}</td>
+      {% if is_admin %}<td class="acts">
+        <details><summary>Edit</summary>
+          <form method="post" action="/players/{{ p.id }}/edit" class="stack">{{ ui.csrf_input() }}<input type="hidden" name="next" value="/players?team={{ team.id }}">
+            <input name="player_name" value="{{ p.player_name }}" maxlength="80" required><input name="mob_no" value="{{ p.mob_no or '' }}" maxlength="20" placeholder="Mobile">
+            <button class="btn small">Save</button></form></details>
+        {{ ui.action('/players/%d/archive' % p.id, 'Restore' if p.status == 'archived' else 'Archive', '/players?team=%d' % team.id, 'linkbtn', None, {'archive': '0' if p.status == 'archived' else '1'}) }}
+        {{ ui.action('/players/%d/delete' % p.id, 'Delete', '/players?team=%d' % team.id, 'linkbtn danger-text', 'Delete %s? This only works for players with no transactions.' % p.player_name) }}
+      </td>{% endif %}
+    </tr>{% endfor %}</tbody></table></div>
+<p class="hint">Sorted by net outstanding, highest first. Net outstanding is owed minus paid. A credit means the team owes the player.</p>
+{% else %}<div class="card"><p class="muted">No players {{ 'archived' if show == 'archived' else 'yet' }}.</p></div>{% endif %}
+{% endif %}
+{% endblock %}
