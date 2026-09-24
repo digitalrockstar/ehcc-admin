@@ -54,8 +54,8 @@
     <legend>To be charged to <b id="sel-count">0 selected</b></legend>
     <div class="quick"><button type="button" class="linkbtn" data-select="players">Select all players</button>
       <button type="button" class="linkbtn" data-select="none">Clear</button></div>
-    <div class="checks">
-      {% for a in parties %}<label class="check"><input type="checkbox" name="charged_to" value="{{ a.id }}" data-kind="{{ a.kind }}" {% if a.id in f.charged_to %}checked{% endif %}> {{ a.name }}{% if a.kind == 'team' %} (team account){% endif %}</label>{% endfor %}
+    <div class="chips">
+      {% for a in parties %}<label class="chip"><input type="checkbox" name="charged_to" value="{{ a.id }}" data-kind="{{ a.kind }}" {% if a.id in f.charged_to %}checked{% endif %}><span>{{ a.name }}{% if a.kind == 'team' %} (team account){% endif %}</span></label>{% endfor %}
     </div>
     <p class="hint">Split equally across everyone selected, each share rounded up to the nearest ₹{{ step }}. The rounding difference becomes team surplus.</p>
   </fieldset>

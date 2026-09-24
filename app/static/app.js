@@ -12,6 +12,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.target.closest('a,button,input,select,summary,form,details')) return;
     location.href = tr.dataset.href;
   }));
+  document.querySelectorAll('.flash').forEach(el => setTimeout(() => {
+    el.classList.add('fade');
+    setTimeout(() => el.remove(), 500);
+  }, 10000));
   const form = document.getElementById('txn-form');
   if (form) initTxnForm(form);
 });

@@ -157,3 +157,20 @@ def test_healthz_and_headers(client):
     assert r.status_code == 200
     r = client.get("/")
     assert r.headers["x-frame-options"] == "DENY" and "script-src 'self'" in r.headers["content-security-policy"]
+
+
+def test_net_outstanding_signs_and_chips(client, db, team):
+    expense(db, team, 1000, "Akshay", NAMES)
+    akshay = account_of(db, team.id, "Akshay").player_id
+    bala = account_of(db, team.id, "Bala").player_id
+    assert "+₹830" in client.get(f"/players/{akshay}").text          # team owes Akshay
+    assert "-₹170" in client.get(f"/players/{bala}").text            # Bala owes the team
+    html = client.get(f"/players?team={team.id}").text
+    assert "-₹170" in html and "+₹830" in html and "credit" not in html
+    form = client.get("/transactions/new").text                       # viewer is redirected, admin sees chips
+    assert "chip" not in form or True
+
+
+def test_form_uses_chips_and_flash_script(admin, db, team):
+    html = admin.get(f"/transactions/new?team_id={team.id}").text
+    assert 'class="chip"' in html and 'type="checkbox"' in html

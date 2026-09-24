@@ -37,7 +37,7 @@
         {{ ui.action('/players/%d/delete' % p.id, 'Delete', '/players?team=%d' % team.id, 'linkbtn danger-text', 'Delete %s? This only works for players with no transactions.' % p.player_name) }}
       </td>{% endif %}
     </tr>{% endfor %}</tbody></table></div>
-<p class="hint">Sorted by net outstanding, highest first. Net outstanding is owed minus paid. A credit means the team owes the player.</p>
+<p class="hint">Sorted by who owes the most. Net outstanding is paid minus owed: a minus sign means the player owes the team, a plus sign means the team owes the player.</p>
 {% else %}<div class="card"><p class="muted">No players {{ 'archived' if show == 'archived' else 'yet' }}.</p></div>{% endif %}
 {% endif %}
 {% endblock %}

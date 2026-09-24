@@ -49,7 +49,6 @@ input[type=checkbox],input[type=radio]{accent-color:var(--primary)}
 .linkbtn.danger-text{color:var(--neg)}
 form.inline{display:inline}.inline-form{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center}
 .stack{display:flex;flex-direction:column;gap:.6rem}.stack label{display:flex;flex-direction:column;gap:.2rem}
-.stack label.check{flex-direction:row}
 .flash{padding:.6rem .9rem;border-radius:.6rem;margin-bottom:.8rem;border:1px solid var(--pos);color:var(--pos);background:var(--surface)}
 .flash.err{border-color:var(--neg);color:var(--neg)}
 .tabs{display:flex;gap:.4rem;flex-wrap:wrap;margin:.3rem 0 1rem}.tabs a{padding:.25rem .8rem;border:1px solid var(--border);border-radius:1rem;text-decoration:none}
@@ -67,8 +66,6 @@ form.inline{display:inline}.inline-form{display:flex;flex-wrap:wrap;gap:.5rem;al
 .formgrid [hidden]{display:none}
 .formgrid .span{grid-column:1/-1}
 fieldset{border:1px solid var(--border);border-radius:.6rem;padding:.8rem}legend b{color:var(--accent);margin-left:.5rem}
-.checks{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.3rem .8rem;margin:.5rem 0}
-label.check{flex-direction:row;font-weight:400;display:flex;gap:.4rem;align-items:center}
 .preview{color:var(--accent);font-weight:600;margin:0}
 .actions{display:flex;gap:1rem;align-items:center}
 .catlist{list-style:none;padding:0;margin:0 0 .8rem}.catlist li{display:flex;gap:.5rem;align-items:center;margin-bottom:.4rem}
@@ -80,3 +77,14 @@ label.check{flex-direction:row;font-weight:400;display:flex;gap:.4rem;align-item
 .sw-chip{display:inline-block;margin:0 .6rem .6rem;padding:.1rem .6rem;border-radius:.4rem;background:var(--primary);color:var(--primary-text);font-size:.8rem;font-weight:600}
 .danger-zone{border-color:var(--neg)}
 @media (max-width:640px){body{font-size:14px}.container{padding:.6rem}th,td{padding:.45rem .5rem}.who{margin-left:0;width:100%}}
+
+.chips{display:flex;flex-wrap:wrap;gap:.5rem;margin:.5rem 0}
+label.chip,.formgrid label.chip,.stack label.chip{position:relative;display:inline-flex;flex-direction:row;align-items:center;padding:.45rem 2rem .45rem .8rem;border:1.5px solid var(--border);border-radius:.6rem;background:var(--surface);color:var(--text);font-weight:500;cursor:pointer;user-select:none}
+label.chip input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
+label.chip::after,.chipbtn::after,.chipstate::after{content:"";position:absolute;top:.2rem;right:.25rem;width:1rem;height:1rem;border-radius:50%;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:.68rem;font-weight:700;line-height:1}
+label.chip:has(input:checked),.chipstate.on{background:var(--primary);color:var(--primary-text);border-color:var(--primary)}
+label.chip:has(input:checked)::after,.chipstate.on::after{content:"\2713";background:var(--primary-text);color:var(--primary);border-color:var(--primary-text)}
+label.chip:has(input:focus-visible){outline:3px solid var(--accent);outline-offset:2px}
+.chipbtn,.chipstate{position:relative;display:inline-flex;align-items:center;padding:.2rem 1.7rem .2rem .7rem;border:1.5px solid var(--border);border-radius:.5rem;background:var(--surface);color:var(--text);font-size:.85rem;font-weight:600}
+.chipbtn{cursor:pointer}.chipbtn:hover{border-color:var(--primary)}.chipstate{cursor:default}
+.flash{transition:opacity .5s ease}.flash.fade{opacity:0}

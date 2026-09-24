@@ -64,9 +64,10 @@
 <section class="card danger-zone" id="reset"><h2>Data reset</h2>
   <p>Deletes transactions, allocations and settlements. Teams, players, categories and starting balances stay. The audit log is never deleted and records this reset.</p>
   <form method="post" action="/settings/reset" class="stack" data-confirm="This permanently deletes ledger data. Continue?">{{ ui.csrf_input() }}
-    <label class="check"><input type="radio" name="scope" value="all" checked> Delete all transactions</label>
-    <label class="check"><input type="radio" name="scope" value="since"> Delete transactions recorded on or after
-      <input type="datetime-local" name="since"> (India time)</label>
+    <div class="chips">
+      <label class="chip"><input type="radio" name="scope" value="all" checked><span>Delete all transactions</span></label>
+      <label class="chip"><input type="radio" name="scope" value="since"><span>Delete from a date and time</span></label></div>
+    <label>Only if you chose the second option: on or after (India time) <input type="datetime-local" name="since"></label>
     <label>Type DELETE to confirm <input name="confirm" autocomplete="off"></label>
     <button class="btn danger">Delete data</button></form>
 </section>

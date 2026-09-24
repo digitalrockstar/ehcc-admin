@@ -30,10 +30,10 @@
     <tr><td>{% if a.account.player %}<a href="/players/{{ a.account.player.id }}">{{ a.account.name }}</a>{% else %}{{ a.account.name }}{% endif %}</td>
       <td class="num">{{ a.allocated_amount|inr }}</td>
       <td>{% if a.account.kind == 'team' %}<span class="muted">Team pays directly</span>
-        {% elif a.settlement_status == 1 %}<span class="badge pos">PAID</span>
+        {% elif a.settlement_status == 1 %}<span class="chipstate on">PAID</span>
         {% elif t.status != 'active' %}<span class="muted">Void</span>
-        {% elif is_admin %}{{ ui.action('/allocations/%d/collect' % a.id, 'Collect', request.url.path, 'btn small', 'Collect %s in full?' % (a.allocated_amount|inr)) }}
-        {% else %}<span class="badge">Pending</span>{% endif %}</td></tr>
+        {% elif is_admin %}{{ ui.action('/allocations/%d/collect' % a.id, 'Collect', request.url.path, 'chipbtn', 'Collect %s in full?' % (a.allocated_amount|inr)) }}
+        {% else %}<span class="chipstate">Pending</span>{% endif %}</td></tr>
   {% endfor %}</tbody></table></div>
   {% if is_admin and t.status == 'active' and row.coll and row.coll.done < row.coll.total %}
     <p>{{ ui.action('/transactions/%d/collect-all' % t.id, 'Collect from everyone left', request.url.path, 'btn', 'Collect in full from every player who has not paid?') }}</p>{% endif %}
