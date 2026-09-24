@@ -180,3 +180,11 @@ def test_favicon_served(client):
     assert client.get("/favicon.ico").status_code == 200
     assert client.get("/static/favicon.svg").status_code == 200
     assert 'rel="icon"' in client.get("/").text
+
+
+def test_sidebar_navigation_markup(client, admin):
+    html = admin.get("/").text
+    assert 'id="sidebar"' in html and 'id="menu-btn"' in html and "topbar" not in html
+    assert 'href="/settings"' in html and "Signed in as Tester" in html
+    client.cookies.clear()
+    assert 'href="/settings"' not in client.get("/").text

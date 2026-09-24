@@ -12,21 +12,26 @@
   <script src="/static/app.js" defer></script>
 </head>
 <body>
-<header class="topbar">
+<header class="mobilebar">
+  <button class="menubtn" id="menu-btn" type="button" aria-controls="sidebar" aria-expanded="false" aria-label="Toggle menu"><span></span><span></span><span></span></button>
+  <a class="brand" href="/">EHCC Expenses</a>
+</header>
+<aside class="sidebar" id="sidebar" aria-label="Main navigation">
   <a class="brand" href="/">EHCC Expenses</a>
   <nav>
-    <a href="/" {% if path == '/' %}class="on"{% endif %}>Dashboard</a>
+    <a href="/" {% if path == '/' %}class="on" aria-current="page"{% endif %}>Dashboard</a>
     <a href="/transactions" {% if path.startswith('/transactions') and path != '/transactions/new' %}class="on"{% endif %}>Transactions</a>
     <a href="/players" {% if path.startswith('/players') %}class="on"{% endif %}>Players</a>
-    {% if is_admin %}<a href="/transactions/new" {% if path == '/transactions/new' %}class="on"{% endif %}>+ Add</a>
+    {% if is_admin %}<a href="/transactions/new" {% if path == '/transactions/new' %}class="on"{% endif %}>+ Add transaction</a>
     <a href="/settings" {% if path.startswith('/settings') or path == '/audit' %}class="on"{% endif %}>Settings</a>{% endif %}
   </nav>
   <div class="who">
-    {% if is_admin %}<span class="muted">{{ admin_name }}</span>
+    {% if is_admin %}<span class="muted">Signed in as {{ admin_name }}</span>
       <form method="post" action="/logout" class="inline"><input type="hidden" name="csrf_token" value="{{ csrf }}"><button class="linkbtn">Log out</button></form>
-    {% else %}<span class="muted">View only</span> <a href="/login">Admin login</a>{% endif %}
+    {% else %}<span class="muted">View only</span><a href="/login">Admin login</a>{% endif %}
   </div>
-</header>
+</aside>
+<div class="backdrop" id="backdrop"></div>
 <main class="container">
   {% if show_teambar %}
   <form class="teambar" method="get" action="{{ teambar_path }}">

@@ -6,12 +6,6 @@ h1{font-size:1.5rem;margin:.2rem 0 .8rem}h2{font-size:1.1rem;margin:0 0 .6rem}h3
 .small{font-size:.8rem;font-weight:400}.muted{color:var(--muted)}.hint{color:var(--muted);font-size:.85rem;margin:.3rem 0}
 .mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.78rem;word-break:break-word}
 .pos{color:var(--pos)}.neg{color:var(--neg)}
-.topbar{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem 1.2rem;padding:.6rem 1rem;background:var(--surface);border-bottom:1px solid var(--border)}
-.brand{font-weight:700;text-decoration:none;color:var(--text)}
-.topbar nav{display:flex;flex-wrap:wrap;gap:.2rem}
-.topbar nav a{padding:.3rem .7rem;border-radius:.5rem;text-decoration:none;color:var(--text)}
-.topbar nav a.on,.topbar nav a:hover{background:var(--primary);color:var(--primary-text)}
-.who{margin-left:auto;display:flex;gap:.6rem;align-items:center;font-size:.9rem}
 .container{max-width:1100px;margin:0 auto;padding:1rem}
 .teambar{display:flex;gap:.6rem;align-items:center;margin-bottom:1rem}
 .teambar label{font-weight:600}
@@ -76,7 +70,7 @@ fieldset{border:1px solid var(--border);border-radius:.6rem;padding:.8rem}legend
 .sw-body{display:block;padding:.5rem .6rem;color:var(--muted)}
 .sw-chip{display:inline-block;margin:0 .6rem .6rem;padding:.1rem .6rem;border-radius:.4rem;background:var(--primary);color:var(--primary-text);font-size:.8rem;font-weight:600}
 .danger-zone{border-color:var(--neg)}
-@media (max-width:640px){body{font-size:14px}.container{padding:.6rem}th,td{padding:.45rem .5rem}.who{margin-left:0;width:100%}}
+@media (max-width:640px){body{font-size:14px}.container{padding:.6rem}th,td{padding:.45rem .5rem}}
 
 .chips{display:flex;flex-wrap:wrap;gap:.5rem;margin:.5rem 0}
 label.chip,.formgrid label.chip,.stack label.chip{position:relative;display:inline-flex;flex-direction:row;align-items:center;padding:.45rem 2rem .45rem .8rem;border:1.5px solid var(--border);border-radius:.6rem;background:var(--surface);color:var(--text);font-weight:500;cursor:pointer;user-select:none}
@@ -88,3 +82,27 @@ label.chip:has(input:focus-visible){outline:3px solid var(--accent);outline-offs
 .chipbtn,.chipstate{position:relative;display:inline-flex;align-items:center;padding:.2rem 1.7rem .2rem .7rem;border:1.5px solid var(--border);border-radius:.5rem;background:var(--surface);color:var(--text);font-size:.85rem;font-weight:600}
 .chipbtn{cursor:pointer}.chipbtn:hover{border-color:var(--primary)}.chipstate{cursor:default}
 .flash{transition:opacity .5s ease}.flash.fade{opacity:0}
+
+/* Sidebar: fixed in landscape, slide-in drawer in portrait or narrow windows */
+:root{--side-w:220px}
+body{padding-left:var(--side-w)}
+.brand{font-weight:700;text-decoration:none;color:var(--text);font-size:1.05rem}
+.sidebar{position:fixed;top:0;bottom:0;left:0;width:var(--side-w);z-index:30;display:flex;flex-direction:column;gap:1rem;padding:1rem .8rem;background:var(--surface);border-right:1px solid var(--border);overflow-y:auto}
+.sidebar nav{display:flex;flex-direction:column;gap:.2rem}
+.sidebar nav a{padding:.5rem .8rem;border-radius:.5rem;text-decoration:none;color:var(--text)}
+.sidebar nav a.on,.sidebar nav a:hover{background:var(--primary);color:var(--primary-text)}
+.who{margin-top:auto;display:flex;flex-direction:column;gap:.3rem;align-items:flex-start;font-size:.9rem;padding-top:.8rem;border-top:1px solid var(--border)}
+.mobilebar,.backdrop{display:none}
+.menubtn{display:flex;flex-direction:column;justify-content:center;gap:4px;width:2.4rem;height:2.4rem;padding:0 .55rem;background:transparent;border:1.5px solid var(--border);border-radius:.5rem;cursor:pointer}
+.menubtn span{display:block;height:2px;background:var(--text);border-radius:2px}
+@media (orientation:portrait),(max-width:720px){
+  body{padding-left:0}
+  .mobilebar{display:flex;align-items:center;gap:.8rem;position:sticky;top:0;z-index:20;padding:.5rem .8rem;background:var(--surface);border-bottom:1px solid var(--border)}
+  .sidebar{width:min(270px,82vw);transform:translateX(-100%);visibility:hidden;transition:transform .2s ease,visibility 0s linear .2s}
+  body.nav-open .sidebar{transform:none;visibility:visible;transition-delay:0s;box-shadow:0 0 30px rgba(0,0,0,.35)}
+  .sidebar>.brand{display:none}
+  .backdrop{position:fixed;inset:0;z-index:25;background:rgba(0,0,0,.5)}
+  body.nav-open .backdrop{display:block}
+  body.nav-open{overflow:hidden}
+}
+@media (prefers-reduced-motion:reduce){.sidebar{transition:none}}

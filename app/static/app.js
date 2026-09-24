@@ -12,6 +12,16 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.target.closest('a,button,input,select,summary,form,details')) return;
     location.href = tr.dataset.href;
   }));
+  const menu = document.getElementById('menu-btn');
+  const setNav = open => {
+    document.body.classList.toggle('nav-open', open);
+    if (menu) menu.setAttribute('aria-expanded', String(open));
+  };
+  if (menu) menu.addEventListener('click', () => setNav(!document.body.classList.contains('nav-open')));
+  const backdrop = document.getElementById('backdrop');
+  if (backdrop) backdrop.addEventListener('click', () => setNav(false));
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') setNav(false); });
+  document.querySelectorAll('#sidebar a').forEach(a => a.addEventListener('click', () => setNav(false)));
   document.querySelectorAll('.flash').forEach(el => setTimeout(() => {
     el.classList.add('fade');
     setTimeout(() => el.remove(), 500);
