@@ -144,3 +144,5 @@ select option{background:var(--surface);color:var(--text)}
 .sidebar nav a{display:flex;align-items:center;gap:.7rem}
 .who a,.who .linkbtn{display:inline-flex;align-items:center;gap:.5rem;text-decoration:none}
 .who a:hover span,.who .linkbtn:hover span{text-decoration:underline}
+
+.stat.surplus{border-color:var(--pos)}.stat.surplus .lbl,.stat.surplus .val{color:var(--pos)}

@@ -86,7 +86,7 @@ def test_full_flow_through_the_ui(admin, db):
     akshay = account_of(db, team.id, "Akshay").player_id
     assert "Reimbursed" in admin.get(f"/players/{akshay}").text
     dash = admin.get(f"/?team={team.id}").text
-    assert "Surplus available" in dash and "₹20" in dash and "Ground Charges" in dash
+    assert "Surplus available" in dash and "stat surplus" in dash and "₹20" in dash and "Ground Charges" in dash
 
     assert post(admin, f"/transactions/{t.id}/void", reason="typo").status_code == 303
     assert "Voided" in admin.get(f"/transactions?team={team.id}").text
