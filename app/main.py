@@ -4,7 +4,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import PlainTextResponse, RedirectResponse
+from fastapi.responses import FileResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -47,9 +47,14 @@ async def security_headers(request: Request, call_next):
     resp.headers.setdefault("Content-Security-Policy",
                             "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; "
                             "frame-ancestors 'none'; form-action 'self'")
-    if request.url.path != "/healthz":
+    if request.url.path not in ("/healthz", "/favicon.ico") and not request.url.path.startswith("/static/"):
         resp.headers.setdefault("Cache-Control", "no-store")
     return resp
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    return FileResponse(Path(__file__).parent / "static" / "favicon.ico", media_type="image/x-icon")
 
 
 @app.get("/healthz", include_in_schema=False)

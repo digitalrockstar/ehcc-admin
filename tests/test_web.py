@@ -174,3 +174,9 @@ def test_net_outstanding_signs_and_chips(client, db, team):
 def test_form_uses_chips_and_flash_script(admin, db, team):
     html = admin.get(f"/transactions/new?team_id={team.id}").text
     assert 'class="chip"' in html and 'type="checkbox"' in html
+
+
+def test_favicon_served(client):
+    assert client.get("/favicon.ico").status_code == 200
+    assert client.get("/static/favicon.svg").status_code == 200
+    assert 'rel="icon"' in client.get("/").text
