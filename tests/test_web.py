@@ -198,3 +198,8 @@ def test_fonts_are_self_hosted(client):
     for f in ("open-sans-latin-700-normal", "carlito-latin-400-normal", "google-sans-code-latin-400-normal"):
         r = client.get(f"/static/fonts/{f}.woff2")
         assert r.status_code == 200 and r.content[:4] == b"wOF2"
+
+
+def test_digit_font_is_scaled_down(client):
+    css = client.get("/static/app.css").text
+    assert css.count("size-adjust:88%") == 3
