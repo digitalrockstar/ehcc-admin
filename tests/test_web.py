@@ -188,3 +188,13 @@ def test_sidebar_navigation_markup(client, admin):
     assert 'href="/settings"' in html and "Signed in as Tester" in html
     client.cookies.clear()
     assert 'href="/settings"' not in client.get("/").text
+
+
+def test_fonts_are_self_hosted(client):
+    css = client.get("/static/app.css").text
+    for fam in ('"Num"', '"Body"', '"Heading"'):
+        assert f'font-family:{fam}' in css
+    assert "fonts.googleapis" not in css
+    for f in ("open-sans-latin-700-normal", "carlito-latin-400-normal", "google-sans-code-latin-400-normal"):
+        r = client.get(f"/static/fonts/{f}.woff2")
+        assert r.status_code == 200 and r.content[:4] == b"wOF2"

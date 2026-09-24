@@ -1,6 +1,17 @@
+/* Fonts are self-hosted (SIL OFL). Digits always use Google Sans Code; body uses Calibri, falling back to Carlito. */
+@font-face{font-family:"Num";src:url(/static/fonts/google-sans-code-latin-400-normal.woff2) format("woff2");font-weight:400;font-display:swap;unicode-range:U+0030-0039}
+@font-face{font-family:"Num";src:url(/static/fonts/google-sans-code-latin-600-normal.woff2) format("woff2");font-weight:600;font-display:swap;unicode-range:U+0030-0039}
+@font-face{font-family:"Num";src:url(/static/fonts/google-sans-code-latin-700-normal.woff2) format("woff2");font-weight:700;font-display:swap;unicode-range:U+0030-0039}
+@font-face{font-family:"Body";src:local("Calibri"),local("Carlito"),url(/static/fonts/carlito-latin-400-normal.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Body";src:local("Calibri Bold"),local("Carlito Bold"),url(/static/fonts/carlito-latin-700-normal.woff2) format("woff2");font-weight:700;font-display:swap}
+@font-face{font-family:"Body";src:url(/static/fonts/carlito-latin-ext-400-normal.woff2) format("woff2");font-weight:400;font-display:swap;unicode-range:U+20B9}
+@font-face{font-family:"Body";src:url(/static/fonts/carlito-latin-ext-700-normal.woff2) format("woff2");font-weight:700;font-display:swap;unicode-range:U+20B9}
+@font-face{font-family:"Heading";src:url(/static/fonts/open-sans-latin-400-normal.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Heading";src:url(/static/fonts/open-sans-latin-600-normal.woff2) format("woff2");font-weight:600;font-display:swap}
+@font-face{font-family:"Heading";src:url(/static/fonts/open-sans-latin-700-normal.woff2) format("woff2");font-weight:700;font-display:swap}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
-body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 "Num","Body",Calibri,Carlito,system-ui,-apple-system,"Segoe UI",sans-serif}
 a{color:var(--link)}
 h1{font-size:1.5rem;margin:.2rem 0 .8rem}h2{font-size:1.1rem;margin:0 0 .6rem}h3{font-size:1rem;margin:1rem 0 .4rem}
 .small{font-size:.8rem;font-weight:400}.muted{color:var(--muted)}.hint{color:var(--muted);font-size:.85rem;margin:.3rem 0}
@@ -70,7 +81,7 @@ fieldset{border:1px solid var(--border);border-radius:.6rem;padding:.8rem}legend
 .sw-body{display:block;padding:.5rem .6rem;color:var(--muted)}
 .sw-chip{display:inline-block;margin:0 .6rem .6rem;padding:.1rem .6rem;border-radius:.4rem;background:var(--primary);color:var(--primary-text);font-size:.8rem;font-weight:600}
 .danger-zone{border-color:var(--neg)}
-@media (max-width:640px){body{font-size:14px}.container{padding:.6rem}th,td{padding:.45rem .5rem}}
+@media (max-width:640px){body{font-size:15px}.container{padding:.6rem}th,td{padding:.45rem .5rem}}
 
 .chips{display:flex;flex-wrap:wrap;gap:.5rem;margin:.5rem 0}
 label.chip,.formgrid label.chip,.stack label.chip{position:relative;display:inline-flex;flex-direction:row;align-items:center;padding:.45rem 2rem .45rem .8rem;border:1.5px solid var(--border);border-radius:.6rem;background:var(--surface);color:var(--text);font-weight:500;cursor:pointer;user-select:none}
@@ -106,3 +117,9 @@ body{padding-left:var(--side-w)}
   body.nav-open{overflow:hidden}
 }
 @media (prefers-reduced-motion:reduce){.sidebar{transition:none}}
+
+/* Titles and headers: Open Sans, capitals */
+h1,h2,h3,h4,legend,.brand,thead th,.sw-head{font-family:"Num","Heading","Open Sans",system-ui,sans-serif;text-transform:uppercase;letter-spacing:.04em}
+h1{font-size:1.3rem}h2{font-size:1rem}h3{font-size:.92rem}
+tr.dategroup th{text-transform:none;letter-spacing:0}
+.brand{font-size:1rem}
