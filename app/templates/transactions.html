@@ -18,6 +18,7 @@
   <noscript><button class="btn small">Filter</button></noscript>
 </form>
 {% if rows %}
+<p class="hint swipe">Swipe sideways to see all columns.</p>
 <div class="card flush scroll"><table class="txns">
   <thead><tr><th>#</th><th>Type</th><th>Item / Category</th><th class="num">Amount</th><th>Paid By / Account In</th><th>Charged To / Account Out</th><th>Reimbursement / Collection</th>{% if is_admin %}<th></th>{% endif %}</tr></thead>
   <tbody>
@@ -28,7 +29,7 @@
     {% endif %}
     <tr class="{{ 'voided' if r.t.status != 'active' }}">
       <td class="muted">{{ r.t.id }}</td>
-      <td>{{ r.t.type|capitalize }} {{ ui.status(r.t) }}</td>
+      <td>{{ ui.tpill(r.t.type) }} {{ ui.status(r.t) }}</td>
       <td><a href="/transactions/{{ r.t.id }}">{{ r.item }}</a></td>
       <td class="num">{{ r.t.amount|inr }}</td>
       <td>{{ r.col1 }}</td><td>{{ r.col2 }}</td>

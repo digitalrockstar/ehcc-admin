@@ -35,6 +35,8 @@
   {%- else -%}₹0{%- endif -%}
 {%- endmacro %}
 
+{% macro tpill(type) %}<span class="pill {{ type }}">{{ type|capitalize }}</span>{% endmacro %}
+
 {% macro status(t) -%}
   {%- if t.status == 'voided' %}<span class="badge">Voided</span>{% elif t.status == 'reversed' %}<span class="badge">Reversed</span>{% endif -%}
 {%- endmacro %}

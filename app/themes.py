@@ -62,7 +62,7 @@ def mix(a: str, b: str, t: float) -> str:
     return _hex([x + (y - x) * t for x, y in zip(ca, cb)])
 
 
-def ensure(fg: str, backgrounds: list[str], minimum: float = 4.5) -> str:
+def ensure(fg: str, backgrounds: list[str], minimum: float = 5.2) -> str:
     """Nudge fg towards black or white until it clears `minimum` on every background."""
     def worst(c):
         return min(contrast(c, bg) for bg in backgrounds)

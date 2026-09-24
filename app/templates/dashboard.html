@@ -38,10 +38,11 @@
 </section>
 <div class="card"><h2>Recent transactions</h2>
   {% if recent %}
+  <p class="hint swipe">Swipe sideways to see all columns.</p>
   <div class="scroll"><table>
     <thead><tr><th>Date</th><th>Type</th><th>Item / Category</th><th class="num">Amount</th></tr></thead>
     <tbody>{% for r in recent %}
-      <tr><td>{{ r.t.transaction_date|dmy }}</td><td>{{ r.t.type|capitalize }}</td>
+      <tr><td>{{ r.t.transaction_date|dmy }}</td><td>{{ ui.tpill(r.t.type) }}</td>
         <td><a href="/transactions/{{ r.t.id }}">{{ r.item }}</a></td><td class="num">{{ r.t.amount|inr }}</td></tr>
     {% endfor %}</tbody></table></div>
   {% else %}<p class="muted">Nothing recorded yet.</p>{% endif %}

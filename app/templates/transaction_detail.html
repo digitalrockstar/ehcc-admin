@@ -12,7 +12,7 @@
   <dl class="facts">
     <dt>Team</dt><dd>{{ t.team.name }}</dd>
     <dt>Date</dt><dd>{{ t.transaction_date|dmy }}</dd>
-    <dt>Type</dt><dd>{{ t.type|capitalize }}</dd>
+    <dt>Type</dt><dd>{{ ui.tpill(t.type) }}</dd>
     <dt>Item / Category</dt><dd>{{ row.item }}</dd>
     <dt>Amount</dt><dd>{{ t.amount|inr }}</dd>
     <dt>Paid by / Account in</dt><dd>{{ row.col1 }}</dd>

@@ -21,6 +21,7 @@
     <p class="hint">Columns: player_name, mob_no. A header row is optional. Names already in this team are skipped.</p></details>
 </div>{% endif %}
 {% if rows %}
+<p class="hint swipe">Swipe sideways to see all columns.</p>
 <div class="card flush scroll"><table>
   <thead><tr><th>Player</th><th>Mobile</th><th class="num">Owed</th><th class="num">Paid</th><th class="num">Net outstanding</th>{% if is_admin %}<th></th>{% endif %}</tr></thead>
   <tbody>{% for r in rows %}{% set p = r.player %}

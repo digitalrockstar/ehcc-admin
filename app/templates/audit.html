@@ -2,6 +2,7 @@
 {% block title %}Audit log{% endblock %}
 {% block content %}
 <h1>Audit log</h1><p class="hint">Append-only. The database rejects edits and deletes on this table.</p>
+<p class="hint swipe">Swipe sideways to see all columns.</p>
 <div class="card flush scroll"><table>
   <thead><tr><th>When (IST)</th><th>Who</th><th>Action</th><th>Entity</th><th>Details</th></tr></thead>
   <tbody>{% for r in rows %}<tr><td>{{ r.at|ist }}</td><td>{{ r.actor }}</td><td>{{ r.action }}</td>

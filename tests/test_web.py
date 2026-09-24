@@ -267,3 +267,12 @@ def test_sidebar_items_have_icons(client, admin):
     client.cookies.clear()
     v = client.get("/").text
     assert v.count('class="ico"') == 4             # dashboard, transactions, players, admin login
+
+
+def test_tables_scroll_and_use_type_pills(client, db, team):
+    css = client.get("/static/app.css").text
+    assert ".card.flush.scroll,.scroll{overflow-x:auto" in css
+    assert ".card.flush{padding:0;overflow:hidden}" not in css   # this rule used to block sideways scrolling
+    expense(db, team, 200, "Akshay", ["Bala"])
+    html = client.get(f"/transactions?team={team.id}").text
+    assert 'class="pill expense"' in html and "Swipe sideways" in html and 'class="card flush scroll"' in html

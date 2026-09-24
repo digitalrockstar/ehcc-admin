@@ -22,12 +22,13 @@
     <p class="hint">One transfer for the difference, and every reimbursement and collection above is marked settled together. Undoing any of them undoes the whole batch. Or settle items one by one with the buttons below.</p>
   {% endif %}
 </div>{% endif %}
+<p class="hint swipe">Swipe sideways to see all columns.</p>
 <div class="card flush scroll"><table>
   <thead><tr><th>Date</th><th>Type</th><th>Item / Category</th><th class="num">Amount</th><th>Role</th><th>Settlement</th><th class="num">Balance</th></tr></thead>
   <tbody>
   {% for e in events %}{% set t = e.t %}
     <tr class="{{ 'voided' if t.status != 'active' }}">
-      <td>{{ t.transaction_date|dmy }}</td><td>{{ t.type|capitalize }} {{ ui.status(t) }}</td>
+      <td>{{ t.transaction_date|dmy }}</td><td>{{ ui.tpill(t.type) }} {{ ui.status(t) }}</td>
       <td><a href="/transactions/{{ t.id }}">{{ item_label(t) }}</a></td>
       <td class="num">{{ e.amount|inr }}</td><td>{{ e.role }}</td>
       <td>
