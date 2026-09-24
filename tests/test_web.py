@@ -259,3 +259,11 @@ def test_viewer_sees_pending_summary_but_no_button(client, db, team):
     html = client.get(f"/players/{aid}").text
     assert "Pending settlement" in html and "Settle net" not in html
     assert client.post(f"/players/{aid}/settle-net").status_code == 403
+
+
+def test_sidebar_items_have_icons(client, admin):
+    html = admin.get("/").text
+    assert html.count('class="ico"') == 6          # 5 nav items plus log out
+    client.cookies.clear()
+    v = client.get("/").text
+    assert v.count('class="ico"') == 4             # dashboard, transactions, players, admin login

@@ -14,6 +14,7 @@
   <script src="/static/app.js" defer></script>
 </head>
 <body>
+{% import "_macros.html" as ui with context %}
 <header class="mobilebar">
   <button class="menubtn" id="menu-btn" type="button" aria-controls="sidebar" aria-expanded="false" aria-label="Toggle menu"><span></span><span></span><span></span></button>
   <a class="brand" href="/">EHCC Expenses</a>
@@ -21,16 +22,16 @@
 <aside class="sidebar" id="sidebar" aria-label="Main navigation">
   <a class="brand" href="/">EHCC Expenses</a>
   <nav>
-    <a href="/" {% if path == '/' %}class="on" aria-current="page"{% endif %}>Dashboard</a>
-    <a href="/transactions" {% if path.startswith('/transactions') and path != '/transactions/new' %}class="on"{% endif %}>Transactions</a>
-    <a href="/players" {% if path.startswith('/players') %}class="on"{% endif %}>Players</a>
-    {% if is_admin %}<a href="/transactions/new" {% if path == '/transactions/new' %}class="on"{% endif %}>+ Add transaction</a>
-    <a href="/settings" {% if path.startswith('/settings') or path == '/audit' %}class="on"{% endif %}>Settings</a>{% endif %}
+    <a href="/" {% if path == '/' %}class="on" aria-current="page"{% endif %}>{{ ui.icon('dashboard') }}<span>Dashboard</span></a>
+    <a href="/transactions" {% if path.startswith('/transactions') and path != '/transactions/new' %}class="on"{% endif %}>{{ ui.icon('transactions') }}<span>Transactions</span></a>
+    <a href="/players" {% if path.startswith('/players') %}class="on"{% endif %}>{{ ui.icon('players') }}<span>Players</span></a>
+    {% if is_admin %}<a href="/transactions/new" {% if path == '/transactions/new' %}class="on"{% endif %}>{{ ui.icon('add') }}<span>Add transaction</span></a>
+    <a href="/settings" {% if path.startswith('/settings') or path == '/audit' %}class="on"{% endif %}>{{ ui.icon('settings') }}<span>Settings</span></a>{% endif %}
   </nav>
   <div class="who">
     {% if is_admin %}<span class="muted">Signed in as {{ admin_name }}</span>
-      <form method="post" action="/logout" class="inline"><input type="hidden" name="csrf_token" value="{{ csrf }}"><button class="linkbtn">Log out</button></form>
-    {% else %}<span class="muted">View only</span><a href="/login">Admin login</a>{% endif %}
+      <form method="post" action="/logout" class="inline"><input type="hidden" name="csrf_token" value="{{ csrf }}"><button class="linkbtn">{{ ui.icon('logout') }}<span>Log out</span></button></form>
+    {% else %}<span class="muted">View only</span><a href="/login">{{ ui.icon('login') }}<span>Admin login</span></a>{% endif %}
   </div>
 </aside>
 <div class="backdrop" id="backdrop"></div>

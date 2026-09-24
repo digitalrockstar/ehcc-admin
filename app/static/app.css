@@ -139,3 +139,8 @@ select:disabled{opacity:.6;cursor:not-allowed}
 select option{background:var(--surface);color:var(--text)}
 
 .hint.warn{display:block;margin:.1rem 0 .3rem;color:var(--accent)}
+
+.ico{width:1.2rem;height:1.2rem;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.sidebar nav a{display:flex;align-items:center;gap:.7rem}
+.who a,.who .linkbtn{display:inline-flex;align-items:center;gap:.5rem;text-decoration:none}
+.who a:hover span,.who .linkbtn:hover span{text-decoration:underline}
