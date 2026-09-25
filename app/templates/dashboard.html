@@ -31,12 +31,12 @@
     </ul>
     {% else %}<p class="muted">No expenses yet.</p>{% endif %}
   </div>
-  <div class="card"><h2>Top 5 outstanding</h2>
+  <div class="card"><h2>Outstanding balances</h2>
     {% if top %}
     <table class="plain"><tbody>
       {% for r in top %}<tr><td><a href="/players/{{ r.player.id }}">{{ r.player.player_name }}</a></td><td class="num">{{ ui.net(r.net) }}</td></tr>{% endfor %}
     </tbody></table>
-    {% else %}<p class="muted">Nobody owes anything right now.</p>{% endif %}
+    {% else %}<p class="muted">Everyone is settled up.</p>{% endif %}
   </div>
 </section>
 <div class="card"><h2>Recent transactions</h2>

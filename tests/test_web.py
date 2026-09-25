@@ -284,3 +284,10 @@ def test_expected_after_pending_sign(admin, db, team):
     mk(db, team, 807, "team", NAMES[:3])  # team paid 807 directly; collecting 3 shares rounds up to 810: +3 expected
     dash = admin.get(f"/?team={team.id}").text
     assert "Expected after pending" in dash and "+₹3" in dash and 'class="expected pos"' in dash
+
+
+def test_dashboard_shows_all_outstanding_not_just_five(admin, db, team):
+    from .conftest import NAMES, expense as mk
+    mk(db, team, 6000, "team", NAMES)  # 6 players owe the team, all nonzero
+    dash = admin.get(f"/?team={team.id}").text
+    assert dash.count('href="/players/') >= 6 and "Outstanding balances" in dash

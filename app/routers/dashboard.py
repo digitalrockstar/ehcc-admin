@@ -17,7 +17,7 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
         return page(request, db, "dashboard.html", team=None, summary=None)
     summary = ledger.team_summary(db, team.id)
     pending = ledger.team_pending_totals(ledger.pending_positions(db, team.id))
-    balances = [r for r in ledger.player_balances(db, team.id) if r["net"] > 0][:5]
+    balances = [r for r in ledger.player_balances(db, team.id) if r["net"] != 0]
     recent = db.scalars(load_transactions_query().where(m.Transaction.team_id == team.id,
                                                         m.Transaction.status == "active")
                         .order_by(m.Transaction.transaction_date.desc(), m.Transaction.id.desc()).limit(10)).unique().all()
