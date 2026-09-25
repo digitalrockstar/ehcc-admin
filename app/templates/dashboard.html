@@ -16,7 +16,7 @@
     <div class="hint">Starting {{ summary.opening|inr }}, cash in less cash out</div>
     {% if pending.reimb or pending.owed %}
     <div class="expected {{ 'pos' if summary.balance - pending.net >= 0 else 'neg' }}">
-      Expected after pending: {{ (summary.balance - pending.net)|inr }}
+      Expected after pending: {{ (summary.balance - pending.net)|inr(true) }}
       <span class="hint">owes players {{ pending.reimb|inr }}, to collect {{ pending.owed|inr }}</span>
     </div>{% endif %}</div>
 </section>
