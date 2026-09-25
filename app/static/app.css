@@ -172,3 +172,9 @@ td.num,th.num{font-variant-numeric:tabular-nums}
 .expected.pos{color:var(--pos)}.expected.neg{color:var(--neg)}
 .expected .hint{display:block;font-weight:400;margin:.1rem 0 0}
 .stat.surplus{border-color:var(--pos)}.stat.surplus .lbl,.stat.surplus .val{color:var(--pos)}
+
+/* Compact grid for the charged-to picker: smaller, filled solid on selection, no tick */
+.chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:.4rem;margin:.5rem 0}
+.chips .chip{padding:.35rem .5rem;font-size:.82rem;text-align:center;justify-content:center;border-radius:.45rem}
+.chips .chip::after{content:none}
+.chips label.chip:has(input:checked){background:var(--primary);color:var(--primary-text);border-color:var(--primary);font-weight:700}
