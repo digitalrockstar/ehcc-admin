@@ -81,12 +81,13 @@ def test_full_flow_through_the_ui(admin, db):
 
     detail = admin.get(f"/transactions/{t.id}").text
     assert "Who owes what" in detail and "Collect from everyone left" in detail
+    assert "Expected after pending" in admin.get(f"/?team={team.id}").text   # collections still open
     assert post(admin, f"/transactions/{t.id}/collect-all").status_code == 303
 
     akshay = account_of(db, team.id, "Akshay").player_id
     assert "Reimbursed" in admin.get(f"/players/{akshay}").text
     dash = admin.get(f"/?team={team.id}").text
-    assert "Surplus available" in dash and "stat surplus" in dash and "₹20" in dash and "Ground Charges" in dash
+    assert "Expected after pending" not in dash and "Ground Charges" in dash
 
     assert post(admin, f"/transactions/{t.id}/void", reason="typo").status_code == 303
     assert "Voided" in admin.get(f"/transactions?team={team.id}").text

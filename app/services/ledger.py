@@ -449,6 +449,12 @@ def pending_positions(db: Session, team_id: int) -> dict[int, dict]:
     return out
 
 
+def team_pending_totals(pending: dict) -> dict:
+    reimb = sum((v["reimb"] for v in pending.values()), ZERO)
+    owed = sum((v["owed"] for v in pending.values()), ZERO)
+    return {"reimb": reimb, "owed": owed, "net": q2(reimb - owed)}
+
+
 def pending_of(pending: dict | None, account_id: int | None) -> dict:
     empty = {"owed": ZERO, "owed_n": 0, "reimb": ZERO, "reimb_n": 0, "net": ZERO}
     return (pending or {}).get(account_id, empty)

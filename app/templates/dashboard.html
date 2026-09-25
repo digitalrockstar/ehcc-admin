@@ -13,9 +13,12 @@
   <div class="card stat"><div class="lbl">Total amount OUT</div><div class="val neg">{{ summary.total_out|inr }}</div></div>
   <div class="card stat"><div class="lbl">Team account balance</div>
     <div class="val {{ 'neg' if summary.balance < 0 }}">{{ summary.balance|inr }}</div>
-    <div class="hint">Starting {{ summary.opening|inr }}, cash in less cash out</div></div>
-  <div class="card stat surplus"><div class="lbl">Surplus available</div><div class="val">{{ summary.surplus|inr }}</div>
-    <div class="hint">Rounding surplus for future purchases</div></div>
+    <div class="hint">Starting {{ summary.opening|inr }}, cash in less cash out</div>
+    {% if pending.reimb or pending.owed %}
+    <div class="expected {{ 'pos' if pending.net + summary.balance >= 0 else 'neg' }}">
+      Expected after pending: {{ (summary.balance + pending.net)|inr }}
+      <span class="hint">owes players {{ pending.reimb|inr }}, to collect {{ pending.owed|inr }}</span>
+    </div>{% endif %}</div>
 </section>
 <section class="two">
   <div class="card"><h2>Expenses by category</h2>

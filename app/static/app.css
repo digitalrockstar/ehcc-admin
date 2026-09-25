@@ -167,3 +167,8 @@ td.num,th.num{font-variant-numeric:tabular-nums}
 .swipe{display:none}
 @media (max-width:900px){.swipe{display:block}}
 @media (max-width:640px){th,td{padding:.55rem .65rem}tr.dategroup th{padding:.45rem .65rem}}
+
+.expected{margin-top:.5rem;padding-top:.4rem;border-top:1px dashed var(--border);font-weight:700}
+.expected.pos{color:var(--pos)}.expected.neg{color:var(--neg)}
+.expected .hint{display:block;font-weight:400;margin:.1rem 0 0}
+.stat.surplus{border-color:var(--pos)}.stat.surplus .lbl,.stat.surplus .val{color:var(--pos)}
