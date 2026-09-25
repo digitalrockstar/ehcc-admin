@@ -277,3 +277,10 @@ def test_tables_scroll_and_use_type_pills(client, db, team):
     expense(db, team, 200, "Akshay", ["Bala"])
     html = client.get(f"/transactions?team={team.id}").text
     assert 'class="pill expense"' in html and "Swipe sideways" in html and 'class="card flush scroll"' in html
+
+
+def test_expected_after_pending_sign(admin, db, team):
+    from .conftest import NAMES, expense as mk
+    mk(db, team, 807, "team", NAMES[:3])  # team paid 807 directly; collecting 3 shares rounds up to 810: +3 expected
+    dash = admin.get(f"/?team={team.id}").text
+    assert "Expected after pending" in dash and "+₹3" in dash and 'class="expected pos"' in dash
