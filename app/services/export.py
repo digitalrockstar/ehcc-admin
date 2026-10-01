@@ -106,6 +106,12 @@ def team_pdf_context(db: Session, team_id: int) -> dict:
 
     return {
         "team": team,
+        "team_data": {
+            "team": team,
+            "summary": summary,
+            "balances": balances,
+            "rows": rows,
+        },
         "summary": summary,
         "balances": balances,
         "rows": rows,
