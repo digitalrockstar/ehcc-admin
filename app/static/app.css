@@ -407,6 +407,9 @@
    LAYER: Mobile (bottom nav, responsive adjustments)
    ============================================================ */
 @layer mobile {
+  /* Bottom nav: hidden on desktop, shown on mobile */
+  .bottomnav { display: none; }
+
   @media (orientation: portrait), (max-width: 720px) {
     body { padding-left: 0; padding-bottom: var(--bottomnav-h); }
 
@@ -640,9 +643,13 @@
     #rounding .inline-form input { flex: 1; }
     #rounding .inline-form .btn { width: auto; }
 
-    /* Export buttons: full width */
+    /* Export buttons: full width on mobile */
     #export .actions { flex-direction: column; }
     #export .actions .btn { width: 100%; }
+
+    /* Dashboard export buttons: full width on mobile */
+    .head .actions { flex-direction: column; width: 100%; }
+    .head .actions .btn { width: 100%; }
 
     /* Audit link: full width */
     .tabs a[href="/audit"] { width: 100%; text-align: center; }
