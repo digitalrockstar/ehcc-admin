@@ -26,7 +26,11 @@
     <a href="/transactions" {% if path.startswith('/transactions') and path != '/transactions/new' %}class="on"{% endif %}>{{ ui.icon('transactions') }}<span>Transactions</span></a>
     <a href="/players" {% if path.startswith('/players') %}class="on"{% endif %}>{{ ui.icon('players') }}<span>Players</span></a>
     {% if is_admin %}<a href="/transactions/new" {% if path == '/transactions/new' %}class="on"{% endif %}>{{ ui.icon('add') }}<span>Add transaction</span></a>
-    <a href="/settings" {% if path.startswith('/settings') or path == '/audit' %}class="on"{% endif %}>{{ ui.icon('settings') }}<span>Settings</span></a>{% endif %}
+    <a href="/settings" {% if path.startswith('/settings') or path == '/audit' %}class="on"{% endif %}>{{ ui.icon('settings') }}<span>Settings</span></a>
+    <a href="/logout">{{ ui.icon('logout') }}<span>Logout</span></a>
+    {% else %}
+    <a href="/login" {% if path == '/login' %}class="on"{% endif %}>{{ ui.icon('login') }}<span>Login</span></a>
+    {% endif %}
   </nav>
   <div class="who">
     {% if is_admin %}<span class="muted">Signed in as {{ admin_name }}</span>

@@ -414,8 +414,7 @@
     body { padding-left: 0; padding-bottom: var(--bottomnav-h); }
 
     .mobilebar {
-      display: flex; align-items: center; gap: 0.8rem; position: sticky; top: 0; z-index: 20;
-      padding: 0.5rem 0.8rem; background: var(--surface); border-bottom: 1px solid var(--border);
+      display: none;
     }
 
     .sidebar {
@@ -438,16 +437,17 @@
     }
     .bottomnav a {
       flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
-      gap: 0.2rem; padding: 0.4rem 0.2rem; text-decoration: none; color: var(--muted);
-      font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.02em;
+      gap: 0.15rem; padding: 0.3rem 0.1rem; text-decoration: none; color: var(--muted);
+      font-size: 0.6rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.01em;
       transition: color var(--transition-fast);
+      min-width: 0;
     }
-    .bottomnav a .ico { width: 1.4rem; height: 1.4rem; }
+    .bottomnav a .ico { width: 1.2rem; height: 1.2rem; }
     .bottomnav a.on, .bottomnav a:hover { color: var(--primary); }
 
-    /* Hide sidebar nav on mobile (use bottom nav instead) */
-    .sidebar nav { display: none; }
-    .sidebar .who { display: flex; }
+    /* Hide sidebar completely on mobile (use bottom nav instead) */
+    .sidebar { display: none; }
+    .backdrop { display: none; }
   }
 
   @media (prefers-reduced-motion: reduce) {
