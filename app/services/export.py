@@ -5,6 +5,7 @@ import csv
 import io
 from datetime import datetime
 from decimal import Decimal
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -108,7 +109,7 @@ def team_pdf_context(db: Session, team_id: int) -> dict:
         "summary": summary,
         "balances": balances,
         "rows": rows,
-        "generated_at": datetime.now(TIMEZONE).strftime("%d %b %Y, %I:%M %p IST"),
+        "generated_at": datetime.now(ZoneInfo(TIMEZONE)).strftime("%d %b %Y, %I:%M %p IST"),
         "inr": inr,
         "dmy": dmy,
     }
@@ -122,7 +123,7 @@ def full_backup_pdf_context(db: Session) -> dict:
         team_data.append(team_pdf_context(db, team.id))
     return {
         "teams": team_data,
-        "generated_at": datetime.now(TIMEZONE).strftime("%d %b %Y, %I:%M %p IST"),
+        "generated_at": datetime.now(ZoneInfo(TIMEZONE)).strftime("%d %b %Y, %I:%M %p IST"),
         "inr": inr,
         "dmy": dmy,
     }
