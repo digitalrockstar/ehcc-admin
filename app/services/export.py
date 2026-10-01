@@ -104,6 +104,9 @@ def team_pdf_context(db: Session, team_id: int) -> dict:
     pending = ledger.pending_positions(db, team_id)
     rows = describe(db, list(txns), pending)
 
+    # Combined balance: team account balance + surplus (like dashboard)
+    combined_balance = summary["balance"] + summary["surplus"]
+
     return {
         "team": team,
         "team_data": {
@@ -111,10 +114,31 @@ def team_pdf_context(db: Session, team_id: int) -> dict:
             "summary": summary,
             "balances": balances,
             "rows": rows,
+            "combined_balance": combined_balance,
         },
         "summary": summary,
         "balances": balances,
         "rows": rows,
+        "combined_balance": combined_balance,
+        "generated_at": datetime.now(ZoneInfo(TIMEZONE)).strftime("%d %b %Y, %I:%M %p IST"),
+        "inr": inr,
+        "dmy": dmy,
+    }
+
+
+def player_summary_pdf_context(db: Session, team_id: int) -> dict:
+    """Build the context for the player summary PDF export."""
+    team = db.get(m.Team, team_id)
+    if team is None:
+        raise ledger.NotFoundError("Team not found.")
+
+    balances = ledger.player_balances(db, team_id)
+    summary = ledger.team_summary(db, team_id)
+
+    return {
+        "team": team,
+        "balances": balances,
+        "summary": summary,
         "generated_at": datetime.now(ZoneInfo(TIMEZONE)).strftime("%d %b %Y, %I:%M %p IST"),
         "inr": inr,
         "dmy": dmy,
