@@ -27,6 +27,52 @@
   </style>
 </head>
 <body>
+  {% macro team_section(t) %}
+    <h2>Summary</h2>
+    <div class="summary">
+      <div class="stat"><div class="lbl">Income</div><div class="val pos">{{ t.summary.total_in|inr }}</div></div>
+      <div class="stat"><div class="lbl">Expenses</div><div class="val neg">{{ t.summary.total_out|inr }}</div></div>
+      <div class="stat"><div class="lbl">Team Balance</div><div class="val">{{ t.summary.balance|inr }}</div></div>
+      <div class="stat"><div class="lbl">Surplus</div><div class="val pos">{{ t.summary.surplus|inr }}</div></div>
+    </div>
+
+    <h2>Player Balances</h2>
+    <table>
+      <thead><tr><th>Player</th><th class="num">Owed</th><th class="num">Paid</th><th class="num">Net Outstanding</th></tr></thead>
+      <tbody>
+        {% for b in t.balances %}
+          <tr>
+            <td>{{ b.player.player_name }}</td>
+            <td class="num">{{ b.owed|inr }}</td>
+            <td class="num">{{ b.paid|inr }}</td>
+            <td class="num {% if b.net > 0 %}pos{% elif b.net < 0 %}neg{% endif %}">{{ b.net|inr }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <h2>Transactions</h2>
+    <table>
+      <thead><tr><th>Date</th><th>Type</th><th>Item</th><th class="num">Amount</th><th>Paid By</th><th>Status</th></tr></thead>
+      <tbody>
+        {% for r in t.rows %}
+          <tr class="{{ 'voided' if r.t.status != 'active' }}">
+            <td>{{ r.t.transaction_date|dmy }}</td>
+            <td>{{ r.t.type|capitalize }}</td>
+            <td>{{ r.item_label }}</td>
+            <td class="num">{{ r.t.amount|inr }}</td>
+            <td>{{ r.paid_by }}</td>
+            <td>{{ r.t.status|capitalize }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <div class="footer">
+      EHCC Expense Tracker — Confidential financial report for {{ t.team.name }}.
+    </div>
+  {% endmacro %}
+
   {% if full_backup %}
     <div class="header">
       <h1>EHCC Expense Tracker — Full Backup</h1>
@@ -48,49 +94,3 @@
   {% endif %}
 </body>
 </html>
-
-{% macro team_section(t) %}
-  <h2>Summary</h2>
-  <div class="summary">
-    <div class="stat"><div class="lbl">Income</div><div class="val pos">{{ t.summary.total_in|inr }}</div></div>
-    <div class="stat"><div class="lbl">Expenses</div><div class="val neg">{{ t.summary.total_out|inr }}</div></div>
-    <div class="stat"><div class="lbl">Team Balance</div><div class="val">{{ t.summary.balance|inr }}</div></div>
-    <div class="stat"><div class="lbl">Surplus</div><div class="val pos">{{ t.summary.surplus|inr }}</div></div>
-  </div>
-
-  <h2>Player Balances</h2>
-  <table>
-    <thead><tr><th>Player</th><th class="num">Owed</th><th class="num">Paid</th><th class="num">Net Outstanding</th></tr></thead>
-    <tbody>
-      {% for b in t.balances %}
-        <tr>
-          <td>{{ b.player.player_name }}</td>
-          <td class="num">{{ b.owed|inr }}</td>
-          <td class="num">{{ b.paid|inr }}</td>
-          <td class="num {% if b.net > 0 %}pos{% elif b.net < 0 %}neg{% endif %}">{{ b.net|inr }}</td>
-        </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-
-  <h2>Transactions</h2>
-  <table>
-    <thead><tr><th>Date</th><th>Type</th><th>Item</th><th class="num">Amount</th><th>Paid By</th><th>Status</th></tr></thead>
-    <tbody>
-      {% for r in t.rows %}
-        <tr class="{{ 'voided' if r.t.status != 'active' }}">
-          <td>{{ r.t.transaction_date|dmy }}</td>
-          <td>{{ r.t.type|capitalize }}</td>
-          <td>{{ r.item_label }}</td>
-          <td class="num">{{ r.t.amount|inr }}</td>
-          <td>{{ r.paid_by }}</td>
-          <td>{{ r.t.status|capitalize }}</td>
-        </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-
-  <div class="footer">
-    EHCC Expense Tracker — Confidential financial report for {{ t.team.name }}.
-  </div>
-{% endmacro %}
