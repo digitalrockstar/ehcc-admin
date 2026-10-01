@@ -1,6 +1,6 @@
 """Export routes: CSV and PDF downloads for team data and full backup."""
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import HTMLResponse, PlainTextResponse
+from fastapi.responses import PlainTextResponse, Response
 from sqlalchemy.orm import Session
 
 from .. import config
@@ -38,8 +38,8 @@ def team_pdf_export(team_id: int, request: Request, db: Session = Depends(get_db
     from weasyprint import HTML
     pdf = HTML(string=html.body.decode()).write_pdf()
     filename = f"ehcc_{team.name.replace(' ', '_')}_report.pdf"
-    return HTMLResponse(pdf, media_type="application/pdf",
-                        headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+    return Response(pdf, media_type="application/pdf",
+                    headers={"Content-Disposition": f'attachment; filename="{filename}"'})
 
 
 @router.get("/export/full/csv")
@@ -57,5 +57,5 @@ def full_pdf_export(request: Request, db: Session = Depends(get_db),
     html = page(request, db, "export_pdf.html", teambar=False, full_backup=True, **ctx)
     from weasyprint import HTML
     pdf = HTML(string=html.body.decode()).write_pdf()
-    return HTMLResponse(pdf, media_type="application/pdf",
-                        headers={"Content-Disposition": 'attachment; filename="ehcc_full_backup.pdf"'})
+    return Response(pdf, media_type="application/pdf",
+                    headers={"Content-Disposition": 'attachment; filename="ehcc_full_backup.pdf"'})
