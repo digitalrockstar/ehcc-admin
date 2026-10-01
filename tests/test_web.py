@@ -264,12 +264,12 @@ def test_viewer_sees_pending_summary_but_no_button(client, db, team):
 
 def test_sidebar_items_have_icons(client, admin):
     html = admin.get("/").text
-    # 5 sidebar nav + 6 bottom nav + 1 logout = 12 total
-    assert html.count('class="ico"') == 12
+    # 5 sidebar nav + 6 bottom nav + 1 sidebar logout = 13 total
+    assert html.count('class="ico"') == 13
     client.cookies.clear()
     v = client.get("/").text
-    # 3 sidebar nav (no admin items) + 4 bottom nav (no admin items) + 1 admin login = 8
-    assert v.count('class="ico"') == 8
+    # 3 sidebar nav (no admin items) + 4 bottom nav (no admin items) + 1 sidebar login = 9
+    assert v.count('class="ico"') == 9
 
 
 def test_tables_scroll_and_use_type_pills(client, db, team):
