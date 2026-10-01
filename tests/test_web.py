@@ -268,8 +268,8 @@ def test_sidebar_items_have_icons(client, admin):
     assert html.count('class="ico"') == 13
     client.cookies.clear()
     v = client.get("/").text
-    # 3 sidebar nav (no admin items) + 4 bottom nav (no admin items) + 1 sidebar login = 9
-    assert v.count('class="ico"') == 9
+    # 3 sidebar nav + 4 bottom nav (Home, Txns, Players, Login) = 8
+    assert v.count('class="ico"') == 8
 
 
 def test_tables_scroll_and_use_type_pills(client, db, team):
