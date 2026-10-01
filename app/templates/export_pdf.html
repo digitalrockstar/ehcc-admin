@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Export Report</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Calibri, Carlito, sans-serif; font-size: 11pt; color: #1b2a1b; line-height: 1.4; }
+    h1 { font-size: 18pt; margin-bottom: 0.3rem; }
+    h2 { font-size: 13pt; margin: 1rem 0 0.4rem; border-bottom: 1px solid #bfc3bf; padding-bottom: 0.2rem; }
+    .muted { color: #5f685f; font-size: 9pt; }
+    .header { margin-bottom: 1rem; }
+    .summary { display: flex; gap: 1rem; margin-bottom: 1rem; }
+    .stat { flex: 1; border: 1px solid #bfc3bf; border-radius: 6px; padding: 0.6rem; }
+    .stat .lbl { font-size: 8pt; color: #5f685f; text-transform: uppercase; }
+    .stat .val { font-size: 14pt; font-weight: 700; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
+    th, td { padding: 4px 6px; text-align: left; border-bottom: 1px solid #e0e0e0; font-size: 9pt; }
+    th { background: #f4f6f1; font-size: 8pt; text-transform: uppercase; }
+    .num { text-align: right; }
+    .pos { color: #187533; }
+    .neg { color: #c12727; }
+    .voided { color: #999; text-decoration: line-through; }
+    .footer { margin-top: 1.5rem; padding-top: 0.5rem; border-top: 1px solid #bfc3bf; font-size: 8pt; color: #5f685f; }
+    .team-section { page-break-before: always; }
+    .team-section:first-child { page-break-before: avoid; }
+  </style>
+</head>
+<body>
+  {% if full_backup %}
+    <div class="header">
+      <h1>EHCC Expense Tracker — Full Backup</h1>
+      <p class="muted">Generated: {{ generated_at }}</p>
+    </div>
+    {% for t in teams %}
+      <div class="team-section">
+        <h1>{{ t.team.name }}</h1>
+        <p class="muted">Generated: {{ t.generated_at }}</p>
+        {{ team_section(t) }}
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="header">
+      <h1>{{ team.name }} — Financial Report</h1>
+      <p class="muted">Generated: {{ generated_at }}</p>
+    </div>
+    {{ team_section(team_data) }}
+  {% endif %}
+</body>
+</html>
+
+{% macro team_section(t) %}
+  <h2>Summary</h2>
+  <div class="summary">
+    <div class="stat"><div class="lbl">Income</div><div class="val pos">{{ t.summary.total_in|inr }}</div></div>
+    <div class="stat"><div class="lbl">Expenses</div><div class="val neg">{{ t.summary.total_out|inr }}</div></div>
+    <div class="stat"><div class="lbl">Team Balance</div><div class="val">{{ t.summary.balance|inr }}</div></div>
+    <div class="stat"><div class="lbl">Surplus</div><div class="val pos">{{ t.summary.surplus|inr }}</div></div>
+  </div>
+
+  <h2>Player Balances</h2>
+  <table>
+    <thead><tr><th>Player</th><th class="num">Owed</th><th class="num">Paid</th><th class="num">Net Outstanding</th></tr></thead>
+    <tbody>
+      {% for b in t.balances %}
+        <tr>
+          <td>{{ b.player.player_name }}</td>
+          <td class="num">{{ b.owed|inr }}</td>
+          <td class="num">{{ b.paid|inr }}</td>
+          <td class="num {% if b.net > 0 %}pos{% elif b.net < 0 %}neg{% endif %}">{{ b.net|inr }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Transactions</h2>
+  <table>
+    <thead><tr><th>Date</th><th>Type</th><th>Item</th><th class="num">Amount</th><th>Paid By</th><th>Status</th></tr></thead>
+    <tbody>
+      {% for r in t.rows %}
+        <tr class="{{ 'voided' if r.t.status != 'active' }}">
+          <td>{{ r.t.transaction_date|dmy }}</td>
+          <td>{{ r.t.type|capitalize }}</td>
+          <td>{{ r.item_label }}</td>
+          <td class="num">{{ r.t.amount|inr }}</td>
+          <td>{{ r.paid_by }}</td>
+          <td>{{ r.t.status|capitalize }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="footer">
+    EHCC Expense Tracker — Confidential financial report for {{ t.team.name }}.
+  </div>
+{% endmacro %}

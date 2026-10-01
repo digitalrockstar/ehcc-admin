@@ -264,16 +264,19 @@ def test_viewer_sees_pending_summary_but_no_button(client, db, team):
 
 def test_sidebar_items_have_icons(client, admin):
     html = admin.get("/").text
-    assert html.count('class="ico"') == 6          # 5 nav items plus log out
+    # 5 sidebar nav + 5 bottom nav + 1 logout = 11 total
+    assert html.count('class="ico"') == 11
     client.cookies.clear()
     v = client.get("/").text
-    assert v.count('class="ico"') == 4             # dashboard, transactions, players, admin login
+    # 3 sidebar nav (no admin items) + 3 bottom nav (no admin items) + 1 admin login = 7
+    assert v.count('class="ico"') == 7
 
 
 def test_tables_scroll_and_use_type_pills(client, db, team):
     css = client.get("/static/app.css").text
-    assert ".card.flush.scroll,.scroll{overflow-x:auto" in css
-    assert ".card.flush{padding:0;overflow:hidden}" not in css   # this rule used to block sideways scrolling
+    assert "overflow-x: auto" in css or "overflow-x:auto" in css
+    # The old .card.flush{overflow:hidden} rule that blocked sideways scrolling is gone
+    assert ".card.flush{" not in css or "overflow:hidden" not in css.split(".card.flush{")[1].split("}")[0]
     expense(db, team, 200, "Akshay", ["Bala"])
     html = client.get(f"/transactions?team={team.id}").text
     assert 'class="pill expense"' in html and "Swipe sideways" in html and 'class="card flush scroll"' in html

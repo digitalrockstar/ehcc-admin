@@ -7,40 +7,48 @@
       action="{{ ('/transactions/%d/edit' % txn.id) if txn else '/transactions/new' }}">
   {{ ui.csrf_input() }}
   <input type="hidden" name="next" value="{{ ('/transactions/%d' % txn.id) if txn else ('/transactions?team=%d' % team.id) }}">
-  <div class="field"><span class="cap">Team</span>
+  <div class="field{% if errors.get('team_id') %} has-error{% endif %}"><span class="cap">Team</span>
     {% if txn %}{{ ui.choice('team_display', [(team.id, team.name)], team.id, 'Team', disabled=True) }}<input type="hidden" name="team_id" value="{{ team.id }}">
     {% else %}{{ ui.choice('team_id', team_opts, team.id, 'Team', 'f-team', required=True, attrs='data-team-switch="/transactions/new"') }}{% endif %}
+    {% if errors.get('team_id') %}<span class="field-error">{{ errors['team_id'] }}</span>{% endif %}
   </div>
-  <label class="field"><span class="cap">Date</span><input type="date" name="transaction_date" value="{{ f.transaction_date }}" required></label>
-  <div class="field"><span class="cap">Type</span>
+  <label class="field{% if errors.get('transaction_date') %} has-error{% endif %}"><span class="cap">Date</span><input type="date" name="transaction_date" value="{{ f.transaction_date }}" required{% if errors.get('transaction_date') %} class="invalid"{% endif %}>{% if errors.get('transaction_date') %}<span class="field-error">{{ errors['transaction_date'] }}</span>{% endif %}</label>
+  <div class="field{% if errors.get('type') %} has-error{% endif %}"><span class="cap">Type</span>
     {% if txn %}{{ ui.choice('type_display', type_opts, f.type, 'Type', disabled=True) }}<input type="hidden" name="type" value="{{ f.type }}">
     {% else %}{{ ui.choice('type', type_opts, f.type, 'Type', 'f-type', required=True) }}{% endif %}
+    {% if errors.get('type') %}<span class="field-error">{{ errors['type'] }}</span>{% endif %}
   </div>
-  <div class="field" data-for="expense income" {% if f.type == 'transfer' %}hidden{% endif %}>
+  <div class="field{% if errors.get('category_id') %} has-error{% endif %}" data-for="expense income" {% if f.type == 'transfer' %}hidden{% endif %}>
     <label class="cap" for="f-category">Item / Cost</label>
-    <select id="f-category" name="category_id">
+    <select id="f-category" name="category_id"{% if errors.get('category_id') %} class="invalid"{% endif %}>
       <option value="">Select</option>
       {% for c in cat_json if c.kind == f.type %}<option value="{{ c.id }}" data-other="{{ 1 if c.other else '' }}" {% if f.category_id == c.id %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
     </select>
+    {% if errors.get('category_id') %}<span class="field-error">{{ errors['category_id'] }}</span>{% endif %}
   </div>
-  <label class="field" id="desc-wrap"><span class="cap">Description <span class="hint" id="desc-hint"></span></span>
-    <input name="item_description" id="f-desc" maxlength="200" value="{{ f.item_description }}" placeholder="Free text. Required for 'Other'">
+  <label class="field{% if errors.get('item_description') %} has-error{% endif %}" id="desc-wrap"><span class="cap">Description <span class="hint" id="desc-hint"></span></span>
+    <input name="item_description" id="f-desc" maxlength="200" value="{{ f.item_description }}" placeholder="Free text. Required for 'Other'"{% if errors.get('item_description') %} class="invalid"{% endif %}>
+    {% if errors.get('item_description') %}<span class="field-error">{{ errors['item_description'] }}</span>{% endif %}
   </label>
 
-  <div class="field" data-for="expense" {% if f.type != 'expense' %}hidden{% endif %}><span class="cap">Paid by</span>
+  <div class="field{% if errors.get('paid_by') %} has-error{% endif %}" data-for="expense" {% if f.type != 'expense' %}hidden{% endif %}><span class="cap">Paid by</span>
     {{ ui.choice('paid_by', party_opts, f.paid_by, 'Paid by', 'f-paid-by', placeholder='Select', required=True, disabled=(f.type != 'expense')) }}
+    {% if errors.get('paid_by') %}<span class="field-error">{{ errors['paid_by'] }}</span>{% endif %}
   </div>
-  <div class="field" data-for="income" {% if f.type != 'income' %}hidden{% endif %}><span class="cap">Paid by</span>
+  <div class="field{% if errors.get('paid_by_income') %} has-error{% endif %}" data-for="income" {% if f.type != 'income' %}hidden{% endif %}><span class="cap">Paid by</span>
     {{ ui.choice('paid_by_income', income_opts, f.paid_by, 'Paid by', 'f-paid-by-income', disabled=(f.type != 'income')) }}
     <span class="hint">Money lands in the {{ team.name }} account. Pick a player when this is a player contribution.</span>
+    {% if errors.get('paid_by_income') %}<span class="field-error">{{ errors['paid_by_income'] }}</span>{% endif %}
   </div>
-  <div class="field" data-for="transfer" {% if f.type != 'transfer' %}hidden{% endif %}><span class="cap">Account in (receives)</span>
+  <div class="field{% if errors.get('account_in') %} has-error{% endif %}" data-for="transfer" {% if f.type != 'transfer' %}hidden{% endif %}><span class="cap">Account in (receives)</span>
     {{ ui.choice('account_in', party_opts, f.account_in, 'Account in', 'f-acc-in', placeholder='Select', disabled=(f.type != 'transfer')) }}
+    {% if errors.get('account_in') %}<span class="field-error">{{ errors['account_in'] }}</span>{% endif %}
   </div>
-  <div class="field" data-for="transfer" {% if f.type != 'transfer' %}hidden{% endif %}><span class="cap">Account out (pays)</span>
+  <div class="field{% if errors.get('account_out') %} has-error{% endif %}" data-for="transfer" {% if f.type != 'transfer' %}hidden{% endif %}><span class="cap">Account out (pays)</span>
     {{ ui.choice('account_out', party_opts, f.account_out, 'Account out', 'f-acc-out', placeholder='Select', disabled=(f.type != 'transfer')) }}
+    {% if errors.get('account_out') %}<span class="field-error">{{ errors['account_out'] }}</span>{% endif %}
   </div>
-  <label class="field"><span class="cap">Amount (INR)</span><input name="amount" inputmode="decimal" value="{{ f.amount }}" placeholder="0.00" required></label>
+  <label class="field{% if errors.get('amount') %} has-error{% endif %}"><span class="cap">Amount (INR)</span><input name="amount" inputmode="decimal" value="{{ f.amount }}" placeholder="0.00" required{% if errors.get('amount') %} class="invalid"{% endif %}>{% if errors.get('amount') %}<span class="field-error">{{ errors['amount'] }}</span>{% endif %}</label>
 
   <fieldset class="span" data-for="expense" {% if f.type != 'expense' %}hidden disabled{% endif %}>
     <legend>To be charged to <b id="sel-count">0 selected</b></legend>
@@ -50,6 +58,7 @@
       {% for a in parties %}<label class="chip"><input type="checkbox" name="charged_to" value="{{ a.id }}" data-kind="{{ a.kind }}" {% if a.id in f.charged_to %}checked{% endif %}><span>{{ a.name }}{% if a.kind == 'team' %} (team account){% endif %}</span></label>{% endfor %}
     </div>
     <p class="hint">Split equally across everyone selected, each share rounded up to the nearest ₹{{ step }}. The rounding difference becomes team surplus.</p>
+    {% if errors.get('charged_to') %}<span class="field-error">{{ errors['charged_to'] }}</span>{% endif %}
   </fieldset>
   <p id="preview" class="span preview" aria-live="polite"></p>
   <script type="application/json" id="cat-data">{{ cat_json|tojson }}</script>

@@ -11,8 +11,10 @@
 <div class="card"><h2>Add player</h2>
   <form method="post" action="/players/add" class="inline-form">{{ ui.csrf_input() }}
     <input type="hidden" name="team_id" value="{{ team.id }}"><input type="hidden" name="next" value="/players?team={{ team.id }}">
-    <input name="player_name" placeholder="Player name" maxlength="80" required>
-    <input name="mob_no" placeholder="Mobile (optional)" inputmode="tel" maxlength="20">
+    <input name="player_name" placeholder="Player name" maxlength="80" required value="{{ form_data.get('player_name', '') }}"{% if errors.get('player_name') %} class="invalid"{% endif %}>
+    {% if errors.get('player_name') %}<span class="field-error">{{ errors['player_name'] }}</span>{% endif %}
+    <input name="mob_no" placeholder="Mobile (optional)" inputmode="tel" maxlength="20" value="{{ form_data.get('mob_no', '') }}"{% if errors.get('mob_no') %} class="invalid"{% endif %}>
+    {% if errors.get('mob_no') %}<span class="field-error">{{ errors['mob_no'] }}</span>{% endif %}
     <button class="btn">Add player</button></form>
   <details class="import"><summary>Import from CSV</summary>
     <form method="post" action="/players/import" enctype="multipart/form-data" class="inline-form">{{ ui.csrf_input() }}
@@ -34,8 +36,8 @@
           <form method="post" action="/players/{{ p.id }}/edit" class="stack">{{ ui.csrf_input() }}<input type="hidden" name="next" value="/players?team={{ team.id }}">
             <input name="player_name" value="{{ p.player_name }}" maxlength="80" required><input name="mob_no" value="{{ p.mob_no or '' }}" maxlength="20" placeholder="Mobile">
             <button class="btn small">Save</button></form></details>
-        {{ ui.action('/players/%d/archive' % p.id, 'Restore' if p.status == 'archived' else 'Archive', '/players?team=%d' % team.id, 'linkbtn', None, {'archive': '0' if p.status == 'archived' else '1'}) }}
-        {{ ui.action('/players/%d/delete' % p.id, 'Delete', '/players?team=%d' % team.id, 'linkbtn danger-text', 'Delete %s? This only works for players with no transactions.' % p.player_name) }}
+        {{ ui.action('/players/%d/archive' % p.id, 'Restore' if p.status == 'archived' else 'Archive', '/players?team=%d' % team.id, 'btn small ghost', None, {'archive': '0' if p.status == 'archived' else '1'}) }}
+        {{ ui.action('/players/%d/delete' % p.id, 'Delete', '/players?team=%d' % team.id, 'btn small danger', 'Delete %s? This only works for players with no transactions.' % p.player_name) }}
       </td>{% endif %}
     </tr>{% endfor %}</tbody></table></div>
 <p class="hint">Sorted by who owes the most. Net outstanding is paid minus owed: a minus sign means the player owes the team, a plus sign means the team owes the player.</p>

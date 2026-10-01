@@ -8,7 +8,7 @@ from .. import models as m
 from ..db import get_db
 from ..security import admin_form, admin_name, require_admin_page
 from ..services import ledger
-from ..services.ledger import LedgerError, TxnInput
+from ..services.ledger import ConflictError, LedgerError, NotFoundError, TxnInput
 from ..services.masters import parse_amount
 from ..services.views import describe, load_transactions_query
 from ..web import all_teams, flash, page, redirect, resolve_team
@@ -53,7 +53,7 @@ def prefill_from_txn(t: m.Transaction, keep_date: bool) -> dict:
             "account_in": one("account_in"), "account_out": one("account_out")}
 
 
-def form_page(request, db, team, f, *, txn=None, status_code=200, error=None):
+def form_page(request, db, team, f, *, txn=None, status_code=200, error=None, errors=None):
     parties = db.scalars(select(m.Account).where(m.Account.team_id == team.id, m.Account.status == "active")).all()
     parties = sorted(parties, key=lambda a: (a.kind != "team", a.name.lower()))
     cats = db.scalars(select(m.Category).order_by(m.Category.sort_order, m.Category.name)).all()
@@ -69,7 +69,7 @@ def form_page(request, db, team, f, *, txn=None, status_code=200, error=None):
     type_opts = [("income", "Income"), ("expense", "Expense"), ("transfer", "Transfer")]
     return page(request, db, "transaction_form.html", team=team, f=f, txn=txn, parties=parties,
                 party_opts=party_opts, income_opts=[("", "External")] + player_opts, team_opts=team_opts,
-                type_opts=type_opts,
+                type_opts=type_opts, errors=errors or {},
                 cat_json=cat_json, step=int(ledger.rounding_step(db)), teambar_path="/transactions",
                 status_code=status_code)
 
@@ -123,7 +123,8 @@ def create(request: Request, form=Depends(admin_form), db: Session = Depends(get
         db.commit()
     except LedgerError as e:
         db.rollback()
-        return form_page(request, db, team, prefill_from_form(form), status_code=400, error=str(e))
+        return form_page(request, db, team, prefill_from_form(form),
+                         status_code=e.status_code, errors={e.field: str(e)} if e.field else None)
     flash(request, f"Transaction #{t.id} saved.")
     return redirect(request, form, f"/transactions?team={team.id}")
 
@@ -150,7 +151,7 @@ def edit(txn_id: int, request: Request, form=Depends(admin_form), db: Session = 
         db.rollback()
         t = db.scalars(load_transactions_query().where(m.Transaction.id == txn_id)).unique().first()
         return form_page(request, db, resolve_team(request, db, force=t.team), prefill_from_form(form),
-                         txn=t, status_code=400, error=str(e))
+                         txn=t, status_code=e.status_code, errors={e.field: str(e)} if e.field else None)
     flash(request, f"Transaction #{txn_id} updated.")
     return redirect(request, form, f"/transactions/{txn_id}")
 

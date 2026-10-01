@@ -6,7 +6,7 @@ from ..db import get_db
 from ..formatting import inr
 from ..security import admin_form, admin_name
 from ..services import ledger, masters
-from ..services.ledger import LedgerError
+from ..services.ledger import ConflictError, LedgerError, NotFoundError
 from ..web import flash, page, redirect, resolve_team
 
 router = APIRouter()
@@ -44,22 +44,34 @@ def _team_from(form, db):
     return team
 
 
-def _run(request, form, db, action, msg, default_next="/players"):
+def _run(request, form, db, action, msg, default_next="/players", field_errors=None):
     try:
         result = action()
         db.commit()
         flash(request, msg(result) if callable(msg) else msg)
     except LedgerError as e:
         db.rollback()
-        flash(request, str(e), "err")
+        if field_errors is not None:
+            field_errors[e.field] = str(e)
+        else:
+            flash(request, str(e), "err")
     return redirect(request, form, default_next)
 
 
 @router.post("/players/add")
 def add(request: Request, form=Depends(admin_form), db: Session = Depends(get_db)):
     team = _team_from(form, db)
-    return _run(request, form, db, lambda: masters.create_player(
-        db, team.id, form.get("player_name"), form.get("mob_no"), admin_name(request)), "Player added.")
+    field_errors = {}
+    _run(request, form, db, lambda: masters.create_player(
+        db, team.id, form.get("player_name"), form.get("mob_no"), admin_name(request)),
+        "Player added.", field_errors=field_errors)
+    if field_errors:
+        return page(request, db, "players.html", team=team, rows=ledger.player_balances(db, team.id),
+                    show="active", errors=field_errors, form_data={
+                        "player_name": form.get("player_name", ""),
+                        "mob_no": form.get("mob_no", ""),
+                    })
+    return redirect(request, form, "/players")
 
 
 @router.post("/players/import")

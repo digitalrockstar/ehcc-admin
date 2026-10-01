@@ -1,17 +1,26 @@
 document.addEventListener('DOMContentLoaded', () => {
+  // Team switcher
   document.querySelectorAll('[data-team-switch]').forEach(sel => sel.addEventListener('change', () => {
     const url = new URL(sel.dataset.teamSwitch, location.origin);
     url.searchParams.set('team', sel.value);
     location.href = url.toString();
   }));
+
+  // Auto-submit forms
   document.querySelectorAll('[data-autosubmit]').forEach(el => el.addEventListener('change', () => el.form.submit()));
+
+  // Confirm dialogs
   document.querySelectorAll('form[data-confirm]').forEach(f => f.addEventListener('submit', e => {
     if (!confirm(f.dataset.confirm)) e.preventDefault();
   }));
+
+  // Clickable table rows
   document.querySelectorAll('tr[data-href]').forEach(tr => tr.addEventListener('click', e => {
     if (e.target.closest('a,button,input,select,summary,form,details')) return;
     location.href = tr.dataset.href;
   }));
+
+  // Sidebar / mobile nav toggle
   const menu = document.getElementById('menu-btn');
   const setNav = open => {
     document.body.classList.toggle('nav-open', open);
@@ -22,10 +31,17 @@ document.addEventListener('DOMContentLoaded', () => {
   if (backdrop) backdrop.addEventListener('click', () => setNav(false));
   document.addEventListener('keydown', e => { if (e.key === 'Escape') setNav(false); });
   document.querySelectorAll('#sidebar a').forEach(a => a.addEventListener('click', () => setNav(false)));
+
+  // Bottom nav: close on link click (mobile)
+  document.querySelectorAll('.bottomnav a').forEach(a => a.addEventListener('click', () => setNav(false)));
+
+  // Flash messages auto-fade
   document.querySelectorAll('.flash').forEach(el => setTimeout(() => {
     el.classList.add('fade');
     setTimeout(() => el.remove(), 500);
   }, 10000));
+
+  // Transaction form
   const form = document.getElementById('txn-form');
   if (form) initTxnForm(form);
 });

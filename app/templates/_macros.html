@@ -28,6 +28,10 @@
 </form>
 {% endmacro %}
 
+{% macro link_action(url, label, cls='btn small ghost') %}
+<a href="{{ url }}" class="{{ cls }}">{{ label }}</a>
+{% endmacro %}
+
 {% macro net(v) -%}
   {%- set d = -v -%}
   {%- if d > 0 -%}<span class="pos" title="Team owes this player">{{ d|inr(true) }}</span>
@@ -50,11 +54,11 @@
     <div class="settle"><span class="lbl">Reimburse</span>
       {% if row.reimb == 'paid' %}
         <span class="chipstate on">PAID</span>
-        {% if is_admin %}{{ action('/settlements/%d/reverse' % row.reimb_s.id, 'undo', next, 'linkbtn', ('Undo the whole net settlement? Every item settled together reopens.' if row.reimb_s.batch_id else 'Reverse this reimbursement?')) }}{% endif %}
+        {% if is_admin %}{{ action('/settlements/%d/reverse' % row.reimb_s.id, 'Undo', next, 'btn small ghost', ('Undo the whole net settlement? Every item settled together reopens.' if row.reimb_s.batch_id else 'Reverse this reimbursement?')) }}{% endif %}
       {% elif is_admin %}
         {% set msg = 'Reimburse %s in full?' % (row.t.amount|inr) %}
         {% if row.reimb_warn %}{% set msg = msg ~ ' ' ~ row.reimb_who ~ ' still owes the team ' ~ (row.reimb_warn|inr) ~ '. To pay only the difference, use Settle net on their player page.' %}{% endif %}
-        {{ action('/transactions/%d/reimburse' % row.t.id, 'PAY', next, 'chipbtn', msg) }}
+        {{ action('/transactions/%d/reimburse' % row.t.id, 'PAY', next, 'btn small', msg) }}
       {% else %}<span class="chipstate">Pending</span>{% endif %}
     </div>
     {% if is_admin and row.reimb == 'pay' and row.reimb_warn %}<a class="hint warn" href="/players/{{ row.reimb_pid }}">Owes {{ row.reimb_warn|inr }}: settle net</a>{% endif %}
@@ -64,11 +68,11 @@
       {% if row.coll.single %}
         {% if row.coll.single.settlement_status == 1 %}
           <span class="chipstate on">PAID</span>
-          {% if is_admin and row.coll.single_s %}{{ action('/settlements/%d/reverse' % row.coll.single_s.id, 'undo', next, 'linkbtn', ('Undo the whole net settlement? Every item settled together reopens.' if row.coll.single_s.batch_id else 'Reverse this collection?')) }}{% endif %}
+          {% if is_admin and row.coll.single_s %}{{ action('/settlements/%d/reverse' % row.coll.single_s.id, 'Undo', next, 'btn small ghost', ('Undo the whole net settlement? Every item settled together reopens.' if row.coll.single_s.batch_id else 'Reverse this collection?')) }}{% endif %}
         {% elif is_admin %}
           {% set cmsg = 'Collect %s in full?' % (row.coll.single.allocated_amount|inr) %}
           {% if row.coll.warn %}{% set cmsg = cmsg ~ ' The team owes ' ~ row.coll.who ~ ' ' ~ (row.coll.warn|inr) ~ ' for expenses they paid. To settle only the difference, use Settle net on their player page.' %}{% endif %}
-          {{ action('/allocations/%d/collect' % row.coll.single.id, 'C', next, 'chipbtn', cmsg) }}
+          {{ action('/allocations/%d/collect' % row.coll.single.id, 'Collect', next, 'btn small', cmsg) }}
         {% else %}<span class="chipstate">Pending</span>{% endif %}
         {% if is_admin and row.coll.single.settlement_status == 0 and row.coll.warn %}<a class="hint warn" href="/players/{{ row.coll.pid }}">Team owes {{ row.coll.warn|inr }}: settle net</a>{% endif %}
       {% else %}

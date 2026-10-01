@@ -64,5 +64,6 @@ def page(request: Request, db: Session, name: str, *, status_code: int = 200, te
         teambar_path=teambar_path or request.url.path,
         flashes=request.session.pop("_flash", []), path=request.url.path,
         show_mobile=is_admin(request) or config.SHOW_MOBILE_TO_VIEWERS, mask_mobile=mask_mobile,
+        errors=ctx.get("errors", {}), form_data=ctx.get("form_data", {}),
     )
     return templates.TemplateResponse(request, name, ctx, status_code=status_code)

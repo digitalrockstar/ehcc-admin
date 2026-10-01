@@ -35,6 +35,13 @@
   </div>
 </aside>
 <div class="backdrop" id="backdrop"></div>
+<nav class="bottomnav" aria-label="Mobile navigation">
+  <a href="/" {% if path == '/' %}class="on" aria-current="page"{% endif %}>{{ ui.icon('dashboard') }}<span>Home</span></a>
+  <a href="/transactions" {% if path.startswith('/transactions') and path != '/transactions/new' %}class="on"{% endif %}>{{ ui.icon('transactions') }}<span>Txns</span></a>
+  <a href="/players" {% if path.startswith('/players') %}class="on"{% endif %}>{{ ui.icon('players') }}<span>Players</span></a>
+  {% if is_admin %}<a href="/transactions/new" {% if path == '/transactions/new' %}class="on"{% endif %}>{{ ui.icon('add') }}<span>Add</span></a>
+  <a href="/settings" {% if path.startswith('/settings') or path == '/audit' %}class="on"{% endif %}>{{ ui.icon('settings') }}<span>Settings</span></a>{% endif %}
+</nav>
 <main class="container">
   {% if show_teambar and teams %}
   <div class="teambar"><span class="cap">Team</span>

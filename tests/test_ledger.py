@@ -6,7 +6,7 @@ from sqlalchemy import select
 
 from app import models as m
 from app.services import ledger, masters
-from app.services.ledger import LedgerError, TxnInput
+from app.services.ledger import ConflictError, LedgerError, NotFoundError, TxnInput
 
 from .conftest import NAMES, account_of, cat, expense
 
@@ -392,3 +392,56 @@ def test_player_history_labels_net_settlement(db, team):
     db.commit()
     events, net = ledger.player_history(db, a.player)
     assert "Net settlement received" in [e["role"] for e in events] and net == 0
+
+
+# ---------------------------------------------------------------- exception hierarchy
+
+def test_not_found_error_for_missing_transaction(db, team):
+    with pytest.raises(NotFoundError) as exc_info:
+        ledger.update_transaction(db, 99999, TxnInput(
+            team_id=team.id, date=dt.date(2026, 9, 1), type="expense", amount=D("100"),
+            category_id=cat(db, "Balls", "expense").id,
+            paid_by=account_of(db, team.id, "Akshay").id,
+            charged_to=[account_of(db, team.id, "Bala").id]), "t")
+    assert exc_info.value.status_code == 404
+
+
+def test_conflict_error_for_duplicate_team(db, team):
+    with pytest.raises(ConflictError) as exc_info:
+        masters.create_team(db, team.name, "t")
+    assert exc_info.value.status_code == 409
+    assert exc_info.value.field == "name"
+
+
+def test_field_error_for_bad_amount(db, team):
+    with pytest.raises(LedgerError) as exc_info:
+        ledger.create_transaction(db, TxnInput(
+            team_id=team.id, date=dt.date(2026, 9, 1), type="expense", amount=D("-5"),
+            category_id=cat(db, "Balls", "expense").id,
+            paid_by=account_of(db, team.id, "Akshay").id,
+            charged_to=[account_of(db, team.id, "Bala").id]), "t")
+    assert exc_info.value.field == "amount"
+    assert exc_info.value.status_code == 400
+
+
+def test_field_error_for_missing_category(db, team):
+    with pytest.raises(LedgerError) as exc_info:
+        ledger.create_transaction(db, TxnInput(
+            team_id=team.id, date=dt.date(2026, 9, 1), type="expense", amount=D("100"),
+            category_id=None,
+            paid_by=account_of(db, team.id, "Akshay").id,
+            charged_to=[account_of(db, team.id, "Bala").id]), "t")
+    assert exc_info.value.field == "category_id"
+
+
+def test_not_found_error_for_missing_player(db, team):
+    with pytest.raises(NotFoundError) as exc_info:
+        masters.update_player(db, 99999, "New Name", None, "t")
+    assert exc_info.value.status_code == 404
+
+
+def test_conflict_error_for_duplicate_player(db, team):
+    with pytest.raises(ConflictError) as exc_info:
+        masters.create_player(db, team.id, "Akshay", None, "t")
+    assert exc_info.value.status_code == 409
+    assert exc_info.value.field == "player_name"

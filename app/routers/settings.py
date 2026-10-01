@@ -10,7 +10,7 @@ from ..db import get_db
 from ..security import admin_form, admin_name, require_admin_page
 from ..services import ledger, masters
 from ..services.audit import log
-from ..services.ledger import LedgerError
+from ..services.ledger import ConflictError, LedgerError, NotFoundError
 from ..themes import DEFAULT_THEME, theme_list, valid_theme
 from ..web import all_teams, flash, page, redirect
 
@@ -31,14 +31,17 @@ def settings(request: Request, db: Session = Depends(get_db), _=Depends(require_
                 step=int(ledger.rounding_step(db)))
 
 
-def _run(request, form, db, action, msg, anchor=""):
+def _run(request, form, db, action, msg, anchor="", field_errors=None):
     try:
         result = action()
         db.commit()
         flash(request, msg(result) if callable(msg) else msg)
     except LedgerError as e:
         db.rollback()
-        flash(request, str(e), "err")
+        if field_errors is not None:
+            field_errors[e.field] = str(e)
+        else:
+            flash(request, str(e), "err")
     return redirect(request, {"next": "/settings" + anchor}, "/settings")
 
 
@@ -46,12 +49,29 @@ def _int_id(v) -> int:
     return int(v)
 
 
+def _settings_page(request, db, *, errors=None, form_data=None):
+    teams = all_teams(db)
+    rows = []
+    for t in teams:
+        acct = ledger.get_team_account(db, t.id)
+        rows.append({"team": t, "account": acct, "opening": ledger.opening_balance(db, t.id),
+                     "players": db.scalar(select(func.count()).select_from(m.Player).where(m.Player.team_id == t.id))})
+    cats = db.scalars(select(m.Category).order_by(m.Category.kind, m.Category.sort_order)).all()
+    return page(request, db, "settings.html", teambar=False, rows=rows,
+                categories=cats, themes=theme_list(), current_theme=ledger.get_setting(db, "theme", DEFAULT_THEME),
+                step=int(ledger.rounding_step(db)), errors=errors or {}, form_data=form_data or {})
+
+
 @router.post("/settings/teams/add")
 def team_add(request: Request, form=Depends(admin_form), db: Session = Depends(get_db)):
     def go():
         opening = masters.parse_amount(form.get("opening"), allow_negative=True) if form.get("opening") else None
         masters.create_team(db, form.get("name"), admin_name(request), opening)
-    return _run(request, form, db, go, "Team and team account created.", "#teams")
+    field_errors = {}
+    _run(request, form, db, go, "Team and team account created.", "#teams", field_errors=field_errors)
+    if field_errors:
+        return _settings_page(request, db, errors=field_errors, form_data={"name": form.get("name", "")})
+    return redirect(request, {"next": "/settings#teams"}, "/settings")
 
 
 @router.post("/settings/teams/{team_id}/edit")
@@ -76,8 +96,13 @@ def team_opening(team_id: int, request: Request, form=Depends(admin_form), db: S
 
 @router.post("/settings/categories/add")
 def cat_add(request: Request, form=Depends(admin_form), db: Session = Depends(get_db)):
-    return _run(request, form, db, lambda: masters.create_category(
-        db, form.get("name"), form.get("kind"), admin_name(request)), "Category added.", "#categories")
+    field_errors = {}
+    _run(request, form, db, lambda: masters.create_category(
+        db, form.get("name"), form.get("kind"), admin_name(request)), "Category added.", "#categories",
+        field_errors=field_errors)
+    if field_errors:
+        return _settings_page(request, db, errors=field_errors, form_data={"name": form.get("name", "")})
+    return redirect(request, {"next": "/settings#categories"}, "/settings")
 
 
 @router.post("/settings/categories/{cat_id}/edit")

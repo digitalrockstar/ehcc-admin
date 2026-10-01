@@ -10,7 +10,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from . import config
 from .db import SessionLocal
-from .routers import auth, dashboard, players, settings, transactions
+from .routers import auth, dashboard, export, players, settings, transactions
 from .security import LoginRequired
 from .services.ledger import LedgerError
 from .services.masters import ensure_defaults
@@ -34,7 +34,7 @@ app.add_middleware(SessionMiddleware, secret_key=config.SECRET_KEY, max_age=14 *
                    same_site="lax", https_only=config.IS_PROD, session_cookie="ehcc_session")
 app.mount("/static", StaticFiles(directory=str(Path(__file__).parent / "static")), name="static")
 
-for r in (auth, dashboard, transactions, players, settings):
+for r in (auth, dashboard, export, transactions, players, settings):
     app.include_router(r.router)
 
 
@@ -69,7 +69,7 @@ async def login_required(request: Request, exc: LoginRequired):
 
 def _error(request: Request, code: int, message: str):
     with SessionLocal() as db:
-        return page(request, db, "error.html", teambar=False, status_code=code, code=code, message=message)
+        return page(request, db, "error.html", teambar=True, status_code=code, code=code, message=message)
 
 
 @app.exception_handler(HTTPException)
@@ -79,4 +79,4 @@ async def http_error(request: Request, exc: HTTPException):
 
 @app.exception_handler(LedgerError)
 async def ledger_error(request: Request, exc: LedgerError):
-    return _error(request, 400, str(exc))
+    return _error(request, exc.status_code, str(exc))

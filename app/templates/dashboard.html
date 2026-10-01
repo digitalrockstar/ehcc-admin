@@ -7,10 +7,16 @@
   {% if is_admin %}<p>Create the first team in <a href="/settings#teams">Settings</a>. A team account is created with it.</p>
   {% else %}<p>An admin needs to create a team before anything shows up here.</p>{% endif %}</div>
 {% else %}
-<h1>{{ team.name }} <span class="muted small">{{ account.name }}</span></h1>
+<div class="head">
+  <h1>{{ team.name }} <span class="muted small">{{ account.name }}</span></h1>
+  {% if is_admin %}<div class="actions">
+    <a href="/export/team/{{ team.id }}/csv" class="btn small ghost">Export CSV</a>
+    <a href="/export/team/{{ team.id }}/pdf" class="btn small ghost">Export PDF</a>
+  </div>{% endif %}
+</div>
 <section class="cards">
-  <div class="card stat"><div class="lbl">Total amount IN</div><div class="val pos">{{ summary.total_in|inr }}</div></div>
-  <div class="card stat"><div class="lbl">Total amount OUT</div><div class="val neg">{{ summary.total_out|inr }}</div></div>
+  <div class="card stat"><div class="lbl">Income</div><div class="val pos">{{ summary.total_in|inr }}</div></div>
+  <div class="card stat"><div class="lbl">Expenses</div><div class="val neg">{{ summary.total_out|inr }}</div></div>
   <div class="card stat"><div class="lbl">Team account balance</div>
     <div class="val {{ 'neg' if summary.balance < 0 }}">{{ summary.balance|inr }}</div>
     <div class="hint">Starting {{ summary.opening|inr }}, cash in less cash out</div>

@@ -22,7 +22,23 @@ NOSYNC = {"synchronize_session": False}
 
 
 class LedgerError(Exception):
-    """A rule was broken. The message is safe to show to the admin."""
+    """Base for all ledger rule violations. Message is safe to show the admin."""
+    status_code = 400
+    field = None
+
+    def __init__(self, message, field=None):
+        super().__init__(message)
+        self.field = field
+
+
+class NotFoundError(LedgerError):
+    """The requested entity does not exist."""
+    status_code = 404
+
+
+class ConflictError(LedgerError):
+    """The action conflicts with the current state (duplicate, already done, etc.)."""
+    status_code = 409
 
 
 def q2(v) -> Decimal:
@@ -72,7 +88,7 @@ def per_party_charge(amount: Decimal, parties: int, step: Decimal) -> Decimal:
 def get_team_account(db: Session, team_id: int) -> m.Account:
     acct = db.scalar(select(m.Account).where(m.Account.team_id == team_id, m.Account.kind == "team"))
     if acct is None:
-        raise LedgerError("This team has no team account.")
+        raise NotFoundError("This team has no team account.")
     return acct
 
 
@@ -80,7 +96,7 @@ def _lock_txn(db: Session, txn_id: int) -> m.Transaction:
     t = db.scalar(select(m.Transaction).where(m.Transaction.id == txn_id)
                   .with_for_update().execution_options(populate_existing=True))
     if t is None:
-        raise LedgerError("Transaction not found.")
+        raise NotFoundError("Transaction not found.")
     return t
 
 
@@ -96,7 +112,7 @@ def _accounts_for_team(db: Session, team_id: int, ids: list[int]) -> list[m.Acco
         if a is None or a.team_id != team_id:
             raise LedgerError("A selected account does not belong to this team.")
         if a.status != "active" or (a.player is not None and a.player.status != "active"):
-            raise LedgerError(f"{a.name} is archived and cannot be used.")
+            raise ConflictError(f"{a.name} is archived and cannot be used.")
         out.append(a)
     return out
 
@@ -120,22 +136,22 @@ class TxnInput:
 def _prepare(db: Session, d: TxnInput, keep_category_id: int | None = None) -> dict:
     team = db.get(m.Team, d.team_id)
     if team is None:
-        raise LedgerError("Choose a team.")
+        raise LedgerError("Choose a team.", field="team_id")
     if team.status != "active":
-        raise LedgerError("This team is archived. Restore it in Settings to add transactions.")
+        raise ConflictError("This team is archived. Restore it in Settings to add transactions.")
     if d.type not in m.TXN_TYPES:
-        raise LedgerError("Choose a transaction type.")
+        raise LedgerError("Choose a transaction type.", field="type")
     if not isinstance(d.date, dt.date):
-        raise LedgerError("Choose a date.")
+        raise LedgerError("Choose a date.", field="transaction_date")
     amount = Decimal(d.amount)
     if amount != amount.quantize(TWO):
-        raise LedgerError("Amount can have at most 2 decimal places.")
+        raise LedgerError("Amount can have at most 2 decimal places.", field="amount")
     amount = q2(amount)
     if amount <= 0 or amount > MAX_AMOUNT:
-        raise LedgerError("Amount must be a positive value below ₹1,00,00,000.")
+        raise LedgerError("Amount must be a positive value below ₹1,00,00,000.", field="amount")
     desc = (d.item_description or "").strip() or None
     if desc and len(desc) > 200:
-        raise LedgerError("Description is too long (200 characters max).")
+        raise LedgerError("Description is too long (200 characters max).", field="item_description")
 
     plan = {"team": team, "amount": amount, "desc": desc, "category": None,
             "links": [], "allocs": [], "surplus": ZERO}
@@ -143,20 +159,20 @@ def _prepare(db: Session, d: TxnInput, keep_category_id: int | None = None) -> d
     if d.type in ("expense", "income"):
         cat = db.get(m.Category, d.category_id) if d.category_id else None
         if cat is None or cat.kind != d.type:
-            raise LedgerError("Choose a category.")
+            raise LedgerError("Choose a category.", field="category_id")
         if cat.status != "active" and cat.id != keep_category_id:
-            raise LedgerError(f"Category '{cat.name}' is archived.")
+            raise ConflictError(f"Category '{cat.name}' is archived.")
         if cat.is_other and not desc:
-            raise LedgerError("Describe the item when the category is 'Other'.")
+            raise LedgerError("Describe the item when the category is 'Other'.", field="item_description")
         plan["category"] = cat
 
     if d.type == "expense":
         if not d.paid_by:
-            raise LedgerError("Choose who paid.")
+            raise LedgerError("Choose who paid.", field="paid_by")
         (payer,) = _accounts_for_team(db, team.id, [d.paid_by])
         ids = list(dict.fromkeys(d.charged_to))
         if not ids:
-            raise LedgerError("Select at least one party to charge.")
+            raise LedgerError("Select at least one party to charge.", field="charged_to")
         parties = _accounts_for_team(db, team.id, ids)
         share = per_party_charge(amount, len(parties), rounding_step(db))
         plan["links"] = [("paid_by", payer)]
@@ -167,13 +183,13 @@ def _prepare(db: Session, d: TxnInput, keep_category_id: int | None = None) -> d
         if d.paid_by:
             (payer,) = _accounts_for_team(db, team.id, [d.paid_by])
             if payer.kind != "player":
-                raise LedgerError("Income can only be paid in by a player, or left as external.")
+                raise LedgerError("Income can only be paid in by a player, or left as external.", field="paid_by_income")
             plan["links"].append(("paid_by", payer))
     else:
         if not d.account_in or not d.account_out:
-            raise LedgerError("Choose both the account in and the account out.")
+            raise LedgerError("Choose both the account in and the account out.", field="account_in")
         if d.account_in == d.account_out:
-            raise LedgerError("Account in and account out must be different.")
+            raise LedgerError("Account in and account out must be different.", field="account_in")
         acc_in, acc_out = _accounts_for_team(db, team.id, [d.account_in, d.account_out])
         plan["links"] = [("account_in", acc_in), ("account_out", acc_out)]
     return plan
@@ -220,11 +236,11 @@ def settlement_for_transfer(db: Session, txn_id: int) -> m.Settlement | None:
 def update_transaction(db: Session, txn_id: int, d: TxnInput, actor: str) -> m.Transaction:
     t = _lock_txn(db, txn_id)
     if t.status != "active":
-        raise LedgerError("Only active transactions can be edited.")
+        raise ConflictError("Only active transactions can be edited.")
     if settlement_for_transfer(db, t.id):
-        raise LedgerError("This transfer was created by a reimbursement or collection. Reverse the settlement instead.")
+        raise ConflictError("This transfer was created by a reimbursement or collection. Reverse the settlement instead.")
     if has_active_settlements(db, t.id):
-        raise LedgerError("Reverse the reimbursement and collections on this transaction before editing it.")
+        raise ConflictError("Reverse the reimbursement and collections on this transaction before editing it.")
     if d.type != t.type or d.team_id != t.team_id:
         raise LedgerError("Type and team cannot be changed. Void this transaction and enter a new one.")
     before = snapshot(t)
@@ -270,15 +286,15 @@ def _make_transfer(db: Session, team_id: int, out_acct: m.Account, in_acct: m.Ac
 def reimburse(db: Session, txn_id: int, actor: str) -> m.Settlement:
     t = _lock_txn(db, txn_id)
     if t.type != "expense" or t.status != "active":
-        raise LedgerError("Only active expenses can be reimbursed.")
+        raise ConflictError("Only active expenses can be reimbursed.")
     payer = _payer_account(t)
     if payer is None or payer.kind != "player":
-        raise LedgerError("Only expenses paid by a player can be reimbursed.")
+        raise ConflictError("Only expenses paid by a player can be reimbursed.")
     exists = db.scalar(select(m.Settlement.id).where(
         m.Settlement.transaction_id == t.id, m.Settlement.account_id == payer.id,
         m.Settlement.kind == "reimbursement", m.Settlement.status == "active"))
     if exists:
-        raise LedgerError("This expense has already been reimbursed.")
+        raise ConflictError("This expense has already been reimbursed.")
     team_acct = get_team_account(db, t.team_id)
     try:
         with db.begin_nested():
@@ -288,7 +304,7 @@ def reimburse(db: Session, txn_id: int, actor: str) -> m.Settlement:
             db.add(s)
             db.flush()
     except IntegrityError:
-        raise LedgerError("This expense has already been reimbursed.")
+        raise ConflictError("This expense has already been reimbursed.")
     log(db, actor, "settlement.reimburse", "transaction", t.id, t.team_id,
         {"to": payer.name, "amount": t.amount, "transfer_id": tr.id})
     return s
@@ -297,16 +313,16 @@ def reimburse(db: Session, txn_id: int, actor: str) -> m.Settlement:
 def collect(db: Session, allocation_id: int, actor: str) -> m.Settlement:
     a0 = db.get(m.Allocation, allocation_id)
     if a0 is None:
-        raise LedgerError("Allocation not found.")
+        raise NotFoundError("Allocation not found.")
     t = _lock_txn(db, a0.transaction_id)
     a = db.scalar(select(m.Allocation).where(m.Allocation.id == allocation_id)
                   .with_for_update().execution_options(populate_existing=True))
     if t.type != "expense" or t.status != "active":
-        raise LedgerError("Collections apply to active expenses only.")
+        raise ConflictError("Collections apply to active expenses only.")
     if a.account.kind != "player":
         raise LedgerError("Only players are collected from. The team account is charged directly.")
     if a.settlement_status == 1:
-        raise LedgerError(f"{a.account.name} has already paid this.")
+        raise ConflictError(f"{a.account.name} has already paid this.")
     team_acct = get_team_account(db, t.team_id)
     try:
         with db.begin_nested():
@@ -320,7 +336,7 @@ def collect(db: Session, allocation_id: int, actor: str) -> m.Settlement:
             a.settled_transaction_id = tr.id
             db.flush()
     except IntegrityError:
-        raise LedgerError(f"{a.account.name} has already paid this.")
+        raise ConflictError(f"{a.account.name} has already paid this.")
     log(db, actor, "settlement.collect", "transaction", t.id, t.team_id,
         {"from": a.account.name, "amount": a.allocated_amount, "transfer_id": tr.id})
     return s
@@ -329,10 +345,10 @@ def collect(db: Session, allocation_id: int, actor: str) -> m.Settlement:
 def collect_all(db: Session, txn_id: int, actor: str) -> int:
     t = db.get(m.Transaction, txn_id)
     if t is None:
-        raise LedgerError("Transaction not found.")
+        raise NotFoundError("Transaction not found.")
     ids = [a.id for a in t.allocations if a.settlement_status == 0 and a.account.kind == "player"]
     if not ids:
-        raise LedgerError("Nothing left to collect on this transaction.")
+        raise ConflictError("Nothing left to collect on this transaction.")
     for i in ids:
         collect(db, i, actor)
     return len(ids)
@@ -373,12 +389,12 @@ def _lock_all(db: Session, ids) -> None:
 def reverse_settlement(db: Session, settlement_id: int, actor: str, reason: str | None = None) -> int:
     s0 = db.get(m.Settlement, settlement_id)
     if s0 is None:
-        raise LedgerError("Settlement not found.")
+        raise NotFoundError("Settlement not found.")
     _lock_all(db, [s0.transaction_id] + [g.transaction_id for g in _active_group(db, s0)])
     s = db.scalar(select(m.Settlement).where(m.Settlement.id == settlement_id)
                   .with_for_update().execution_options(populate_existing=True))
     if s.status != "active":
-        raise LedgerError("This settlement is already reversed.")
+        raise ConflictError("This settlement is already reversed.")
     group = _active_group(db, s)
     for row in group:
         _reverse_row(db, row, actor, reason)
@@ -400,7 +416,7 @@ def void_transaction(db: Session, txn_id: int, actor: str, reason: str | None = 
     _lock_all(db, ids)
     t = _lock_txn(db, txn_id)
     if t.status != "active":
-        raise LedgerError("This transaction is already voided or reversed.")
+        raise ConflictError("This transaction is already voided or reversed.")
     t.status = "voided"
     t.voided_at, t.voided_by, t.void_reason = m.utcnow(), actor, reason
     seen: set[int] = set()
@@ -481,15 +497,15 @@ def settle_net(db: Session, player_id: int, actor: str) -> dict:
     Reimbursements and collections are marked settled together and reverse together."""
     p = db.get(m.Player, player_id)
     if p is None:
-        raise LedgerError("Player not found.")
+        raise NotFoundError("Player not found.")
     acct = p.account
     exps, allocs = _pending_items(db, acct)
     if not exps and not allocs:
-        raise LedgerError(f"Nothing is pending for {p.player_name}.")
+        raise ConflictError(f"Nothing is pending for {p.player_name}.")
     _lock_all(db, [t.id for t in exps] + [a.transaction_id for a in allocs])
     exps, allocs = _pending_items(db, acct)
     if not exps and not allocs:
-        raise LedgerError(f"Nothing is pending for {p.player_name}.")
+        raise ConflictError(f"Nothing is pending for {p.player_name}.")
     reimb_total = sum((t.amount for t in exps), ZERO)
     coll_total = sum((a.allocated_amount for a in allocs), ZERO)
     net = q2(reimb_total - coll_total)
@@ -519,7 +535,7 @@ def settle_net(db: Session, player_id: int, actor: str) -> dict:
                 a.settled_transaction_id = tr.id if tr else None
             db.flush()
     except IntegrityError:
-        raise LedgerError("Something on this player was settled at the same time. Reload and try again.")
+        raise ConflictError("Something on this player was settled at the same time. Reload and try again.")
     log(db, actor, "settlement.net", "player", p.id, p.team_id,
         {"net": net, "reimbursed": reimb_total, "collected": coll_total, "items": len(exps) + len(allocs),
          "batch": batch, "transfer_id": tr.id if tr else None})
