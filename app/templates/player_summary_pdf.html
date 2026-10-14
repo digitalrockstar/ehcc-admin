@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Player Summary</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Calibri, Carlito, sans-serif; font-size: 11pt; color: #1b2a1b; line-height: 1.4; }
+    h1 { font-size: 18pt; margin-bottom: 0.3rem; }
+    h2 { font-size: 13pt; margin: 1rem 0 0.4rem; border-bottom: 1px solid #bfc3bf; padding-bottom: 0.2rem; }
+    .muted { color: #5f685f; font-size: 9pt; }
+    .header { margin-bottom: 1rem; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
+    th, td { padding: 6px 8px; text-align: left; border-bottom: 1px solid #e0e0e0; font-size: 10pt; }
+    th { background: #f4f6f1; font-size: 9pt; text-transform: uppercase; }
+    .num { text-align: right; }
+    .pos { color: #187533; }
+    .neg { color: #c12727; }
+    .footer { margin-top: 1.5rem; padding-top: 0.5rem; border-top: 1px solid #bfc3bf; font-size: 8pt; color: #5f685f; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>{{ team.name }} — Player Summary</h1>
+    <p class="muted">Generated: {{ generated_at }}</p>
+  </div>
+
+  <h2>Player Balances</h2>
+  <table>
+    <thead><tr><th>Player</th><th class="num">Owed</th><th class="num">Paid</th><th class="num">Net Outstanding</th></tr></thead>
+    <tbody>
+      {% for b in balances %}
+        <tr>
+          <td>{{ b.player.player_name }}</td>
+          <td class="num">{{ b.owed|inr }}</td>
+          <td class="num">{{ b.paid|inr }}</td>
+          <td class="num {% if b.net > 0 %}pos{% elif b.net < 0 %}neg{% endif %}">{{ b.net|inr }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="footer">
+    EHCC Expense Tracker — Player summary for {{ team.name }}.
+  </div>
+</body>
+</html>

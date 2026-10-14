@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% import "_macros.html" as ui with context %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+{% if not team %}
+  <div class="card narrow"><h1>No teams yet</h1>
+  {% if is_admin %}<p>Create the first team in <a href="/settings#teams">Settings</a>. A team account is created with it.</p>
+  {% else %}<p>An admin needs to create a team before anything shows up here.</p>{% endif %}</div>
+{% else %}
+<div class="head">
+  <h1>{{ team.name }} <span class="muted small">{{ account.name }}</span></h1>
+  {% if is_admin %}<div class="actions">
+    <a href="/export/team/{{ team.id }}/csv" class="btn small ghost">Export CSV</a>
+    <a href="/export/team/{{ team.id }}/pdf" class="btn small ghost">Export PDF</a>
+    <a href="/export/team/{{ team.id }}/players/pdf" class="btn small ghost">Export Players PDF</a>
+  </div>{% endif %}
+</div>
+<section class="cards">
+  <div class="card stat"><div class="lbl">Income</div><div class="val pos">{{ summary.total_in|inr }}</div></div>
+  <div class="card stat"><div class="lbl">Expenses</div><div class="val neg">{{ summary.total_out|inr }}</div></div>
+  <div class="card stat"><div class="lbl">Team account balance</div>
+    <div class="val {{ 'neg' if summary.balance < 0 }}">{{ summary.balance|inr }}</div>
+    <div class="hint">Starting {{ summary.opening|inr }}, cash in less cash out</div>
+    {% if pending.reimb or pending.owed %}
+    <div class="expected {{ 'pos' if summary.balance - pending.net >= 0 else 'neg' }}">
+      Expected after pending: {{ (summary.balance - pending.net)|inr(true) }}
+      <span class="hint">owes players {{ pending.reimb|inr }}, to collect {{ pending.owed|inr }}</span>
+    </div>{% endif %}</div>
+</section>
+<section class="two">
+  <div class="card"><h2>Expenses by category</h2>
+    {% if summary.by_category %}
+    <ul class="bars">
+      {% for name, amt in summary.by_category %}
+      <li><div class="row"><span>{{ name }}</span><span>{{ amt|inr }}</span></div>
+        <div class="bar"><i style="width: {{ (amt / summary.total_out * 100)|round(1) }}%"></i></div></li>
+      {% endfor %}
+    </ul>
+    {% else %}<p class="muted">No expenses yet.</p>{% endif %}
+  </div>
+  <div class="card"><h2>Outstanding balances</h2>
+    {% if top %}
+    <table class="plain"><tbody>
+      {% for r in top %}<tr><td><a href="/players/{{ r.player.id }}">{{ r.player.player_name }}</a></td><td class="num">{{ ui.net(r.net) }}</td></tr>{% endfor %}
+    </tbody></table>
+    {% else %}<p class="muted">Everyone is settled up.</p>{% endif %}
+  </div>
+</section>
+<div class="card"><h2>Recent transactions</h2>
+  {% if recent %}
+  <p class="hint swipe">Swipe sideways to see all columns.</p>
+  <div class="scroll"><table>
+    <thead><tr><th>Date</th><th>Type</th><th>Item / Category</th><th class="num">Amount</th></tr></thead>
+    <tbody>{% for r in recent %}
+      <tr><td>{{ r.t.transaction_date|dmy }}</td><td>{{ ui.tpill(r.t.type) }}</td>
+        <td><a href="/transactions/{{ r.t.id }}">{{ r.item }}</a></td><td class="num">{{ r.t.amount|inr }}</td></tr>
+    {% endfor %}</tbody></table></div>
+  {% else %}<p class="muted">Nothing recorded yet.</p>{% endif %}
+</div>
+{% endif %}
+{% endblock %}
