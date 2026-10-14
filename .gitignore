@@ -1,7 +1,0 @@
-.env
-*.db
-__pycache__/
-.venv/
-venv/
-.pytest_cache/
-docs/
