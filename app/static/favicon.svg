@@ -1,13 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="14" fill="#1f7a3d"/>
-  <g fill="none" stroke="#ffd54a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-    <g transform="translate(9 5) scale(1.25)"><path d="M9 5C9 2 3 2 3 5.5S9 9 9 12.5 3 16 3 13M6 .5V17.5"/></g>
-    <g transform="translate(29 5) scale(1.25)"><path d="M9 5C9 2 3 2 3 5.5S9 9 9 12.5 3 16 3 13M6 .5V17.5"/></g>
-  </g>
-  <g stroke-linecap="round" transform="translate(-1 4)">
-    <path d="M9 57 20 46" stroke="#e8c07d" stroke-width="4.5"/>
-    <path d="M19 47 40 32" stroke="#f5deb3" stroke-width="9"/>
-  </g>
-  <circle cx="50" cy="50" r="8.5" fill="#d62828" stroke="#fff" stroke-width="1.5"/>
-  <path d="M44.5 45.5c3 2.5 3 7.5 0 10M55.5 44.5c-3 2.5-3 7.5 0 10" fill="none" stroke="#fff" stroke-width="1.3" stroke-linecap="round"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#073d2b"/><g fill="none" stroke="#e5bd61" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 43 36 14l6 5-22 29z" fill="#c58c48"/><path d="M31 44V29m7 15V29m7 15V29M29 28h18M29 47h18"/></g><circle cx="48" cy="17" r="7" fill="#9e2437" stroke="#e5bd61" stroke-width="1.5"/><path d="M45 12l6 10m-7-6 6-3m-3 8 4-3" stroke="#f7d9b4" stroke-width="1"/><g fill="#e5bd61"><ellipse cx="18" cy="53" rx="7" ry="2.5"/><rect x="11" y="49" width="14" height="4" rx="1"/><ellipse cx="18" cy="49" rx="7" ry="2.5"/><ellipse cx="18" cy="46" rx="5" ry="2"/></g><text x="33" y="58" font-family="Arial,sans-serif" font-size="9" font-weight="700" text-anchor="middle" fill="#fff2c4">EHCC</text></svg>
