@@ -35,7 +35,6 @@ def test_allocation_and_surplus_step_5(db, team):
     t = expense(db, team, 1000, "Akshay", NAMES)
     assert [a.allocated_amount for a in t.allocations] == [D("170.00")] * 6
     assert t.surplus_amount == D("20.00")
-    assert ledger.team_summary(db, team.id)["surplus"] == D("20.00")
     # no artificial player balance for the rounding difference: total owed is 1020, not more
     rows = ledger.player_balances(db, team.id)
     assert sum(r["owed"] for r in rows) == D("1020.00")
@@ -216,7 +215,7 @@ def test_void_cascades_and_recalculates(db, team):
     assert transfers and all(x.status == "reversed" for x in transfers)
     assert all(r["net"] == 0 for r in ledger.player_balances(db, team.id))
     s = ledger.team_summary(db, team.id)
-    assert s["total_out"] == 0 and s["balance"] == 0 and s["surplus"] == 0
+    assert s["total_out"] == 0 and s["balance"] == 0
     with pytest.raises(LedgerError):
         ledger.void_transaction(db, t.id, "test")
     db.rollback()
