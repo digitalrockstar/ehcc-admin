@@ -790,7 +790,8 @@ def pending_positions(db: Session, team_id: int) -> dict[int, dict]:
         slot(aid).update(owed=q2(sum(amounts, ZERO)), owed_n=len(amounts))
 
     reimbursed = exists().where(m.Settlement.transaction_id == m.Transaction.id,
-                                m.Settlement.kind == "reimbursement", m.Settlement.status == "active")
+                                m.Settlement.kind == "reimbursement", m.Settlement.status == "active"
+                                ).correlate(m.Transaction)
     for aid, total, n in db.execute(
             select(m.TransactionAccount.account_id, func.sum(m.Transaction.amount), func.count())
             .join(m.Transaction, m.Transaction.id == m.TransactionAccount.transaction_id)
@@ -817,7 +818,8 @@ def pending_of(pending: dict | None, account_id: int | None) -> dict:
 
 def _pending_items(db: Session, acct: m.Account):
     reimbursed = exists().where(m.Settlement.transaction_id == m.Transaction.id,
-                                m.Settlement.kind == "reimbursement", m.Settlement.status == "active")
+                                m.Settlement.kind == "reimbursement", m.Settlement.status == "active"
+                                ).correlate(m.Transaction)
     exps = db.scalars(
         select(m.Transaction).join(m.TransactionAccount, m.TransactionAccount.transaction_id == m.Transaction.id)
         .where(m.TransactionAccount.role == "paid_by", m.TransactionAccount.account_id == acct.id,
