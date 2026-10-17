@@ -160,15 +160,6 @@ def test_edit_after_collection_preserves_payment_and_creates_player_credit(db, t
         m.PlayerCredit.source_transaction_id == t.id, m.PlayerCredit.account_id == bala.id))
     assert credit.remaining_amount == D("20.00")
 
-    future = expense(db, team, 600, "team", ["Bala"])
-    future_allocation = future.allocations[0]
-    applied = ledger.apply_player_credit(db, credit.id, future_allocation.id, "test")
-    db.commit()
-    assert applied == D("20.00")
-    assert credit.remaining_amount == D("0.00")
-    pending = ledger.pending_of(ledger.pending_positions(db, team.id), bala.id)
-    assert pending["owed"] == D("580.00")
-
     # Increasing the old split creates only the additional due; the original ₹170 transfer stays.
     d.amount = D("1200")
     ledger.update_transaction(db, t.id, d, "test")
@@ -185,6 +176,15 @@ def test_edit_after_collection_preserves_payment_and_creates_player_credit(db, t
         m.Settlement.transaction_id == t.id, m.Settlement.account_id == bala.id,
         m.Settlement.kind == "collection", m.Settlement.status == "active")).all()
     assert sorted(s.amount for s in active_collections) == [D("30.00"), D("170.00")]
+
+    future = expense(db, team, 600, "team", ["Bala"])
+    future_allocation = future.allocations[0]
+    applied = ledger.apply_player_credit(db, credit.id, future_allocation.id, "test")
+    db.commit()
+    assert applied == D("20.00")
+    assert credit.remaining_amount == D("0.00")
+    pending = ledger.pending_of(ledger.pending_positions(db, team.id), bala.id)
+    assert pending["owed"] == D("580.00")
 
 
 def test_player_credit_transfer_can_be_reversed(db, team):
