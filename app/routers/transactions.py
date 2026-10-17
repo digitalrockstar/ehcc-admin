@@ -67,9 +67,19 @@ def form_page(request, db, team, f, *, txn=None, status_code=200, error=None, er
     player_opts = [(a.id, a.name) for a in parties if a.kind == "player"]
     team_opts = [(t.id, t.name) for t in all_teams(db) if t.status == "active"]
     type_opts = [("income", "Income"), ("expense", "Expense"), ("transfer", "Transfer")]
+    current_impact = None
+    if txn is not None and txn.type == "expense":
+        current_impact = {
+            "amount": txn.amount,
+            "parties": len(txn.allocations),
+            "share": txn.allocations[0].allocated_amount if txn.allocations else 0,
+            "collected": db.scalar(select(func.coalesce(func.sum(m.Settlement.amount), 0)).where(
+                m.Settlement.transaction_id == txn.id, m.Settlement.kind == "collection",
+                m.Settlement.status == "active")),
+        }
     return page(request, db, "transaction_form.html", team=team, f=f, txn=txn, parties=parties,
                 party_opts=party_opts, income_opts=[("", "External")] + player_opts, team_opts=team_opts,
-                type_opts=type_opts, errors=errors or {},
+                type_opts=type_opts, errors=errors or {}, current_impact=current_impact,
                 cat_json=cat_json, step=int(ledger.rounding_step(db)), teambar_path="/transactions",
                 status_code=status_code)
 
