@@ -1,6 +1,6 @@
 # EHCC Expense Tracker
 
-Team-wise cricket ledger: income, expenses, transfers, player balances, full reimbursements and collections, and rounding surplus. Built to the PRD v2 (one integrated MVP).
+Team-wise cricket ledger: income, expenses, transfers, player balances, full reimbursements and collections, and team-balance rounding adjustment. Built to the PRD v2 (one integrated MVP).
 
 **Stack:** FastAPI, Jinja2 templates (no build step), SQLAlchemy 2, Alembic, PostgreSQL (Neon) in production, SQLite for quick local runs. Hosted on Render.
 
