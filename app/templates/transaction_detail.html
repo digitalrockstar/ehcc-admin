@@ -17,7 +17,7 @@
     <dt>Amount</dt><dd>{{ t.amount|inr }}</dd>
     <dt>Paid by / Account in</dt><dd>{{ row.col1 }}</dd>
     <dt>Charged to / Account out</dt><dd>{{ row.col2 }}</dd>
-    {% if t.type == 'expense' and t.allocations|length > 1 %}<dt>Rounding surplus</dt><dd>{{ t.surplus_amount|inr }}</dd>{% endif %}
+    {% if t.type == 'expense' and t.allocations|length > 1 %}<dt>Team balance rounding adjustment</dt><dd>{{ t.surplus_amount|inr }}</dd>{% endif %}
     {% if t.status != 'active' %}<dt>{{ t.status|capitalize }}</dt><dd>{{ t.voided_at|ist }} by {{ t.voided_by }}{% if t.void_reason %}. {{ t.void_reason }}{% endif %}</dd>{% endif %}
     {% if row.link and row.link.batch_id %}<dt>Created by</dt><dd>Net settlement for {{ row.link.account.name }}</dd>
     {% elif parent %}<dt>Created by</dt><dd>{{ row.link.kind|capitalize }} on <a href="/transactions/{{ parent.id }}">#{{ parent.id }}</a></dd>{% endif %}
