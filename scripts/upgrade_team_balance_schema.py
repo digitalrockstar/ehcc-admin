@@ -3,8 +3,8 @@
 Usage:
     DATABASE_URL='postgresql+psycopg://...' python scripts/upgrade_team_balance_schema.py
 
-Prefer `alembic upgrade head` for normal deployments. This script creates missing model
-tables, adds the new movement column if missing, and updates settlement indexes/constraint.
+Prefer `alembic upgrade head` for normal deployments. This script creates missing credit tables,
+adds missing model columns, and updates settlement indexes/constraint.
 """
 import os
 from sqlalchemy import create_engine, inspect, text
@@ -17,7 +17,6 @@ engine = create_engine(url, pool_pre_ping=True)
 if engine.dialect.name != "postgresql":
     raise SystemExit("This standalone schema script supports PostgreSQL only; use Alembic for SQLite.")
 
-from sqlalchemy import inspect
 inspector = inspect(engine)
 if not inspector.has_table("teams") or not inspector.has_table("settlements"):
     raise SystemExit("Core schema is missing. Run `alembic upgrade head` first.")
@@ -78,4 +77,8 @@ with engine.begin() as conn:
     conn.execute(text("""CREATE UNIQUE INDEX IF NOT EXISTS uq_active_team_balance
         ON public.settlements(transaction_id, kind)
         WHERE status='active' AND kind='team_balance'"""))
+    conn.execute(text("CREATE INDEX IF NOT EXISTS ix_player_credits_team_id ON public.player_credits(team_id)"))
+    conn.execute(text("CREATE INDEX IF NOT EXISTS ix_player_credits_account_id ON public.player_credits(account_id)"))
+    conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS uq_player_credit_source_account ON public.player_credits(source_transaction_id, account_id)"))
+    conn.execute(text("CREATE INDEX IF NOT EXISTS ix_player_credit_movements_credit_id ON public.player_credit_movements(credit_id)"))
 print("Schema updated: player credits, repeat collections, and team-balance settlements are ready.")
