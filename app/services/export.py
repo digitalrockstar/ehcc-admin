@@ -68,7 +68,7 @@ def team_csv(db: Session, team_id: int) -> str:
     w.writerow(["Total Income", str(summary["total_in"])])
     w.writerow(["Total Expense", str(summary["total_out"])])
     w.writerow(["Team Account Balance", str(summary["balance"])])
-    w.writerow(["Surplus", str(summary["surplus"])])
+    w.writerow(["Team Balance Rounding Adjustment", str(summary["surplus"])])
     w.writerow([])
     w.writerow(["Player Balances"])
     w.writerow(["Player", "Owed", "Paid", "Net Outstanding"])
