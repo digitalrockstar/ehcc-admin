@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .. import models as m
@@ -32,8 +33,17 @@ def player_detail(player_id: int, request: Request, db: Session = Depends(get_db
     events, net = ledger.player_history(db, p)
     owed = sum((e["delta"] for e in events if e["role"] == "Owed"), ledger.ZERO)
     pend = ledger.pending_of(ledger.pending_positions(db, p.team_id), p.account.id)
+    credits = db.scalars(select(m.PlayerCredit).where(
+        m.PlayerCredit.account_id == p.account.id,
+        m.PlayerCredit.remaining_amount > 0).order_by(m.PlayerCredit.created_at)).all()
+    credit_allocations = db.scalars(select(m.Allocation).join(
+        m.Transaction, m.Transaction.id == m.Allocation.transaction_id).where(
+        m.Allocation.account_id == p.account.id, m.Allocation.settlement_status == 0,
+        m.Transaction.status == "active", m.Transaction.type == "expense").order_by(
+        m.Transaction.transaction_date, m.Transaction.id)).all()
     return page(request, db, "player_detail.html", team=team, player=p, events=events, net=net,
-                owed=owed, paid=owed - net, pend=pend, teambar_path="/players")
+                owed=owed, paid=owed - net, pend=pend, credits=credits,
+                credit_allocations=credit_allocations, teambar_path="/players")
 
 
 def _team_from(form, db):
