@@ -3,6 +3,18 @@
 {% block title %}{{ 'Edit' if txn else 'Add' }} transaction{% endblock %}
 {% block content %}
 <h1>{{ ('Edit transaction #%d' % txn.id) if txn else 'Add transaction' }}</h1>
+{% if current_impact %}
+<div class="card">
+  <h2>Current allocation impact</h2>
+  <div class="facts">
+    <dt>Current expense</dt><dd>{{ current_impact.amount|inr }}</dd>
+    <dt>Parties charged</dt><dd>{{ current_impact.parties }}</dd>
+    <dt>Share per party</dt><dd>{{ current_impact.share|inr }}</dd>
+    <dt>Collections already recorded</dt><dd>{{ current_impact.collected|inr }}</dd>
+  </div>
+  <p class="hint">The preview below recalculates the proposed split. Existing collection transfers remain in history; any amount collected above a revised share becomes player credit, and an increased share leaves only the additional amount due.</p>
+</div>
+{% endif %}
 <form method="post" id="txn-form" class="card formgrid" data-step="{{ step }}"
       action="{{ ('/transactions/%d/edit' % txn.id) if txn else '/transactions/new' }}">
   {{ ui.csrf_input() }}
