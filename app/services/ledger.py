@@ -816,8 +816,9 @@ def team_pending_totals(pending: dict) -> dict:
     reimb = sum((v["reimb"] for v in pending.values()), ZERO)
     owed = sum((v["owed"] for v in pending.values()), ZERO)
     owed_to_team = sum((v.get("owed_to_team", ZERO) for v in pending.values()), ZERO)
+    # Net pending player balances offset reimbursements rather than double-counting them.
     return {"reimb": reimb, "owed": owed, "owed_to_team": owed_to_team,
-            "net": q2(reimb - owed_to_team)}
+            "net": q2(reimb - owed)}
 
 
 def pending_of(pending: dict | None, account_id: int | None) -> dict:
