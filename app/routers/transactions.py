@@ -67,9 +67,19 @@ def form_page(request, db, team, f, *, txn=None, status_code=200, error=None, er
     player_opts = [(a.id, a.name) for a in parties if a.kind == "player"]
     team_opts = [(t.id, t.name) for t in all_teams(db) if t.status == "active"]
     type_opts = [("income", "Income"), ("expense", "Expense"), ("transfer", "Transfer")]
+    current_impact = None
+    if txn is not None and txn.type == "expense":
+        current_impact = {
+            "amount": txn.amount,
+            "parties": len(txn.allocations),
+            "share": txn.allocations[0].allocated_amount if txn.allocations else 0,
+            "collected": db.scalar(select(func.coalesce(func.sum(m.Settlement.amount), 0)).where(
+                m.Settlement.transaction_id == txn.id, m.Settlement.kind == "collection",
+                m.Settlement.status == "active")),
+        }
     return page(request, db, "transaction_form.html", team=team, f=f, txn=txn, parties=parties,
                 party_opts=party_opts, income_opts=[("", "External")] + player_opts, team_opts=team_opts,
-                type_opts=type_opts, errors=errors or {},
+                type_opts=type_opts, errors=errors or {}, current_impact=current_impact,
                 cat_json=cat_json, step=int(ledger.rounding_step(db)), teambar_path="/transactions",
                 status_code=status_code)
 
@@ -169,7 +179,16 @@ def detail(txn_id: int, request: Request, db: Session = Depends(get_db)):
     ).order_by(m.AuditLog.id)).all()
     link = row["link"]
     parent = db.get(m.Transaction, link.transaction_id) if link and not link.batch_id else None
-    return page(request, db, "transaction_detail.html", team=team, row=row, history=history, parent=parent, pend=pending,
+    credit_applied = {aid: amount for aid, amount in db.execute(
+        select(m.PlayerCreditMovement.allocation_id,
+               func.sum(m.PlayerCreditMovement.amount))
+        .where(m.PlayerCreditMovement.allocation_id.in_([a.id for a in t.allocations] or [-1]),
+               m.PlayerCreditMovement.kind == "application",
+               m.PlayerCreditMovement.reversed_at.is_(None))
+        .group_by(m.PlayerCreditMovement.allocation_id)).all()}
+    allocation_due = {a.id: ledger.allocation_due(db, a) for a in t.allocations}
+    return page(request, db, "transaction_detail.html", team=team, row=row, history=history, parent=parent,
+                pend=pending, credit_applied=credit_applied, allocation_due=allocation_due,
                 teambar_path="/transactions")
 
 

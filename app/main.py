@@ -9,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
 from . import config
-from .db import SessionLocal
+from .db import SessionLocal, ensure_schema_compatibility
 from .routers import auth, dashboard, export, players, settings, transactions
 from .security import LoginRequired
 from .services.ledger import LedgerError
@@ -22,10 +22,11 @@ log = logging.getLogger("ehcc")
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     try:
+        ensure_schema_compatibility()
         with SessionLocal() as db:
             ensure_defaults(db)
-    except Exception:  # tables missing before the first migration
-        log.exception("Could not seed defaults. Run `alembic upgrade head`.")
+    except Exception:
+        log.exception("Database setup failed. Run `alembic upgrade head` and check DATABASE_URL.")
     yield
 
 

@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .. import models as m
@@ -32,8 +33,17 @@ def player_detail(player_id: int, request: Request, db: Session = Depends(get_db
     events, net = ledger.player_history(db, p)
     owed = sum((e["delta"] for e in events if e["role"] == "Owed"), ledger.ZERO)
     pend = ledger.pending_of(ledger.pending_positions(db, p.team_id), p.account.id)
+    credits = db.scalars(select(m.PlayerCredit).where(
+        m.PlayerCredit.account_id == p.account.id,
+        m.PlayerCredit.remaining_amount > 0).order_by(m.PlayerCredit.created_at)).all()
+    credit_allocations = db.scalars(select(m.Allocation).join(
+        m.Transaction, m.Transaction.id == m.Allocation.transaction_id).where(
+        m.Allocation.account_id == p.account.id, m.Allocation.settlement_status == 0,
+        m.Transaction.status == "active", m.Transaction.type == "expense").order_by(
+        m.Transaction.transaction_date, m.Transaction.id)).all()
     return page(request, db, "player_detail.html", team=team, player=p, events=events, net=net,
-                owed=owed, paid=owed - net, pend=pend, teambar_path="/players")
+                owed=owed, paid=owed - net, pend=pend, credits=credits,
+                credit_allocations=credit_allocations, teambar_path="/players")
 
 
 def _team_from(form, db):
@@ -110,6 +120,34 @@ def settle_net(player_id: int, request: Request, form=Depends(admin_form), db: S
             return f"Net settlement done. {who} paid the team {inr(-net)} in one transfer."
         return f"Settled {r['items']} items with no cash movement. What the team owed {who} and what {who} owed the team cancel out."
     return _run(request, form, db, lambda: ledger.settle_net(db, player_id, admin_name(request)), msg,
+                f"/players/{player_id}")
+
+
+@router.post("/players/{player_id}/credits/{credit_id}/transfer")
+def transfer_credit(player_id: int, credit_id: int, request: Request, form=Depends(admin_form),
+                    db: Session = Depends(get_db)):
+    def action():
+        player = db.get(m.Player, player_id)
+        credit = db.get(m.PlayerCredit, credit_id)
+        if player is None or credit is None or credit.account_id != player.account.id:
+            raise NotFoundError("Player credit not found.")
+        return ledger.transfer_player_credit_to_team(db, credit_id, admin_name(request))
+    return _run(request, form, db, action, lambda amount: f"Transferred {inr(amount)} of credit to the team account.",
+                f"/players/{player_id}")
+
+
+@router.post("/players/{player_id}/credits/{credit_id}/apply")
+def apply_credit(player_id: int, credit_id: int, request: Request, form=Depends(admin_form),
+                 db: Session = Depends(get_db)):
+    raw = str(form.get("allocation_id", "")).strip()
+    allocation_id = int(raw) if raw.isdigit() else 0
+    def action():
+        player = db.get(m.Player, player_id)
+        credit = db.get(m.PlayerCredit, credit_id)
+        if player is None or credit is None or credit.account_id != player.account.id:
+            raise NotFoundError("Player credit not found.")
+        return ledger.apply_player_credit(db, credit_id, allocation_id, admin_name(request))
+    return _run(request, form, db, action, lambda amount: f"Applied {inr(amount)} credit to the selected expense.",
                 f"/players/{player_id}")
 
 

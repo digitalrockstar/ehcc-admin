@@ -35,7 +35,6 @@ def test_allocation_and_surplus_step_5(db, team):
     t = expense(db, team, 1000, "Akshay", NAMES)
     assert [a.allocated_amount for a in t.allocations] == [D("170.00")] * 6
     assert t.surplus_amount == D("20.00")
-    assert ledger.team_summary(db, team.id)["surplus"] == D("20.00")
     # no artificial player balance for the rounding difference: total owed is 1020, not more
     rows = ledger.player_balances(db, team.id)
     assert sum(r["owed"] for r in rows) == D("1020.00")
@@ -95,6 +94,138 @@ def test_collection_full_or_none_and_no_duplicates(db, team):
     assert ledger.team_summary(db, team.id)["balance"] == D("-830.00")
 
 
+def test_player_collections_go_to_payer_and_rounding_moves_to_team_balance(db, team):
+    t = expense(db, team, 1000, "Akshay", NAMES)
+    akshay = account_of(db, team.id, "Akshay")
+    # Payer's own allocation is considered covered by the amount they fronted.
+    own = next(a for a in t.allocations if a.account_id == akshay.id)
+    assert own.settlement_status == 1
+    assert own.settled_transaction_id is None
+
+    ledger.collect_all(db, t.id, "test")
+    db.commit()
+    db.expire_all()
+
+    transfers = db.scalars(select(m.Transaction).where(
+        m.Transaction.team_id == team.id, m.Transaction.type == "transfer",
+        m.Transaction.status == "active")).all()
+    assert len(transfers) == 6  # five collections to Akshay plus one rounding adjustment
+    legs = {tr.id: {ta.role: ta.account_id for ta in tr.accounts} for tr in transfers}
+    team_account = ledger.get_team_account(db, team.id)
+    collections = db.scalars(select(m.Settlement).where(
+        m.Settlement.transaction_id == t.id, m.Settlement.kind == "collection",
+        m.Settlement.status == "active")).all()
+    assert len(collections) == 5
+    assert all(legs[s.settlement_transaction_id]["account_in"] == akshay.id for s in collections)
+    rounding = db.scalars(select(m.Settlement).where(
+        m.Settlement.transaction_id == t.id, m.Settlement.kind == "team_balance",
+        m.Settlement.status == "active")).one()
+    assert rounding.amount == D("20.00")
+    assert legs[rounding.settlement_transaction_id] == {
+        "account_out": akshay.id, "account_in": team_account.id
+    }
+    assert ledger.team_summary(db, team.id)["balance"] == D("20.00")
+
+    # Reversing a collection also reverses the dependent rounding adjustment.
+    ledger.reverse_settlement(db, collections[0].id, "test", "test reversal")
+    db.commit()
+    db.expire_all()
+    assert db.get(m.Settlement, rounding.id).status == "reversed"
+    assert ledger.team_summary(db, team.id)["balance"] == D("0.00")
+
+
+def test_edit_after_collection_preserves_payment_and_creates_player_credit(db, team):
+    t = expense(db, team, 1000, "team", NAMES)
+    bala = account_of(db, team.id, "Bala")
+    allocation = next(a for a in t.allocations if a.account_id == bala.id)
+    original = ledger.collect(db, allocation.id, "test")
+    db.commit()
+    transfer_id = original.settlement_transaction_id
+
+    d = ledger.TxnInput(team_id=team.id, date=t.transaction_date, type="expense",
+                        amount=D("900"), category_id=t.category_id,
+                        paid_by=ledger.get_team_account(db, team.id).id,
+                        charged_to=[a.account_id for a in t.allocations])
+    edited = ledger.update_transaction(db, t.id, d, "test")
+    db.commit()
+    db.expire_all()
+
+    allocation = db.scalar(select(m.Allocation).where(
+        m.Allocation.transaction_id == t.id, m.Allocation.account_id == bala.id))
+    assert allocation.allocated_amount == D("150.00")
+    assert allocation.settlement_status == 1
+    assert db.get(m.Transaction, transfer_id).status == "active"
+    assert db.get(m.Transaction, transfer_id).amount == D("170.00")
+    credit = db.scalar(select(m.PlayerCredit).where(
+        m.PlayerCredit.source_transaction_id == t.id, m.PlayerCredit.account_id == bala.id))
+    assert credit.remaining_amount == D("20.00")
+
+    # Increasing the old split creates only the additional due; the original ₹170 transfer stays.
+    d.amount = D("1200")
+    ledger.update_transaction(db, t.id, d, "test")
+    db.commit()
+    db.expire_all()
+    allocation = db.scalar(select(m.Allocation).where(
+        m.Allocation.transaction_id == t.id, m.Allocation.account_id == bala.id))
+    assert allocation.allocated_amount == D("200.00")
+    assert allocation.settlement_status == 0
+    extra = ledger.collect(db, allocation.id, "test")
+    db.commit()
+    assert extra.amount == D("30.00")
+    active_collections = db.scalars(select(m.Settlement).where(
+        m.Settlement.transaction_id == t.id, m.Settlement.account_id == bala.id,
+        m.Settlement.kind == "collection", m.Settlement.status == "active")).all()
+    assert sorted(s.amount for s in active_collections) == [D("30.00"), D("170.00")]
+
+
+
+def test_player_credit_is_explicitly_applied_to_future_obligation(db, team):
+    t = expense(db, team, 1000, "team", NAMES)
+    bala = account_of(db, team.id, "Bala")
+    allocation = next(a for a in t.allocations if a.account_id == bala.id)
+    ledger.collect(db, allocation.id, "test")
+    db.commit()
+
+    d = ledger.TxnInput(team_id=team.id, date=t.transaction_date, type="expense",
+                        amount=D("900"), category_id=t.category_id,
+                        paid_by=ledger.get_team_account(db, team.id).id,
+                        charged_to=[a.account_id for a in t.allocations])
+    ledger.update_transaction(db, t.id, d, "test")
+    db.commit()
+    credit = db.scalar(select(m.PlayerCredit).where(
+        m.PlayerCredit.source_transaction_id == t.id, m.PlayerCredit.account_id == bala.id))
+    assert credit.remaining_amount == D("20.00")
+
+    future = expense(db, team, 600, "team", ["Bala"])
+    applied = ledger.apply_player_credit(db, credit.id, future.allocations[0].id, "test")
+    db.commit()
+    assert applied == D("20.00")
+    assert credit.remaining_amount == D("0.00")
+    pending = ledger.pending_of(ledger.pending_positions(db, team.id), bala.id)
+    assert pending["owed"] == D("580.00")
+
+
+def test_player_credit_transfer_can_be_reversed(db, team):
+    t = expense(db, team, 1000, "team", NAMES)
+    bala = account_of(db, team.id, "Bala")
+    credit = m.PlayerCredit(team_id=team.id, account_id=bala.id, source_transaction_id=t.id,
+                            original_amount=D("25"), remaining_amount=D("25"), note="test")
+    db.add(credit)
+    db.flush()
+    amount = ledger.transfer_player_credit_to_team(db, credit.id, "test")
+    db.commit()
+    assert amount == D("25.00")
+    assert credit.remaining_amount == D("0.00")
+    transfer = db.scalar(select(m.Transaction).where(
+        m.Transaction.item_description == f"Player credit transferred to team (credit #{credit.id})"))
+    assert transfer is not None
+    ledger.void_transaction(db, transfer.id, "test", "test reversal")
+    db.commit()
+    db.refresh(credit)
+    assert credit.remaining_amount == D("25.00")
+    assert db.get(m.Transaction, transfer.id).status == "reversed"
+
+
 def test_database_blocks_duplicate_active_settlement(db, team):
     t = expense(db, team, 1000, "Akshay", NAMES)
     s = ledger.reimburse(db, t.id, "test")
@@ -119,7 +250,7 @@ def test_void_cascades_and_recalculates(db, team):
     assert transfers and all(x.status == "reversed" for x in transfers)
     assert all(r["net"] == 0 for r in ledger.player_balances(db, team.id))
     s = ledger.team_summary(db, team.id)
-    assert s["total_out"] == 0 and s["balance"] == 0 and s["surplus"] == 0
+    assert s["total_out"] == 0 and s["balance"] == 0
     with pytest.raises(LedgerError):
         ledger.void_transaction(db, t.id, "test")
     db.rollback()

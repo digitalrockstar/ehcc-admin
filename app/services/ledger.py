@@ -1,4 +1,4 @@
-"""All financial rules live here: allocation, surplus, settlement, void/reversal, balances."""
+"""All financial rules live here: allocations, team balance, credits, settlements and reversals."""
 from __future__ import annotations
 
 import datetime as dt
@@ -214,8 +214,11 @@ def create_transaction(db: Session, d: TxnInput, actor: str) -> m.Transaction:
                       surplus_amount=plan["surplus"], status="active", created_by=actor)
     for role, acct in plan["links"]:
         t.accounts.append(m.TransactionAccount(account_id=acct.id, role=role))
+    payer_id = d.paid_by if d.type == "expense" else None
     for acct, share in plan["allocs"]:
-        t.allocations.append(m.Allocation(account_id=acct.id, allocated_amount=share))
+        # The payer's own selected share is already covered by the expense they fronted.
+        t.allocations.append(m.Allocation(account_id=acct.id, allocated_amount=share,
+                                          settlement_status=1 if acct.id == payer_id else 0))
     db.add(t)
     db.flush()
     db.refresh(t)
@@ -234,19 +237,45 @@ def settlement_for_transfer(db: Session, txn_id: int) -> m.Settlement | None:
 
 
 def update_transaction(db: Session, txn_id: int, d: TxnInput, actor: str) -> m.Transaction:
+    """Edit an expense without erasing collection history; overpayments become player credits."""
     t = _lock_txn(db, txn_id)
     if t.status != "active":
         raise ConflictError("Only active transactions can be edited.")
     if settlement_for_transfer(db, t.id):
-        raise ConflictError("This transfer was created by a reimbursement or collection. Reverse the settlement instead.")
-    if has_active_settlements(db, t.id):
-        raise ConflictError("Reverse the reimbursement and collections on this transaction before editing it.")
+        raise ConflictError("This transfer was created by a settlement. Reverse the settlement instead.")
+    active_settlements = db.scalars(select(m.Settlement).where(
+        m.Settlement.transaction_id == t.id, m.Settlement.status == "active")).all()
+    if any(s.kind == "reimbursement" for s in active_settlements):
+        raise ConflictError("Reverse the reimbursement before editing this transaction.")
     if d.type != t.type or d.team_id != t.team_id:
         raise LedgerError("Type and team cannot be changed. Void this transaction and enter a new one.")
     before = snapshot(t)
     plan = _prepare(db, d, keep_category_id=t.category_id)
+    if t.type != "expense" and active_settlements:
+        raise ConflictError("Reverse active settlements before editing this transaction.")
+    source_credit_ids = select(m.PlayerCredit.id).where(m.PlayerCredit.source_transaction_id == t.id)
+    credit_in_use = db.scalar(select(func.count()).select_from(m.PlayerCreditMovement).where(
+        m.PlayerCreditMovement.credit_id.in_(source_credit_ids),
+        m.PlayerCreditMovement.kind.in_(("application", "team_transfer")),
+        m.PlayerCreditMovement.reversed_at.is_(None)))
+    if credit_in_use:
+        raise ConflictError("Reverse this transaction's credit applications or team transfer before editing it.")
+
+    # Capture historical collections before allocations are reconciled.
+    old_allocs = {a.account_id: a for a in list(t.allocations)}
+    collected = {}
+    for aid, alloc in old_allocs.items():
+        collected[aid] = q2(db.scalar(select(func.coalesce(func.sum(m.Settlement.amount), 0)).where(
+            m.Settlement.allocation_id == alloc.id,
+            m.Settlement.kind == "collection", m.Settlement.status == "active")))
+
+    # Reverse only the automatic team-balance adjustment; original collection transfers remain
+    # active and visible as real historical cash movements.
+    for s in active_settlements:
+        if s.kind == "team_balance":
+            _reverse_row(db, s, actor, "Parent transaction edited")
+
     t.accounts.clear()
-    t.allocations.clear()
     db.flush()
     t.transaction_date = d.date
     t.category_id = plan["category"].id if plan["category"] else None
@@ -255,13 +284,53 @@ def update_transaction(db: Session, txn_id: int, d: TxnInput, actor: str) -> m.T
     t.surplus_amount = plan["surplus"]
     for role, acct in plan["links"]:
         t.accounts.append(m.TransactionAccount(account_id=acct.id, role=role))
-    for acct, share in plan["allocs"]:
-        t.allocations.append(m.Allocation(account_id=acct.id, allocated_amount=share))
+
+    new_allocs = {acct.id: (acct, share) for acct, share in plan["allocs"]}
+    for aid, old in list(old_allocs.items()):
+        if aid not in new_allocs:
+            _reverse_credit_applications(db, old, actor)
+            paid = collected.get(aid, ZERO)
+            existing_credit = db.scalar(select(m.PlayerCredit.id).where(
+                m.PlayerCredit.source_transaction_id == t.id, m.PlayerCredit.account_id == aid))
+            if paid > 0 or existing_credit:
+                _upsert_player_credit(db, t.team_id, aid, t.id, paid,
+                                      f"Credit from removed allocation on transaction #{t.id}", actor)
+            t.allocations.remove(old)
+    db.flush()
+
+    payer_id = plan["links"][0][1].id if t.type == "expense" and plan["links"] else None
+    for aid, (acct, share) in new_allocs.items():
+        old = old_allocs.get(aid)
+        if old is None:
+            old = m.Allocation(transaction_id=t.id, account_id=aid, allocated_amount=share)
+            t.allocations.append(old)
+        old.allocated_amount = share
+        paid = collected.get(aid, ZERO)
+        _reconcile_credit_applications(db, old, share, actor)
+        applied_credit = _applied_credit(db, old)
+        old.settlement_status = 1 if (aid == payer_id or paid + applied_credit >= share) else 0
+        if old.settlement_status == 0:
+            old.settled_transaction_id = None
+        elif paid > 0:
+            last = db.scalar(select(m.Settlement).where(
+                m.Settlement.transaction_id == t.id, m.Settlement.account_id == aid,
+                m.Settlement.kind == "collection", m.Settlement.status == "active")
+                .order_by(m.Settlement.id.desc()))
+            old.settled_transaction_id = last.settlement_transaction_id if last else None
+        else:
+            old.settled_transaction_id = None
+        existing_credit = db.scalar(select(m.PlayerCredit.id).where(
+            m.PlayerCredit.source_transaction_id == t.id, m.PlayerCredit.account_id == aid))
+        overpayment = q2(max(ZERO, paid - share))
+        if overpayment > ZERO or existing_credit:
+            _upsert_player_credit(db, t.team_id, aid, t.id, overpayment,
+                                  f"Overpayment from edited transaction #{t.id}", actor)
     db.flush()
     db.refresh(t)
-    log(db, actor, "transaction.edit", "transaction", t.id, t.team_id, {"before": before, "after": snapshot(t)})
+    _finalize_team_balance_rounding(db, t, actor)
+    log(db, actor, "transaction.edit", "transaction", t.id, t.team_id,
+        {"before": before, "after": snapshot(t), "collections_preserved": True})
     return t
-
 
 # ---------------------------------------------------------------- settlements
 
@@ -321,25 +390,214 @@ def collect(db: Session, allocation_id: int, actor: str) -> m.Settlement:
         raise ConflictError("Collections apply to active expenses only.")
     if a.account.kind != "player":
         raise LedgerError("Only players are collected from. The team account is charged directly.")
-    if a.settlement_status == 1:
+    already_collected = _active_collected(db, a)
+    already_credited = _applied_credit(db, a)
+    amount_due = q2(max(ZERO, a.allocated_amount - already_collected - already_credited))
+    if amount_due <= ZERO or a.settlement_status == 1:
         raise ConflictError(f"{a.account.name} has already paid this.")
     team_acct = get_team_account(db, t.team_id)
+    payer = _payer_account(t)
+    recipient = payer if payer is not None and payer.kind == "player" else team_acct
+    if recipient.id == a.account_id:
+        raise ConflictError(f"{a.account.name}'s share is already covered by the amount they paid.")
     try:
         with db.begin_nested():
-            tr = _make_transfer(db, t.team_id, a.account, team_acct, a.allocated_amount,
+            tr = _make_transfer(db, t.team_id, a.account, recipient, amount_due,
                                 f"Collection for #{t.id}", actor)
             s = m.Settlement(kind="collection", transaction_id=t.id, account_id=a.account_id,
-                             allocation_id=a.id, amount=a.allocated_amount,
+                             allocation_id=a.id, amount=amount_due,
                              settlement_transaction_id=tr.id, status="active")
             db.add(s)
-            a.settlement_status = 1
+            a.settlement_status = 1 if q2(already_collected + already_credited + amount_due) >= a.allocated_amount else 0
             a.settled_transaction_id = tr.id
             db.flush()
+            _finalize_team_balance_rounding(db, t, actor)
     except IntegrityError:
         raise ConflictError(f"{a.account.name} has already paid this.")
     log(db, actor, "settlement.collect", "transaction", t.id, t.team_id,
-        {"from": a.account.name, "amount": a.allocated_amount, "transfer_id": tr.id})
+        {"from": a.account.name, "to": recipient.name, "amount": amount_due, "transfer_id": tr.id})
     return s
+
+
+def _reverse_credit_applications(db: Session, allocation: m.Allocation, actor: str) -> None:
+    movements = db.scalars(select(m.PlayerCreditMovement).where(
+        m.PlayerCreditMovement.allocation_id == allocation.id,
+        m.PlayerCreditMovement.kind == "application",
+        m.PlayerCreditMovement.reversed_at.is_(None))).all()
+    for movement in movements:
+        movement.reversed_at = m.utcnow()
+        credit = db.get(m.PlayerCredit, movement.credit_id)
+        if credit is not None:
+            credit.remaining_amount = q2(min(credit.original_amount,
+                                              credit.remaining_amount + movement.amount))
+            log(db, actor, "player_credit.application_reverse", "player_credit", credit.id,
+                credit.team_id, {"allocation_id": allocation.id, "amount": movement.amount})
+
+
+def _reconcile_credit_applications(db: Session, allocation: m.Allocation,
+                                   new_amount: Decimal, actor: str) -> None:
+    """Keep credit applied to an allocation at or below its revised amount after cash collections."""
+    cash_paid = _active_collected(db, allocation)
+    allowed = q2(max(ZERO, new_amount - cash_paid))
+    applied = _applied_credit(db, allocation)
+    excess = q2(applied - allowed)
+    if excess <= ZERO:
+        return
+    movements = db.scalars(select(m.PlayerCreditMovement).where(
+        m.PlayerCreditMovement.allocation_id == allocation.id,
+        m.PlayerCreditMovement.kind == "application",
+        m.PlayerCreditMovement.reversed_at.is_(None)).order_by(
+        m.PlayerCreditMovement.id.desc())).all()
+    for movement in movements:
+        if excess <= ZERO:
+            break
+        credit = db.get(m.PlayerCredit, movement.credit_id)
+        movement.reversed_at = m.utcnow()
+        if credit is not None:
+            credit.remaining_amount = q2(min(credit.original_amount,
+                                              credit.remaining_amount + movement.amount))
+        if movement.amount > excess:
+            replacement_amount = q2(movement.amount - excess)
+            if credit is not None:
+                credit.remaining_amount = q2(credit.remaining_amount - replacement_amount)
+                db.add(m.PlayerCreditMovement(
+                    credit_id=movement.credit_id, kind="application", amount=replacement_amount,
+                    transaction_id=allocation.transaction_id, allocation_id=allocation.id))
+            excess = ZERO
+        else:
+            excess = q2(excess - movement.amount)
+        if credit is not None:
+            log(db, actor, "player_credit.application_adjust", "player_credit", credit.id,
+                credit.team_id, {"allocation_id": allocation.id, "reversed_amount": movement.amount})
+
+
+def _upsert_player_credit(db: Session, team_id: int, account_id: int, source_transaction_id: int,
+                          amount: Decimal, note: str, actor: str) -> m.PlayerCredit | None:
+    """Synchronize the unspent credit with the current overpayment on a source transaction."""
+    amount = q2(max(ZERO, amount))
+    credit = db.scalar(select(m.PlayerCredit).where(
+        m.PlayerCredit.source_transaction_id == source_transaction_id,
+        m.PlayerCredit.account_id == account_id).with_for_update())
+    if credit is None:
+        if amount <= ZERO:
+            return None
+        credit = m.PlayerCredit(team_id=team_id, account_id=account_id,
+                                source_transaction_id=source_transaction_id,
+                                original_amount=amount, remaining_amount=amount, note=note)
+        db.add(credit)
+        db.flush()
+        db.add(m.PlayerCreditMovement(credit_id=credit.id, kind="created", amount=amount,
+                                      transaction_id=source_transaction_id))
+        log(db, actor, "player_credit.create", "player_credit", credit.id, team_id,
+            {"account_id": account_id, "amount": amount, "source_transaction_id": source_transaction_id})
+        return credit
+
+    old_remaining = q2(credit.remaining_amount)
+    if amount == old_remaining:
+        return credit
+    delta = q2(amount - old_remaining)
+    credit.remaining_amount = amount
+    if amount > credit.original_amount:
+        credit.original_amount = amount
+    credit.note = note
+    db.add(m.PlayerCreditMovement(credit_id=credit.id, kind="adjustment", amount=abs(delta),
+                                  transaction_id=source_transaction_id))
+    log(db, actor, "player_credit.adjust", "player_credit", credit.id, team_id,
+        {"account_id": account_id, "from": old_remaining, "to": amount,
+         "source_transaction_id": source_transaction_id})
+    return credit
+
+def player_credit_balance(db: Session, account_id: int) -> Decimal:
+    return q2(db.scalar(select(func.coalesce(func.sum(m.PlayerCredit.remaining_amount), 0)).where(
+        m.PlayerCredit.account_id == account_id)))
+
+
+def apply_player_credit(db: Session, credit_id: int, allocation_id: int, actor: str) -> Decimal:
+    """Explicitly apply credit to a player's future allocation; never auto-applied."""
+    credit = db.scalar(select(m.PlayerCredit).where(m.PlayerCredit.id == credit_id).with_for_update())
+    allocation = db.scalar(select(m.Allocation).where(m.Allocation.id == allocation_id).with_for_update())
+    if credit is None or allocation is None:
+        raise NotFoundError("Credit or allocation not found.")
+    if credit.account_id != allocation.account_id or credit.team_id != allocation.transaction.team_id:
+        raise ConflictError("Credit and allocation must belong to the same player and team.")
+    if allocation.transaction.status != "active" or allocation.transaction.type != "expense":
+        raise ConflictError("Credit can only be applied to an active expense allocation.")
+    remaining_due = q2(max(ZERO, allocation.allocated_amount - _active_collected(db, allocation)
+                           - _applied_credit(db, allocation)))
+    amount = q2(min(credit.remaining_amount, remaining_due))
+    if amount <= ZERO:
+        raise ConflictError("No credit or outstanding amount is available to apply.")
+    credit.remaining_amount = q2(credit.remaining_amount - amount)
+    db.add(m.PlayerCreditMovement(credit_id=credit.id, kind="application", amount=amount,
+                                  transaction_id=allocation.transaction_id, allocation_id=allocation.id))
+    # Credit is not a cash transfer; a separate application movement makes the offset explicit.
+    if q2(_active_collected(db, allocation) + _applied_credit(db, allocation)) >= allocation.allocated_amount:
+        allocation.settlement_status = 1
+    log(db, actor, "player_credit.apply", "player_credit", credit.id, credit.team_id,
+        {"allocation_id": allocation.id, "amount": amount})
+    return amount
+
+
+def transfer_player_credit_to_team(db: Session, credit_id: int, actor: str) -> Decimal:
+    credit = db.scalar(select(m.PlayerCredit).where(m.PlayerCredit.id == credit_id).with_for_update())
+    if credit is None or credit.remaining_amount <= ZERO:
+        raise ConflictError("No available player credit to transfer.")
+    account = db.get(m.Account, credit.account_id)
+    if account is None or account.kind != "player":
+        raise ConflictError("Only player credits can be transferred to the team account.")
+    team_account = get_team_account(db, credit.team_id)
+    amount = q2(credit.remaining_amount)
+    tr = _make_transfer(db, credit.team_id, account, team_account, amount,
+                        f"Player credit transferred to team (credit #{credit.id})", actor)
+    credit.remaining_amount = ZERO
+    db.add(m.PlayerCreditMovement(credit_id=credit.id, kind="team_transfer", amount=amount,
+                                  transaction_id=tr.id))
+    log(db, actor, "player_credit.transfer", "player_credit", credit.id, credit.team_id,
+        {"amount": amount, "transfer_id": tr.id})
+    return amount
+
+
+def _applied_credit(db: Session, allocation: m.Allocation) -> Decimal:
+    return q2(db.scalar(select(func.coalesce(func.sum(m.PlayerCreditMovement.amount), 0)).where(
+        m.PlayerCreditMovement.allocation_id == allocation.id,
+        m.PlayerCreditMovement.kind == "application",
+        m.PlayerCreditMovement.reversed_at.is_(None))))
+
+
+def allocation_due(db: Session, allocation: m.Allocation) -> Decimal:
+    if allocation.transaction.status != "active" or allocation.transaction.type != "expense":
+        return ZERO
+    payer = _payer_account(allocation.transaction)
+    if payer is not None and payer.id == allocation.account_id:
+        return ZERO
+    return q2(max(ZERO, allocation.allocated_amount - _active_collected(db, allocation)
+                   - _applied_credit(db, allocation)))
+
+
+def _active_collected(db: Session, allocation: m.Allocation) -> Decimal:
+    return q2(db.scalar(select(func.coalesce(func.sum(m.Settlement.amount), 0)).where(
+        m.Settlement.allocation_id == allocation.id,
+        m.Settlement.kind == "collection", m.Settlement.status == "active")))
+
+def _finalize_team_balance_rounding(db: Session, t: m.Transaction, actor: str) -> None:
+    """Move the rounded-up difference into team balance once all player shares are collected."""
+    if t.type != "expense" or t.status != "active" or not t.surplus_amount:
+        return
+    if db.scalar(select(m.Settlement.id).where(
+        m.Settlement.transaction_id == t.id, m.Settlement.kind == "team_balance",
+        m.Settlement.status == "active")):
+        return
+    if any(a.account.kind == "player" and a.settlement_status == 0 for a in t.allocations):
+        return
+    payer = _payer_account(t)
+    if payer is None or payer.kind != "player":
+        return
+    team_acct = get_team_account(db, t.team_id)
+    tr = _make_transfer(db, t.team_id, payer, team_acct, t.surplus_amount,
+                        f"Team balance rounding for #{t.id}", actor)
+    db.add(m.Settlement(kind="team_balance", transaction_id=t.id, account_id=team_acct.id,
+                        amount=t.surplus_amount, settlement_transaction_id=tr.id, status="active"))
+    db.flush()
 
 
 def collect_all(db: Session, txn_id: int, actor: str) -> int:
@@ -365,8 +623,16 @@ def _reverse_row(db: Session, s: m.Settlement, actor: str, reason: str | None) -
     if s.allocation_id:
         al = db.get(m.Allocation, s.allocation_id)
         if al is not None:
-            al.settlement_status = 0
-            al.settled_transaction_id = None
+            collected = _active_collected(db, al)
+            applied = _applied_credit(db, al)
+            al.settlement_status = 1 if q2(collected + applied) >= al.allocated_amount else 0
+            if al.settlement_status:
+                last = db.scalar(select(m.Settlement).where(
+                    m.Settlement.allocation_id == al.id, m.Settlement.kind == "collection",
+                    m.Settlement.status == "active").order_by(m.Settlement.id.desc()))
+                al.settled_transaction_id = last.settlement_transaction_id if last else None
+            else:
+                al.settled_transaction_id = None
     parent = db.get(m.Transaction, s.transaction_id)
     log(db, actor, "settlement.reverse", "settlement", s.id, parent.team_id if parent else None,
         {"kind": s.kind, "amount": s.amount, "parent": s.transaction_id, "batch": s.batch_id, "reason": reason})
@@ -375,10 +641,30 @@ def _reverse_row(db: Session, s: m.Settlement, actor: str, reason: str | None) -
 def _active_group(db: Session, s: m.Settlement) -> list[m.Settlement]:
     """A net settlement is one batch: its rows are reversed together."""
     if s.batch_id:
-        return list(db.scalars(select(m.Settlement).where(m.Settlement.batch_id == s.batch_id,
+        rows = list(db.scalars(select(m.Settlement).where(m.Settlement.batch_id == s.batch_id,
                                                           m.Settlement.status == "active")
                                .order_by(m.Settlement.id).execution_options(populate_existing=True)).all())
-    return [s]
+        parent_ids = {row.transaction_id for row in rows}
+        if any(row.kind == "collection" for row in rows):
+            rounding = db.scalars(select(m.Settlement).where(
+                m.Settlement.transaction_id.in_(parent_ids),
+                m.Settlement.kind == "team_balance", m.Settlement.status == "active")).all()
+            rows.extend(rounding)
+        return rows
+    rows = [s]
+    if s.kind == "collection":
+        # A collection reversal also reverses the dependent team-balance adjustment.
+        rounding = db.scalars(select(m.Settlement).where(
+            m.Settlement.transaction_id == s.transaction_id,
+            m.Settlement.kind == "team_balance", m.Settlement.status == "active")).all()
+        rows.extend(rounding)
+    elif s.kind == "team_balance":
+        # Reversing the adjustment invalidates the full set of collections that triggered it.
+        collections = db.scalars(select(m.Settlement).where(
+            m.Settlement.transaction_id == s.transaction_id,
+            m.Settlement.kind == "collection", m.Settlement.status == "active")).all()
+        rows.extend(collections)
+    return rows
 
 
 def _lock_all(db: Session, ids) -> None:
@@ -408,6 +694,26 @@ def void_transaction(db: Session, txn_id: int, actor: str, reason: str | None = 
     if link is not None:
         reverse_settlement(db, link.id, actor, reason)
         return "settlement reversed"
+    credit_transfer = db.scalar(select(m.PlayerCreditMovement).where(
+        m.PlayerCreditMovement.transaction_id == txn_id,
+        m.PlayerCreditMovement.kind == "team_transfer",
+        m.PlayerCreditMovement.reversed_at.is_(None)))
+    if credit_transfer is not None:
+        transfer = _lock_txn(db, txn_id)
+        if transfer.status != "active":
+            raise ConflictError("This credit transfer is already reversed.")
+        transfer.status = "reversed"
+        transfer.voided_at, transfer.voided_by = m.utcnow(), actor
+        transfer.void_reason = (reason or "Player credit transfer reversed")[:200]
+        credit_transfer.reversed_at = m.utcnow()
+        credit = db.get(m.PlayerCredit, credit_transfer.credit_id)
+        if credit is not None:
+            credit.remaining_amount = q2(min(credit.original_amount,
+                                              credit.remaining_amount + credit_transfer.amount))
+        log(db, actor, "player_credit.transfer_reverse", "player_credit",
+            credit_transfer.credit_id, credit.team_id if credit else None,
+            {"amount": credit_transfer.amount, "transfer_id": txn_id, "reason": reason})
+        return "player credit transfer reversed"
     linked = db.scalars(select(m.Settlement).where(m.Settlement.transaction_id == txn_id,
                                                    m.Settlement.status == "active")).all()
     ids = {txn_id}
@@ -417,8 +723,37 @@ def void_transaction(db: Session, txn_id: int, actor: str, reason: str | None = 
     t = _lock_txn(db, txn_id)
     if t.status != "active":
         raise ConflictError("This transaction is already voided or reversed.")
+    # A credit created by this expense cannot survive voiding its source while used elsewhere.
+    source_credits = db.scalars(select(m.PlayerCredit).where(
+        m.PlayerCredit.source_transaction_id == txn_id).with_for_update()).all()
+    for credit in source_credits:
+        active_usage = db.scalar(select(func.count()).select_from(m.PlayerCreditMovement).where(
+            m.PlayerCreditMovement.credit_id == credit.id,
+            m.PlayerCreditMovement.kind.in_(("application", "team_transfer")),
+            m.PlayerCreditMovement.reversed_at.is_(None)))
+        if active_usage:
+            raise ConflictError("Reverse this credit's applications or team transfer before voiding its source transaction.")
+        credit.remaining_amount = ZERO
+        for movement in db.scalars(select(m.PlayerCreditMovement).where(
+            m.PlayerCreditMovement.credit_id == credit.id,
+            m.PlayerCreditMovement.kind == "created",
+            m.PlayerCreditMovement.reversed_at.is_(None))).all():
+            movement.reversed_at = m.utcnow()
+
     t.status = "voided"
     t.voided_at, t.voided_by, t.void_reason = m.utcnow(), actor, reason
+    # Restore any credit applied to this now-voided expense.
+    for allocation in t.allocations:
+        movements = db.scalars(select(m.PlayerCreditMovement).where(
+            m.PlayerCreditMovement.allocation_id == allocation.id,
+            m.PlayerCreditMovement.kind == "application",
+            m.PlayerCreditMovement.reversed_at.is_(None))).all()
+        for movement in movements:
+            movement.reversed_at = m.utcnow()
+            credit = db.get(m.PlayerCredit, movement.credit_id)
+            if credit is not None:
+                credit.remaining_amount = q2(min(credit.original_amount,
+                                                  credit.remaining_amount + movement.amount))
     seen: set[int] = set()
     for s in linked:
         for row in _active_group(db, s):
@@ -434,21 +769,26 @@ def void_transaction(db: Session, txn_id: int, actor: str, reason: str | None = 
 # ---------------------------------------------------------------- pending and net settlement
 
 def pending_positions(db: Session, team_id: int) -> dict[int, dict]:
-    """Per player account: what the team still owes them (unreimbursed expenses they paid)
-    and what they still owe the team (uncollected shares)."""
+    """Outstanding player shares and unreimbursed player-fronted expenses."""
     out: dict[int, dict] = {}
 
     def slot(aid):
         return out.setdefault(aid, {"owed": ZERO, "owed_n": 0, "reimb": ZERO, "reimb_n": 0, "net": ZERO})
 
-    for aid, total, n in db.execute(
-            select(m.Allocation.account_id, func.sum(m.Allocation.allocated_amount), func.count())
-            .join(m.Transaction, m.Transaction.id == m.Allocation.transaction_id)
-            .join(m.Account, m.Account.id == m.Allocation.account_id)
-            .where(m.Transaction.team_id == team_id, m.Transaction.status == "active",
-                   m.Transaction.type == "expense", m.Allocation.settlement_status == 0, m.Account.kind == "player")
-            .group_by(m.Allocation.account_id)).all():
-        slot(aid).update(owed=q2(total), owed_n=n)
+    allocs = db.scalars(select(m.Allocation).join(m.Transaction, m.Transaction.id == m.Allocation.transaction_id)
+        .join(m.Account, m.Account.id == m.Allocation.account_id)
+        .where(m.Transaction.team_id == team_id, m.Transaction.status == "active",
+               m.Transaction.type == "expense", m.Account.kind == "player",
+               m.Allocation.settlement_status == 0)).all()
+    owed_by_account: dict[int, list[Decimal]] = {}
+    for allocation in allocs:
+        due = q2(max(ZERO, allocation.allocated_amount - _active_collected(db, allocation)
+                     - _applied_credit(db, allocation)))
+        if due > ZERO:
+            owed_by_account.setdefault(allocation.account_id, []).append(due)
+    for aid, amounts in owed_by_account.items():
+        slot(aid).update(owed=q2(sum(amounts, ZERO)), owed_n=len(amounts))
+
     reimbursed = exists().where(m.Settlement.transaction_id == m.Transaction.id,
                                 m.Settlement.kind == "reimbursement", m.Settlement.status == "active")
     for aid, total, n in db.execute(
@@ -461,9 +801,8 @@ def pending_positions(db: Session, team_id: int) -> dict[int, dict]:
             .group_by(m.TransactionAccount.account_id)).all():
         slot(aid).update(reimb=q2(total), reimb_n=n)
     for v in out.values():
-        v["net"] = v["reimb"] - v["owed"]
+        v["net"] = q2(v["reimb"] - v["owed"])
     return out
-
 
 def team_pending_totals(pending: dict) -> dict:
     reimb = sum((v["reimb"] for v in pending.values()), ZERO)
@@ -507,7 +846,8 @@ def settle_net(db: Session, player_id: int, actor: str) -> dict:
     if not exps and not allocs:
         raise ConflictError(f"Nothing is pending for {p.player_name}.")
     reimb_total = sum((t.amount for t in exps), ZERO)
-    coll_total = sum((a.allocated_amount for a in allocs), ZERO)
+    coll_total = sum((q2(max(ZERO, a.allocated_amount - _active_collected(db, a) - _applied_credit(db, a)))
+                      for a in allocs), ZERO)
     net = q2(reimb_total - coll_total)
     team_acct = get_team_account(db, p.team_id)
     batch = uuid.uuid4().hex
@@ -527,7 +867,8 @@ def settle_net(db: Session, player_id: int, actor: str) -> dict:
                 first = False
             for a in allocs:
                 db.add(m.Settlement(kind="collection", transaction_id=a.transaction_id, account_id=acct.id,
-                                    allocation_id=a.id, amount=a.allocated_amount,
+                                    allocation_id=a.id,
+                                    amount=q2(max(ZERO, a.allocated_amount - _active_collected(db, a) - _applied_credit(db, a))),
                                     settlement_transaction_id=tr.id if (tr and first) else None,
                                     batch_id=batch, status="active"))
                 first = False
@@ -605,8 +946,6 @@ def team_summary(db: Session, team_id: int) -> dict:
     team_paid = _sum_by_account(db, team_id, role="paid_by", types=("expense",)).get(acct.id, ZERO)
     opening = opening_balance(db, team_id)
     balance = opening + total_in + t_in - t_out - team_paid
-    surplus = q2(db.scalar(select(func.coalesce(func.sum(m.Transaction.surplus_amount), 0)).where(
-        m.Transaction.team_id == team_id, m.Transaction.status == "active", m.Transaction.type == "expense")))
     cats = db.execute(
         select(m.Category.name, func.sum(m.Transaction.amount))
         .join(m.Transaction, m.Transaction.category_id == m.Category.id)
@@ -616,7 +955,7 @@ def team_summary(db: Session, team_id: int) -> dict:
     by_category = [(n, q2(v)) for n, v in cats if q2(v) > 0]
     return {"total_in": total_in, "total_out": total_out, "balance": balance, "opening": opening,
             "transfers_in": t_in, "transfers_out": t_out, "paid_by_team": team_paid,
-            "surplus": surplus, "by_category": by_category}
+            "by_category": by_category}
 
 
 def player_history(db: Session, player: m.Player) -> tuple[list[dict], Decimal]:
@@ -633,14 +972,26 @@ def player_history(db: Session, player: m.Player) -> tuple[list[dict], Decimal]:
         if s.status == "active":
             active_by_parent[(s.transaction_id, s.kind)] = s
     events = []
+    credit_moves = db.scalars(select(m.PlayerCreditMovement).join(
+        m.PlayerCredit, m.PlayerCredit.id == m.PlayerCreditMovement.credit_id
+    ).where(m.PlayerCredit.account_id == acct.id,
+            m.PlayerCreditMovement.kind == "application",
+            m.PlayerCreditMovement.reversed_at.is_(None))).all()
+    credit_by_txn: dict[int, list[m.PlayerCreditMovement]] = {}
+    for movement in credit_moves:
+        if movement.transaction_id:
+            credit_by_txn.setdefault(movement.transaction_id, []).append(movement)
     for t in tx:
         roles = {(ta.role, ta.account_id) for ta in t.accounts}
         alloc = next((a for a in t.allocations if a.account_id == acct.id), None)
         active = t.status == "active"
         if alloc:
             events.append({"t": t, "role": "Owed", "delta": alloc.allocated_amount if active else ZERO,
-                           "amount": alloc.allocated_amount, "alloc": alloc,
-                           "settled": alloc.settlement_status == 1})
+                           "amount": alloc.allocated_amount, "due": allocation_due(db, alloc) if active else ZERO,
+                           "alloc": alloc, "settled": alloc.settlement_status == 1})
+        for movement in credit_by_txn.get(t.id, []):
+            events.append({"t": t, "role": "Credit applied", "delta": ZERO,
+                           "amount": movement.amount, "credit_movement": movement})
         if ("paid_by", acct.id) in roles:
             s = active_by_parent.get((t.id, "reimbursement"))
             events.append({"t": t, "role": "Paid", "delta": -t.amount if active else ZERO, "amount": t.amount,
@@ -668,8 +1019,19 @@ def reset_data(db: Session, actor: str, *, since: dt.datetime | None) -> dict:
     """Hard-delete ledger rows (all, or created at/after `since`). audit_log is never touched."""
     cond = (m.Transaction.created_at >= since) if since else (m.Transaction.id > 0)
     ids = select(m.Transaction.id).where(cond)
-    n_txn = db.scalar(select(func.count()).select_from(m.Transaction).where(cond))
+    reset_ids = set(db.scalars(ids).all())
+    n_txn = len(reset_ids)
     # Net-settlement batches touching anything being deleted are removed whole, reopening what survives.
+    credit_movements = db.scalars(select(m.PlayerCreditMovement).where(
+        m.PlayerCreditMovement.transaction_id.in_(ids),
+        m.PlayerCreditMovement.kind.in_(("application", "team_transfer")),
+        m.PlayerCreditMovement.reversed_at.is_(None))).all()
+    for movement in credit_movements:
+        credit = db.get(m.PlayerCredit, movement.credit_id)
+        if credit is not None:
+            credit.remaining_amount = q2(min(credit.original_amount,
+                                              credit.remaining_amount + movement.amount))
+    db.flush()
     batch_rows = db.scalars(select(m.Settlement).where(m.Settlement.batch_id.in_(
         select(m.Settlement.batch_id).where(m.Settlement.batch_id.is_not(None),
                                             m.Settlement.transaction_id.in_(ids)
@@ -691,6 +1053,32 @@ def reset_data(db: Session, actor: str, *, since: dt.datetime | None) -> dict:
             a = db.get(m.Allocation, s.allocation_id)
             if a:
                 a.settlement_status, a.settled_transaction_id = 0, None
+    db.flush()
+    credit_ids = select(m.PlayerCredit.id).where(m.PlayerCredit.source_transaction_id.in_(ids))
+    # If a source transaction is reset, reopen surviving allocations that used its credit.
+    source_applications = db.scalars(select(m.PlayerCreditMovement).where(
+        m.PlayerCreditMovement.credit_id.in_(credit_ids),
+        m.PlayerCreditMovement.kind == "application",
+        m.PlayerCreditMovement.reversed_at.is_(None),
+        m.PlayerCreditMovement.allocation_id.is_not(None))).all()
+    for movement in source_applications:
+        allocation = db.get(m.Allocation, movement.allocation_id)
+        if allocation is None or allocation.transaction_id in reset_ids:
+            continue
+        other_credit = q2(db.scalar(select(func.coalesce(func.sum(m.PlayerCreditMovement.amount), 0)).where(
+            m.PlayerCreditMovement.allocation_id == allocation.id,
+            m.PlayerCreditMovement.kind == "application",
+            m.PlayerCreditMovement.reversed_at.is_(None),
+            m.PlayerCreditMovement.credit_id.not_in(credit_ids))))
+        allocation.settlement_status = 1 if (
+            _active_collected(db, allocation) + other_credit >= allocation.allocated_amount) else 0
+        if allocation.settlement_status == 0:
+            allocation.settled_transaction_id = None
+    db.flush()
+    db.execute(delete(m.PlayerCreditMovement).where(
+        m.PlayerCreditMovement.credit_id.in_(credit_ids)
+        | m.PlayerCreditMovement.transaction_id.in_(ids)), execution_options=NOSYNC)
+    db.execute(delete(m.PlayerCredit).where(m.PlayerCredit.source_transaction_id.in_(ids)), execution_options=NOSYNC)
     db.flush()
     db.execute(update(m.Allocation).where(m.Allocation.settled_transaction_id.in_(ids))
                .values(settled_transaction_id=None, settlement_status=0), execution_options=NOSYNC)

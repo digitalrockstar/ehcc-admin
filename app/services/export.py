@@ -68,7 +68,6 @@ def team_csv(db: Session, team_id: int) -> str:
     w.writerow(["Total Income", str(summary["total_in"])])
     w.writerow(["Total Expense", str(summary["total_out"])])
     w.writerow(["Team Account Balance", str(summary["balance"])])
-    w.writerow(["Surplus", str(summary["surplus"])])
     w.writerow([])
     w.writerow(["Player Balances"])
     w.writerow(["Player", "Owed", "Paid", "Net Outstanding"])
@@ -104,8 +103,8 @@ def team_pdf_context(db: Session, team_id: int) -> dict:
     pending = ledger.pending_positions(db, team_id)
     rows = describe(db, list(txns), pending)
 
-    # Combined balance: team account balance + surplus (like dashboard)
-    combined_balance = summary["balance"] + summary["surplus"]
+    # Team balance is the ledger's cash balance; rounding is represented by real transfers.
+    combined_balance = summary["balance"]
 
     return {
         "team": team,
