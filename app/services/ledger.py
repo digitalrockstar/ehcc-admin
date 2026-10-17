@@ -273,11 +273,7 @@ def update_transaction(db: Session, txn_id: int, d: TxnInput, actor: str) -> m.T
     # active and visible as real historical cash movements.
     for s in active_settlements:
         if s.kind == "team_balance":
-            tr = db.get(m.Transaction, s.settlement_transaction_id) if s.settlement_transaction_id else None
-            if tr and tr.status == "active":
-                tr.status = "reversed"
-                tr.voided_at, tr.voided_by, tr.void_reason = m.utcnow(), actor, "Parent transaction edited"
-            s.status, s.reversed_at = "reversed", m.utcnow()
+            _reverse_row(db, s, actor, "Parent transaction edited")
 
     t.accounts.clear()
     db.flush()
