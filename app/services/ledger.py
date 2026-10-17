@@ -962,13 +962,15 @@ def team_summary(db: Session, team_id: int) -> dict:
         return q2(db.scalar(select(func.coalesce(func.sum(m.Transaction.amount), 0)).where(
             m.Transaction.team_id == team_id, m.Transaction.status == "active", m.Transaction.type == kind)))
 
-    total_in, total_out = total("income"), total("expense")
+    income_txns, total_out = total("income"), total("expense")
     acct = get_team_account(db, team_id)
+    # Collections/transfers received by the team account are cash income for the team.
     t_in = _sum_by_account(db, team_id, role="account_in", types=("transfer",)).get(acct.id, ZERO)
     t_out = _sum_by_account(db, team_id, role="account_out", types=("transfer",)).get(acct.id, ZERO)
+    total_in = q2(income_txns + t_in)
     team_paid = _sum_by_account(db, team_id, role="paid_by", types=("expense",)).get(acct.id, ZERO)
     opening = opening_balance(db, team_id)
-    balance = opening + total_in + t_in - t_out - team_paid
+    balance = opening + income_txns + t_in - t_out - team_paid
     cats = db.execute(
         select(m.Category.name, func.sum(m.Transaction.amount))
         .join(m.Transaction, m.Transaction.category_id == m.Category.id)
