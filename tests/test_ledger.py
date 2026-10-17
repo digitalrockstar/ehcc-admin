@@ -135,6 +135,63 @@ def test_player_collections_go_to_payer_and_rounding_moves_to_team_balance(db, t
     assert ledger.team_summary(db, team.id)["balance"] == D("0.00")
 
 
+def test_edit_after_collection_preserves_payment_and_creates_player_credit(db, team):
+    t = expense(db, team, 1000, "team", NAMES)
+    bala = account_of(db, team.id, "Bala")
+    allocation = next(a for a in t.allocations if a.account_id == bala.id)
+    original = ledger.collect(db, allocation.id, "test")
+    db.commit()
+    transfer_id = original.settlement_transaction_id
+
+    d = ledger.TxnInput(team_id=team.id, date=t.transaction_date, type="expense",
+                        amount=D("900"), category_id=t.category_id,
+                        paid_by=ledger.get_team_account(db, team.id).id,
+                        charged_to=[a.account_id for a in t.allocations])
+    edited = ledger.update_transaction(db, t.id, d, "test")
+    db.commit()
+    db.expire_all()
+
+    allocation = db.scalar(select(m.Allocation).where(
+        m.Allocation.transaction_id == t.id, m.Allocation.account_id == bala.id))
+    assert allocation.allocated_amount == D("150.00")
+    assert allocation.settlement_status == 1
+    assert db.get(m.Transaction, transfer_id).status == "active"
+    assert db.get(m.Transaction, transfer_id).amount == D("170.00")
+    credit = db.scalar(select(m.PlayerCredit).where(
+        m.PlayerCredit.source_transaction_id == t.id, m.PlayerCredit.account_id == bala.id))
+    assert credit.remaining_amount == D("20.00")
+
+    future = expense(db, team, 600, "team", ["Bala"])
+    future_allocation = future.allocations[0]
+    applied = ledger.apply_player_credit(db, credit.id, future_allocation.id, "test")
+    db.commit()
+    assert applied == D("20.00")
+    assert credit.remaining_amount == D("0.00")
+    pending = ledger.pending_of(ledger.pending_positions(db, team.id), bala.id)
+    assert pending["owed"] == D("580.00")
+
+
+def test_player_credit_transfer_can_be_reversed(db, team):
+    t = expense(db, team, 1000, "team", NAMES)
+    bala = account_of(db, team.id, "Bala")
+    credit = m.PlayerCredit(team_id=team.id, account_id=bala.id, source_transaction_id=t.id,
+                            original_amount=D("25"), remaining_amount=D("25"), note="test")
+    db.add(credit)
+    db.flush()
+    amount = ledger.transfer_player_credit_to_team(db, credit.id, "test")
+    db.commit()
+    assert amount == D("25.00")
+    assert credit.remaining_amount == D("0.00")
+    transfer = db.scalar(select(m.Transaction).where(
+        m.Transaction.item_description == f"Player credit transferred to team (credit #{credit.id})"))
+    assert transfer is not None
+    ledger.void_transaction(db, transfer.id, "test", "test reversal")
+    db.commit()
+    db.refresh(credit)
+    assert credit.remaining_amount == D("25.00")
+    assert db.get(m.Transaction, transfer.id).status == "reversed"
+
+
 def test_database_blocks_duplicate_active_settlement(db, team):
     t = expense(db, team, 1000, "Akshay", NAMES)
     s = ledger.reimburse(db, t.id, "test")
