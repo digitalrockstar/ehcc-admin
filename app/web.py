@@ -41,16 +41,20 @@ def all_teams(db: Session) -> list[m.Team]:
 
 
 def resolve_team(request: Request, db: Session, force: m.Team | None = None) -> m.Team | None:
-    teams = all_teams(db)
-    if force is not None:
+    # Operational pages must never select archived teams. If the previously selected
+    # team was archived, fall back to the only/first active team.
+    teams = [t for t in all_teams(db) if t.status == "active"]
+    if force is not None and force.status == "active":
         team = force
     else:
         wanted = request.query_params.get("team") or request.session.get("team_id")
         team = next((t for t in teams if str(t.id) == str(wanted)), None)
         if team is None:
-            team = next((t for t in teams if t.status == "active"), None) or (teams[0] if teams else None)
+            team = teams[0] if teams else None
     if team is not None:
         request.session["team_id"] = team.id
+    else:
+        request.session.pop("team_id", None)
     return team
 
 
@@ -60,7 +64,7 @@ def page(request: Request, db: Session, name: str, *, status_code: int = 200, te
     ctx.update(
         request=request, is_admin=is_admin(request), admin_name=admin_name(request),
         csrf=csrf_token(request), theme_css=css_block(theme if valid_theme(theme) else DEFAULT_THEME),
-        teams=all_teams(db) if teambar else [], team=team, show_teambar=teambar,
+        teams=([t for t in all_teams(db) if t.status == "active"] if teambar else []), team=team, show_teambar=teambar,
         teambar_path=teambar_path or request.url.path,
         flashes=request.session.pop("_flash", []), path=request.url.path,
         show_mobile=is_admin(request) or config.SHOW_MOBILE_TO_VIEWERS, mask_mobile=mask_mobile,
