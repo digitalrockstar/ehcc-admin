@@ -33,8 +33,8 @@
       <ul class="catlist">{% for c in categories if c.kind == kind %}
         <li class="{{ 'voided' if c.status == 'archived' }}">
           <form method="post" action="/settings/categories/{{ c.id }}/edit" class="inline-form category-edit">{{ ui.csrf_input() }}
-            <input name="name" value="{{ c.name }}" maxlength="60" required aria-label="Category name"><button class="btn small ghost icon-action" aria-label="Rename category" title="Rename category">✎</button></form>
-          {{ ui.action('/settings/categories/%d/archive' % c.id, '↥', '/settings#categories', 'btn small ghost icon-action', None, {'archive': '0' if c.status == 'archived' else '1'}, {'aria-label': 'Restore category' if c.status == 'archived' else 'Archive category', 'title': 'Restore category' if c.status == 'archived' else 'Archive category'}) }}
+            <input name="name" value="{{ c.name }}" maxlength="60" required aria-label="Category name"><button class="btn small ghost icon-action" aria-label="Rename category" title="Rename category">{{ ui.icon('edit') }}</button></form>
+          {{ ui.action('/settings/categories/%d/archive' % c.id, ui.icon('archive'), '/settings#categories', 'btn small ghost icon-action', None, {'archive': '0' if c.status == 'archived' else '1'}, {'aria-label': 'Restore category' if c.status == 'archived' else 'Archive category', 'title': 'Restore category' if c.status == 'archived' else 'Archive category'}) }}
         </li>{% endfor %}</ul>
       <form method="post" action="/settings/categories/add" class="inline-form">{{ ui.csrf_input() }}<input type="hidden" name="kind" value="{{ kind }}">
         <input name="name" placeholder="New {{ kind }} category" maxlength="60" required value="{{ form_data.get('name', '') }}"{% if errors.get('name') %} class="invalid"{% endif %}>
