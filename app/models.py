@@ -186,7 +186,7 @@ class Settlement(Base):
     reversed_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
     account: Mapped[Account] = relationship()
     __table_args__ = (
-        CheckConstraint("kind in ('reimbursement','collection')", name="ck_settlements_kind"),
+        CheckConstraint("kind in ('reimbursement','collection','team_balance')", name="ck_settlements_kind"),
         CheckConstraint("status in ('active','reversed')", name="ck_settlements_status"),
     )
 
