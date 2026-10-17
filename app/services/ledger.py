@@ -799,15 +799,26 @@ def pending_positions(db: Session, team_id: int) -> dict[int, dict]:
     reimbursed = exists().where(m.Settlement.transaction_id == m.Transaction.id,
                                 m.Settlement.kind == "reimbursement", m.Settlement.status == "active"
                                 ).correlate(m.Transaction)
-    for aid, total, n in db.execute(
-            select(m.TransactionAccount.account_id, func.sum(m.Transaction.amount), func.count())
+    reimbursement_by_account: dict[int, list[Decimal]] = {}
+    for aid, txn_id, amount in db.execute(
+            select(m.TransactionAccount.account_id, m.Transaction.id, m.Transaction.amount)
             .join(m.Transaction, m.Transaction.id == m.TransactionAccount.transaction_id)
             .join(m.Account, m.Account.id == m.TransactionAccount.account_id)
             .where(m.Transaction.team_id == team_id, m.Transaction.status == "active",
                    m.Transaction.type == "expense", m.TransactionAccount.role == "paid_by",
-                   m.Account.kind == "player", ~reimbursed)
-            .group_by(m.TransactionAccount.account_id)).all():
-        slot(aid).update(reimb=q2(total), reimb_n=n)
+                   m.Account.kind == "player", ~reimbursed)).all():
+        # If the payer is also charged for this expense, their own share is already
+        # covered by the amount they fronted; reimburse only the other players' shares.
+        own_allocation = db.scalar(select(m.Allocation.allocated_amount).where(
+            m.Allocation.transaction_id == txn_id, m.Allocation.account_id == aid))
+        reimbursable = q2(max(ZERO, amount - (own_allocation or ZERO)))
+        if reimbursable > ZERO:
+            reimbursement_by_account.setdefault(aid, []).append(reimbursable)
+        else:
+            reimbursement_by_account.setdefault(aid, [])
+    for aid, amounts in reimbursement_by_account.items():
+        slot(aid).update(reimb=q2(sum(amounts, ZERO)),
+                         reimb_n=sum(1 for amount in amounts if amount > ZERO))
     for v in out.values():
         v["net"] = q2(v["reimb"] - v["owed"])
     return out
