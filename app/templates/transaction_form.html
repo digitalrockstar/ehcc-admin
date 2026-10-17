@@ -57,7 +57,7 @@
     <div class="chips">
       {% for a in parties %}<label class="chip"><input type="checkbox" name="charged_to" value="{{ a.id }}" data-kind="{{ a.kind }}" {% if a.id in f.charged_to %}checked{% endif %}><span>{{ a.name }}{% if a.kind == 'team' %} (team account){% endif %}</span></label>{% endfor %}
     </div>
-    <p class="hint">Split equally across everyone selected, each share rounded up to the nearest ₹{{ step }}. The rounding difference becomes team surplus.</p>
+    <p class="hint">Split equally across everyone selected, each share rounded up to the nearest ₹{{ step }}. The rounding difference is added to the team account balance.</p>
     {% if errors.get('charged_to') %}<span class="field-error">{{ errors['charged_to'] }}</span>{% endif %}
   </fieldset>
   <p id="preview" class="span preview" aria-live="polite"></p>
