@@ -64,13 +64,6 @@
     <label>Round up to nearest ₹ <input name="step" value="{{ step }}" inputmode="numeric" size="4"></label><button class="btn small">Save</button></form>
 </section>
 
-<section class="card" id="export"><h2>Full backup</h2>
-  <p>Download all teams, players, transactions and balances. The audit log is included in the PDF.</p>
-  <div class="actions">
-    <a href="/export/full/csv" class="btn small ghost">Export full CSV</a>
-  </div>
-</section>
-
 <section class="card danger-zone" id="reset"><h2>Data reset</h2>
   <p>Deletes transactions, allocations and settlements. Teams, players, categories and starting balances stay. The audit log is never deleted and records this reset.</p>
   <form method="post" action="/settings/reset" class="stack" data-confirm="This permanently deletes ledger data. Continue?">{{ ui.csrf_input() }}
