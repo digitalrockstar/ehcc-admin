@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', () => {
+function initPage() {
   // Team switcher
   document.querySelectorAll('[data-team-switch]').forEach(sel => sel.addEventListener('change', () => {
     const url = new URL(sel.dataset.teamSwitch, location.origin);
@@ -44,6 +44,48 @@ document.addEventListener('DOMContentLoaded', () => {
   // Transaction form
   const form = document.getElementById('txn-form');
   if (form) initTxnForm(form);
+}
+
+document.addEventListener('DOMContentLoaded', initPage);
+
+// AJAX-style form submissions: keep the browser on the page while refreshing
+// the returned server-rendered view. File uploads remain regular submissions.
+document.addEventListener('submit', async e => {
+  const form = e.target;
+  if (!(form instanceof HTMLFormElement) || form.method.toLowerCase() !== 'post' ||
+      form.enctype === 'multipart/form-data' || form.dataset.noAjax === 'true') return;
+  if (e.defaultPrevented) return;
+  e.preventDefault();
+  if (form.dataset.ajaxBusy === 'true') return;
+  form.dataset.ajaxBusy = 'true';
+  const submitters = form.querySelectorAll('button[type="submit"], input[type="submit"]');
+  submitters.forEach(b => { b.dataset.wasDisabled = b.disabled ? '1' : '0'; b.disabled = true; });
+  const scrollY = window.scrollY;
+  try {
+    const response = await fetch(form.action, {
+      method: 'POST',
+      body: new FormData(form),
+      credentials: 'same-origin',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    });
+    const type = response.headers.get('content-type') || '';
+    if (!type.includes('text/html')) throw new Error('Unexpected response from server.');
+    const html = await response.text();
+    const parsed = new DOMParser().parseFromString(html, 'text/html');
+    if (!parsed.body || !parsed.querySelector('main.container')) throw new Error('Could not update this page.');
+    document.title = parsed.title;
+    document.body.innerHTML = parsed.body.innerHTML;
+    if (response.url && new URL(response.url).origin === location.origin) {
+      history.replaceState({}, '', response.url);
+    }
+    initPage();
+    window.scrollTo(0, Math.min(scrollY, document.documentElement.scrollHeight));
+  } catch (err) {
+    // Preserve normal form behaviour if the AJAX request fails.
+    form.dataset.ajaxBusy = 'false';
+    submitters.forEach(b => { b.disabled = b.dataset.wasDisabled === '1'; delete b.dataset.wasDisabled; });
+    alert('Could not complete the action without refreshing. Please try again. ' + err.message);
+  }
 });
 
 function initTxnForm(form) {
