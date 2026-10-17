@@ -407,7 +407,14 @@ def _active_group(db: Session, s: m.Settlement) -> list[m.Settlement]:
         return list(db.scalars(select(m.Settlement).where(m.Settlement.batch_id == s.batch_id,
                                                           m.Settlement.status == "active")
                                .order_by(m.Settlement.id).execution_options(populate_existing=True)).all())
-    return [s]
+    rows = [s]
+    # The rounding transfer is valid only while all collections remain settled.
+    if s.kind == "collection":
+        rounding = db.scalars(select(m.Settlement).where(
+            m.Settlement.transaction_id == s.transaction_id,
+            m.Settlement.kind == "team_balance", m.Settlement.status == "active")).all()
+        rows.extend(rounding)
+    return rows
 
 
 def _lock_all(db: Session, ids) -> None:
