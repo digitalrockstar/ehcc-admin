@@ -253,6 +253,13 @@ def update_transaction(db: Session, txn_id: int, d: TxnInput, actor: str) -> m.T
     plan = _prepare(db, d, keep_category_id=t.category_id)
     if t.type != "expense" and active_settlements:
         raise ConflictError("Reverse active settlements before editing this transaction.")
+    source_credit_ids = select(m.PlayerCredit.id).where(m.PlayerCredit.source_transaction_id == t.id)
+    credit_in_use = db.scalar(select(func.count()).select_from(m.PlayerCreditMovement).where(
+        m.PlayerCreditMovement.credit_id.in_(source_credit_ids),
+        m.PlayerCreditMovement.kind.in_(("application", "team_transfer")),
+        m.PlayerCreditMovement.reversed_at.is_(None)))
+    if credit_in_use:
+        raise ConflictError("Reverse this transaction's credit applications or team transfer before editing it.")
 
     # Capture historical collections before allocations are reconciled.
     old_allocs = {a.account_id: a for a in list(t.allocations)}
