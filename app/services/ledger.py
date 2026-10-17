@@ -455,11 +455,8 @@ def apply_player_credit(db: Session, credit_id: int, allocation_id: int, actor: 
         raise ConflictError("Credit and allocation must belong to the same player and team.")
     if allocation.transaction.status != "active" or allocation.transaction.type != "expense":
         raise ConflictError("Credit can only be applied to an active expense allocation.")
-    already = q2(db.scalar(select(func.coalesce(func.sum(m.PlayerCreditMovement.amount), 0)).where(
-        m.PlayerCreditMovement.credit_id == credit.id,
-        m.PlayerCreditMovement.allocation_id == allocation.id,
-        m.PlayerCreditMovement.kind == "application")))
-    remaining_due = q2(max(ZERO, allocation.allocated_amount - _active_collected(db, allocation)))
+    remaining_due = q2(max(ZERO, allocation.allocated_amount - _active_collected(db, allocation)
+                           - _applied_credit(db, allocation)))
     amount = q2(min(credit.remaining_amount, remaining_due))
     if amount <= ZERO:
         raise ConflictError("No credit or outstanding amount is available to apply.")
@@ -467,7 +464,7 @@ def apply_player_credit(db: Session, credit_id: int, allocation_id: int, actor: 
     db.add(m.PlayerCreditMovement(credit_id=credit.id, kind="application", amount=amount,
                                   transaction_id=allocation.transaction_id, allocation_id=allocation.id))
     # Credit is not a cash transfer; a separate application movement makes the offset explicit.
-    if q2(_active_collected(db, allocation) + already + amount) >= allocation.allocated_amount:
+    if q2(_active_collected(db, allocation) + _applied_credit(db, allocation)) >= allocation.allocated_amount:
         allocation.settlement_status = 1
     log(db, actor, "player_credit.apply", "player_credit", credit.id, credit.team_id,
         {"allocation_id": allocation.id, "amount": amount})
