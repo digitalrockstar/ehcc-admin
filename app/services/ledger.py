@@ -781,13 +781,20 @@ def pending_positions(db: Session, team_id: int) -> dict[int, dict]:
                m.Transaction.type == "expense", m.Account.kind == "player",
                m.Allocation.settlement_status == 0)).all()
     owed_by_account: dict[int, list[Decimal]] = {}
+    owed_to_team_by_account: dict[int, list[Decimal]] = {}
     for allocation in allocs:
         due = q2(max(ZERO, allocation.allocated_amount - _active_collected(db, allocation)
                      - _applied_credit(db, allocation)))
         if due > ZERO:
             owed_by_account.setdefault(allocation.account_id, []).append(due)
+            # Player collections for player-paid expenses go directly to the payer.
+            # Only collections for team-paid expenses increase the team's cash forecast.
+            payer = _payer_account(allocation.transaction)
+            if payer is not None and payer.kind == "team":
+                owed_to_team_by_account.setdefault(allocation.account_id, []).append(due)
     for aid, amounts in owed_by_account.items():
-        slot(aid).update(owed=q2(sum(amounts, ZERO)), owed_n=len(amounts))
+        slot(aid).update(owed=q2(sum(amounts, ZERO)), owed_n=len(amounts),
+                         owed_to_team=q2(sum(owed_to_team_by_account.get(aid, []), ZERO)))
 
     reimbursed = exists().where(m.Settlement.transaction_id == m.Transaction.id,
                                 m.Settlement.kind == "reimbursement", m.Settlement.status == "active"
@@ -808,7 +815,9 @@ def pending_positions(db: Session, team_id: int) -> dict[int, dict]:
 def team_pending_totals(pending: dict) -> dict:
     reimb = sum((v["reimb"] for v in pending.values()), ZERO)
     owed = sum((v["owed"] for v in pending.values()), ZERO)
-    return {"reimb": reimb, "owed": owed, "net": q2(reimb - owed)}
+    owed_to_team = sum((v.get("owed_to_team", ZERO) for v in pending.values()), ZERO)
+    return {"reimb": reimb, "owed": owed, "owed_to_team": owed_to_team,
+            "net": q2(reimb - owed_to_team)}
 
 
 def pending_of(pending: dict | None, account_id: int | None) -> dict:
