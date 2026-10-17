@@ -59,7 +59,7 @@
       <td>
         {% if t.status == 'active' and e.role == 'Owed' %}
           {% if e.settled %}<span class="chipstate on">PAID</span>
-          {% elif is_admin and e.alloc.account.kind == 'player' %}{{ ui.action('/allocations/%d/collect' % e.alloc.id, 'Collect', request.url.path, 'chipbtn', 'Collect %s in full?' % (e.alloc.allocated_amount|inr) ~ ((' The team owes %s %s for expenses they paid. To settle only the difference, use Settle net at the top of this page.' % (player.player_name, pend.reimb|inr)) if pend.reimb else '')) }}
+          {% elif is_admin and e.alloc.account.kind == 'player' %}{{ ui.action('/allocations/%d/collect' % e.alloc.id, 'Collect', request.url.path, 'chipbtn', 'Collect %s in full?' % (e.due|inr) ~ ((' The team owes %s %s for expenses they paid. To settle only the difference, use Settle net at the top of this page.' % (player.player_name, pend.reimb|inr)) if pend.reimb else '')) }}
           {% else %}<span class="chipstate">Pending</span>{% endif %}
         {% elif t.status == 'active' and e.role == 'Paid' and e.reimburse %}
           {% if e.settled %}<span class="chipstate on">Reimbursed</span>
