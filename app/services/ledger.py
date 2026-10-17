@@ -379,7 +379,10 @@ def collect(db: Session, allocation_id: int, actor: str) -> m.Settlement:
         raise ConflictError("Collections apply to active expenses only.")
     if a.account.kind != "player":
         raise LedgerError("Only players are collected from. The team account is charged directly.")
-    if a.settlement_status == 1:
+    already_collected = _active_collected(db, a)
+    already_credited = _applied_credit(db, a)
+    amount_due = q2(max(ZERO, a.allocated_amount - already_collected - already_credited))
+    if amount_due <= ZERO or a.settlement_status == 1:
         raise ConflictError(f"{a.account.name} has already paid this.")
     team_acct = get_team_account(db, t.team_id)
     payer = _payer_account(t)
@@ -388,20 +391,20 @@ def collect(db: Session, allocation_id: int, actor: str) -> m.Settlement:
         raise ConflictError(f"{a.account.name}'s share is already covered by the amount they paid.")
     try:
         with db.begin_nested():
-            tr = _make_transfer(db, t.team_id, a.account, recipient, a.allocated_amount,
+            tr = _make_transfer(db, t.team_id, a.account, recipient, amount_due,
                                 f"Collection for #{t.id}", actor)
             s = m.Settlement(kind="collection", transaction_id=t.id, account_id=a.account_id,
-                             allocation_id=a.id, amount=a.allocated_amount,
+                             allocation_id=a.id, amount=amount_due,
                              settlement_transaction_id=tr.id, status="active")
             db.add(s)
-            a.settlement_status = 1
+            a.settlement_status = 1 if q2(already_collected + already_credited + amount_due) >= a.allocated_amount else 0
             a.settled_transaction_id = tr.id
             db.flush()
             _finalize_team_balance_rounding(db, t, actor)
     except IntegrityError:
         raise ConflictError(f"{a.account.name} has already paid this.")
     log(db, actor, "settlement.collect", "transaction", t.id, t.team_id,
-        {"from": a.account.name, "to": recipient.name, "amount": a.allocated_amount, "transfer_id": tr.id})
+        {"from": a.account.name, "to": recipient.name, "amount": amount_due, "transfer_id": tr.id})
     return s
 
 
@@ -488,6 +491,12 @@ def transfer_player_credit_to_team(db: Session, credit_id: int, actor: str) -> D
     log(db, actor, "player_credit.transfer", "player_credit", credit.id, credit.team_id,
         {"amount": amount, "transfer_id": tr.id})
     return amount
+
+
+def _applied_credit(db: Session, allocation: m.Allocation) -> Decimal:
+    return q2(db.scalar(select(func.coalesce(func.sum(m.PlayerCreditMovement.amount), 0)).where(
+        m.PlayerCreditMovement.allocation_id == allocation.id,
+        m.PlayerCreditMovement.kind == "application")))
 
 
 def _active_collected(db: Session, allocation: m.Allocation) -> Decimal:
@@ -623,21 +632,26 @@ def void_transaction(db: Session, txn_id: int, actor: str, reason: str | None = 
 # ---------------------------------------------------------------- pending and net settlement
 
 def pending_positions(db: Session, team_id: int) -> dict[int, dict]:
-    """Per player account: what the team still owes them (unreimbursed expenses they paid)
-    and what they still owe the team (uncollected shares)."""
+    """Outstanding player shares and unreimbursed player-fronted expenses."""
     out: dict[int, dict] = {}
 
     def slot(aid):
         return out.setdefault(aid, {"owed": ZERO, "owed_n": 0, "reimb": ZERO, "reimb_n": 0, "net": ZERO})
 
-    for aid, total, n in db.execute(
-            select(m.Allocation.account_id, func.sum(m.Allocation.allocated_amount), func.count())
-            .join(m.Transaction, m.Transaction.id == m.Allocation.transaction_id)
-            .join(m.Account, m.Account.id == m.Allocation.account_id)
-            .where(m.Transaction.team_id == team_id, m.Transaction.status == "active",
-                   m.Transaction.type == "expense", m.Allocation.settlement_status == 0, m.Account.kind == "player")
-            .group_by(m.Allocation.account_id)).all():
-        slot(aid).update(owed=q2(total), owed_n=n)
+    allocs = db.scalars(select(m.Allocation).join(m.Transaction, m.Transaction.id == m.Allocation.transaction_id)
+        .join(m.Account, m.Account.id == m.Allocation.account_id)
+        .where(m.Transaction.team_id == team_id, m.Transaction.status == "active",
+               m.Transaction.type == "expense", m.Account.kind == "player",
+               m.Allocation.settlement_status == 0)).all()
+    owed_by_account: dict[int, list[Decimal]] = {}
+    for allocation in allocs:
+        due = q2(max(ZERO, allocation.allocated_amount - _active_collected(db, allocation)
+                     - _applied_credit(db, allocation)))
+        if due > ZERO:
+            owed_by_account.setdefault(allocation.account_id, []).append(due)
+    for aid, amounts in owed_by_account.items():
+        slot(aid).update(owed=q2(sum(amounts, ZERO)), owed_n=len(amounts))
+
     reimbursed = exists().where(m.Settlement.transaction_id == m.Transaction.id,
                                 m.Settlement.kind == "reimbursement", m.Settlement.status == "active")
     for aid, total, n in db.execute(
@@ -650,9 +664,8 @@ def pending_positions(db: Session, team_id: int) -> dict[int, dict]:
             .group_by(m.TransactionAccount.account_id)).all():
         slot(aid).update(reimb=q2(total), reimb_n=n)
     for v in out.values():
-        v["net"] = v["reimb"] - v["owed"]
+        v["net"] = q2(v["reimb"] - v["owed"])
     return out
-
 
 def team_pending_totals(pending: dict) -> dict:
     reimb = sum((v["reimb"] for v in pending.values()), ZERO)
