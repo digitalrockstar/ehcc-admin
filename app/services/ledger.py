@@ -1000,7 +1000,8 @@ def reset_data(db: Session, actor: str, *, since: dt.datetime | None) -> dict:
     """Hard-delete ledger rows (all, or created at/after `since`). audit_log is never touched."""
     cond = (m.Transaction.created_at >= since) if since else (m.Transaction.id > 0)
     ids = select(m.Transaction.id).where(cond)
-    n_txn = db.scalar(select(func.count()).select_from(m.Transaction).where(cond))
+    reset_ids = set(db.scalars(ids).all())
+    n_txn = len(reset_ids)
     # Net-settlement batches touching anything being deleted are removed whole, reopening what survives.
     credit_movements = db.scalars(select(m.PlayerCreditMovement).where(
         m.PlayerCreditMovement.transaction_id.in_(ids),
@@ -1043,7 +1044,7 @@ def reset_data(db: Session, actor: str, *, since: dt.datetime | None) -> dict:
         m.PlayerCreditMovement.allocation_id.is_not(None))).all()
     for movement in source_applications:
         allocation = db.get(m.Allocation, movement.allocation_id)
-        if allocation is None or allocation.transaction_id in db.scalars(ids).all():
+        if allocation is None or allocation.transaction_id in reset_ids:
             continue
         other_credit = q2(db.scalar(select(func.coalesce(func.sum(m.PlayerCreditMovement.amount), 0)).where(
             m.PlayerCreditMovement.allocation_id == allocation.id,
