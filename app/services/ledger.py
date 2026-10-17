@@ -214,8 +214,11 @@ def create_transaction(db: Session, d: TxnInput, actor: str) -> m.Transaction:
                       surplus_amount=plan["surplus"], status="active", created_by=actor)
     for role, acct in plan["links"]:
         t.accounts.append(m.TransactionAccount(account_id=acct.id, role=role))
+    payer_id = d.paid_by if d.type == "expense" else None
     for acct, share in plan["allocs"]:
-        t.allocations.append(m.Allocation(account_id=acct.id, allocated_amount=share))
+        # The payer's own selected share is already covered by the expense they fronted.
+        t.allocations.append(m.Allocation(account_id=acct.id, allocated_amount=share,
+                                          settlement_status=1 if acct.id == payer_id else 0))
     db.add(t)
     db.flush()
     db.refresh(t)
@@ -324,9 +327,13 @@ def collect(db: Session, allocation_id: int, actor: str) -> m.Settlement:
     if a.settlement_status == 1:
         raise ConflictError(f"{a.account.name} has already paid this.")
     team_acct = get_team_account(db, t.team_id)
+    payer = _payer_account(t)
+    recipient = payer if payer is not None and payer.kind == "player" else team_acct
+    if recipient.id == a.account_id:
+        raise ConflictError(f"{a.account.name}'s share is already covered by the amount they paid.")
     try:
         with db.begin_nested():
-            tr = _make_transfer(db, t.team_id, a.account, team_acct, a.allocated_amount,
+            tr = _make_transfer(db, t.team_id, a.account, recipient, a.allocated_amount,
                                 f"Collection for #{t.id}", actor)
             s = m.Settlement(kind="collection", transaction_id=t.id, account_id=a.account_id,
                              allocation_id=a.id, amount=a.allocated_amount,
@@ -335,11 +342,33 @@ def collect(db: Session, allocation_id: int, actor: str) -> m.Settlement:
             a.settlement_status = 1
             a.settled_transaction_id = tr.id
             db.flush()
+            _finalize_team_balance_rounding(db, t, actor)
     except IntegrityError:
         raise ConflictError(f"{a.account.name} has already paid this.")
     log(db, actor, "settlement.collect", "transaction", t.id, t.team_id,
-        {"from": a.account.name, "amount": a.allocated_amount, "transfer_id": tr.id})
+        {"from": a.account.name, "to": recipient.name, "amount": a.allocated_amount, "transfer_id": tr.id})
     return s
+
+
+def _finalize_team_balance_rounding(db: Session, t: m.Transaction, actor: str) -> None:
+    """Move the rounded-up difference into team balance once all player shares are collected."""
+    if t.type != "expense" or t.status != "active" or not t.surplus_amount:
+        return
+    if db.scalar(select(m.Settlement.id).where(
+        m.Settlement.transaction_id == t.id, m.Settlement.kind == "team_balance",
+        m.Settlement.status == "active")):
+        return
+    if any(a.account.kind == "player" and a.settlement_status == 0 for a in t.allocations):
+        return
+    payer = _payer_account(t)
+    if payer is None or payer.kind != "player":
+        return
+    team_acct = get_team_account(db, t.team_id)
+    tr = _make_transfer(db, t.team_id, payer, team_acct, t.surplus_amount,
+                        f"Team balance rounding for #{t.id}", actor)
+    db.add(m.Settlement(kind="team_balance", transaction_id=t.id, account_id=team_acct.id,
+                        amount=t.surplus_amount, settlement_transaction_id=tr.id, status="active"))
+    db.flush()
 
 
 def collect_all(db: Session, txn_id: int, actor: str) -> int:
