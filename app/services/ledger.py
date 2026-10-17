@@ -1,4 +1,4 @@
-"""All financial rules live here: allocation, surplus, settlement, void/reversal, balances."""
+"""All financial rules live here: allocations, team balance, credits, settlements and reversals."""
 from __future__ import annotations
 
 import datetime as dt
