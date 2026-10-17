@@ -499,8 +499,7 @@ def _applied_credit(db: Session, allocation: m.Allocation) -> Decimal:
 
 def _active_collected(db: Session, allocation: m.Allocation) -> Decimal:
     return q2(db.scalar(select(func.coalesce(func.sum(m.Settlement.amount), 0)).where(
-        m.Settlement.transaction_id == allocation.transaction_id,
-        m.Settlement.account_id == allocation.account_id,
+        m.Settlement.allocation_id == allocation.id,
         m.Settlement.kind == "collection", m.Settlement.status == "active")))
 
 def _finalize_team_balance_rounding(db: Session, t: m.Transaction, actor: str) -> None:
@@ -739,7 +738,8 @@ def settle_net(db: Session, player_id: int, actor: str) -> dict:
     if not exps and not allocs:
         raise ConflictError(f"Nothing is pending for {p.player_name}.")
     reimb_total = sum((t.amount for t in exps), ZERO)
-    coll_total = sum((a.allocated_amount for a in allocs), ZERO)
+    coll_total = sum((q2(max(ZERO, a.allocated_amount - _active_collected(db, a) - _applied_credit(db, a)))
+                      for a in allocs), ZERO)
     net = q2(reimb_total - coll_total)
     team_acct = get_team_account(db, p.team_id)
     batch = uuid.uuid4().hex
@@ -759,17 +759,14 @@ def settle_net(db: Session, player_id: int, actor: str) -> dict:
                 first = False
             for a in allocs:
                 db.add(m.Settlement(kind="collection", transaction_id=a.transaction_id, account_id=acct.id,
-                                    allocation_id=a.id, amount=a.allocated_amount,
+                                    allocation_id=a.id,
+                                    amount=q2(max(ZERO, a.allocated_amount - _active_collected(db, a) - _applied_credit(db, a))),
                                     settlement_transaction_id=tr.id if (tr and first) else None,
                                     batch_id=batch, status="active"))
                 first = False
                 a.settlement_status = 1
                 a.settled_transaction_id = tr.id if tr else None
             db.flush()
-            for parent_id in {a.transaction_id for a in allocs}:
-                parent = db.get(m.Transaction, parent_id)
-                if parent is not None:
-                    _finalize_team_balance_rounding(db, parent, actor)
     except IntegrityError:
         raise ConflictError("Something on this player was settled at the same time. Reload and try again.")
     log(db, actor, "settlement.net", "player", p.id, p.team_id,
