@@ -26,7 +26,12 @@ def ensure_schema_compatibility():
     Alembic remains the source of truth for constraints and indexes. This additive
     compatibility pass handles a fresh database and older installs missing columns.
     """
-    Base.metadata.create_all(engine)
+    inspector = inspect(engine)
+    # On an uninitialized database, let Alembic create the core schema first.
+    if not inspector.has_table("teams") or not inspector.has_table("settlements"):
+        return
+    Base.metadata.tables["player_credits"].create(engine, checkfirst=True)
+    Base.metadata.tables["player_credit_movements"].create(engine, checkfirst=True)
     inspector = inspect(engine)
     with engine.begin() as conn:
         for table in Base.metadata.sorted_tables:
