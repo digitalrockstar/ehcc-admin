@@ -186,8 +186,10 @@ def detail(txn_id: int, request: Request, db: Session = Depends(get_db)):
                m.PlayerCreditMovement.kind == "application",
                m.PlayerCreditMovement.reversed_at.is_(None))
         .group_by(m.PlayerCreditMovement.allocation_id)).all()}
+    allocation_due = {a.id: ledger.allocation_due(db, a) for a in t.allocations}
     return page(request, db, "transaction_detail.html", team=team, row=row, history=history, parent=parent,
-                pend=pending, credit_applied=credit_applied, teambar_path="/transactions")
+                pend=pending, credit_applied=credit_applied, allocation_due=allocation_due,
+                teambar_path="/transactions")
 
 
 def _do(request, form, db, action, ok_msg, default_next):
