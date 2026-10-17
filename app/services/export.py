@@ -104,8 +104,8 @@ def team_pdf_context(db: Session, team_id: int) -> dict:
     pending = ledger.pending_positions(db, team_id)
     rows = describe(db, list(txns), pending)
 
-    # Combined balance: team account balance + surplus (like dashboard)
-    combined_balance = summary["balance"] + summary["surplus"]
+    # Team balance is the ledger's cash balance; rounding is represented by real transfers.
+    combined_balance = summary["balance"]
 
     return {
         "team": team,
