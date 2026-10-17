@@ -36,7 +36,11 @@
   <div class="card"><h2>Outstanding balances</h2>
     {% if top %}
     <table class="plain"><tbody>
-      {% for r in top %}<tr><td><a href="/players/{{ r.player.id }}">{{ r.player.player_name }}</a></td><td class="num">{{ ui.net(r.net) }}</td></tr>{% endfor %}
+      {% for r in top %}<tr>
+        <td><a href="/players/{{ r.player.id }}">{{ r.player.player_name }}</a></td>
+        <td class="num">{{ ui.net(r.net) }}</td>
+        {% if is_admin %}<td class="num">{{ ui.action('/players/%d/settle-net' % r.player.id, 'Settle', request.url.path, 'btn small', 'Settle the net amount for %s (%s) in one transfer?' % (r.player.player_name, (r.net|abs)|inr)) }}</td>{% endif %}
+      </tr>{% endfor %}
     </tbody></table>
     {% else %}<p class="muted">Everyone is settled up.</p>{% endif %}
   </div>
