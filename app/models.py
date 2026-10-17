@@ -192,8 +192,52 @@ class Settlement(Base):
 
 
 # Duplicate protection lives in the database: one active settlement per parent, party and kind.
-Index("uq_active_settlement", Settlement.transaction_id, Settlement.account_id, Settlement.kind,
-      unique=True, postgresql_where=text("status = 'active'"), sqlite_where=text("status = 'active'"))
+# Reimbursements remain unique; collections may be repeated after an edited allocation
+# increases the amount owed. Team-balance rounding is also idempotently unique per expense.
+Index("uq_active_reimbursement", Settlement.transaction_id, Settlement.account_id,
+      unique=True, postgresql_where=text("status = 'active' AND kind = 'reimbursement'"),
+      sqlite_where=text("status = 'active' AND kind = 'reimbursement'"))
+Index("uq_active_team_balance", Settlement.transaction_id, Settlement.kind,
+      unique=True, postgresql_where=text("status = 'active' AND kind = 'team_balance'"),
+      sqlite_where=text("status = 'active' AND kind = 'team_balance'"))
+
+
+class PlayerCredit(Base):
+    """A player's unused credit. Applying or transferring it reduces remaining_amount."""
+    __tablename__ = "player_credits"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    team_id: Mapped[int] = mapped_column(ForeignKey("teams.id"), index=True)
+    account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id"), index=True)
+    source_transaction_id: Mapped[int | None] = mapped_column(ForeignKey("transactions.id", ondelete="SET NULL"))
+    original_amount: Mapped[Decimal] = mapped_column(MONEY)
+    remaining_amount: Mapped[Decimal] = mapped_column(MONEY)
+    note: Mapped[str | None] = mapped_column(String(200))
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+    account: Mapped[Account] = relationship()
+    __table_args__ = (
+        CheckConstraint("original_amount > 0", name="ck_player_credits_original_amount"),
+        CheckConstraint("remaining_amount >= 0 AND remaining_amount <= original_amount",
+                        name="ck_player_credits_remaining_amount"),
+        Index("uq_player_credit_source_account", "source_transaction_id", "account_id", unique=True),
+    )
+
+
+class PlayerCreditMovement(Base):
+    """Immutable history for explicit credit application, transfer, and adjustment."""
+    __tablename__ = "player_credit_movements"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    credit_id: Mapped[int] = mapped_column(ForeignKey("player_credits.id"), index=True)
+    kind: Mapped[str] = mapped_column(String(12))
+    amount: Mapped[Decimal] = mapped_column(MONEY)
+    transaction_id: Mapped[int | None] = mapped_column(ForeignKey("transactions.id", ondelete="SET NULL"))
+    allocation_id: Mapped[int | None] = mapped_column(ForeignKey("allocations.id", ondelete="SET NULL"))
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    __table_args__ = (
+        CheckConstraint("kind in ('created','application','team_transfer','adjustment')",
+                        name="ck_player_credit_movements_kind"),
+        CheckConstraint("amount > 0", name="ck_player_credit_movements_amount"),
+    )
 
 
 class AuditLog(Base):
