@@ -493,7 +493,8 @@ def transfer_player_credit_to_team(db: Session, credit_id: int, actor: str) -> D
 def _applied_credit(db: Session, allocation: m.Allocation) -> Decimal:
     return q2(db.scalar(select(func.coalesce(func.sum(m.PlayerCreditMovement.amount), 0)).where(
         m.PlayerCreditMovement.allocation_id == allocation.id,
-        m.PlayerCreditMovement.kind == "application")))
+        m.PlayerCreditMovement.kind == "application",
+        m.PlayerCreditMovement.reversed_at.is_(None))))
 
 
 def _active_collected(db: Session, allocation: m.Allocation) -> Decimal:
@@ -603,6 +604,26 @@ def void_transaction(db: Session, txn_id: int, actor: str, reason: str | None = 
     if link is not None:
         reverse_settlement(db, link.id, actor, reason)
         return "settlement reversed"
+    credit_transfer = db.scalar(select(m.PlayerCreditMovement).where(
+        m.PlayerCreditMovement.transaction_id == txn_id,
+        m.PlayerCreditMovement.kind == "team_transfer",
+        m.PlayerCreditMovement.reversed_at.is_(None)))
+    if credit_transfer is not None:
+        transfer = _lock_txn(db, txn_id)
+        if transfer.status != "active":
+            raise ConflictError("This credit transfer is already reversed.")
+        transfer.status = "reversed"
+        transfer.voided_at, transfer.voided_by = m.utcnow(), actor
+        transfer.void_reason = (reason or "Player credit transfer reversed")[:200]
+        credit_transfer.reversed_at = m.utcnow()
+        credit = db.get(m.PlayerCredit, credit_transfer.credit_id)
+        if credit is not None:
+            credit.remaining_amount = q2(min(credit.original_amount,
+                                              credit.remaining_amount + credit_transfer.amount))
+        log(db, actor, "player_credit.transfer_reverse", "player_credit",
+            credit_transfer.credit_id, credit.team_id if credit else None,
+            {"amount": credit_transfer.amount, "transfer_id": txn_id, "reason": reason})
+        return "player credit transfer reversed"
     linked = db.scalars(select(m.Settlement).where(m.Settlement.transaction_id == txn_id,
                                                    m.Settlement.status == "active")).all()
     ids = {txn_id}
@@ -614,6 +635,18 @@ def void_transaction(db: Session, txn_id: int, actor: str, reason: str | None = 
         raise ConflictError("This transaction is already voided or reversed.")
     t.status = "voided"
     t.voided_at, t.voided_by, t.void_reason = m.utcnow(), actor, reason
+    # Restore any credit applied to this now-voided expense.
+    for allocation in t.allocations:
+        movements = db.scalars(select(m.PlayerCreditMovement).where(
+            m.PlayerCreditMovement.allocation_id == allocation.id,
+            m.PlayerCreditMovement.kind == "application",
+            m.PlayerCreditMovement.reversed_at.is_(None))).all()
+        for movement in movements:
+            movement.reversed_at = m.utcnow()
+            credit = db.get(m.PlayerCredit, movement.credit_id)
+            if credit is not None:
+                credit.remaining_amount = q2(min(credit.original_amount,
+                                                  credit.remaining_amount + movement.amount))
     seen: set[int] = set()
     for s in linked:
         for row in _active_group(db, s):
@@ -839,7 +872,8 @@ def player_history(db: Session, player: m.Player) -> tuple[list[dict], Decimal]:
     credit_moves = db.scalars(select(m.PlayerCreditMovement).join(
         m.PlayerCredit, m.PlayerCredit.id == m.PlayerCreditMovement.credit_id
     ).where(m.PlayerCredit.account_id == acct.id,
-            m.PlayerCreditMovement.kind == "application")).all()
+            m.PlayerCreditMovement.kind == "application",
+            m.PlayerCreditMovement.reversed_at.is_(None))).all()
     credit_by_txn: dict[int, list[m.PlayerCreditMovement]] = {}
     for movement in credit_moves:
         if movement.transaction_id:
@@ -884,6 +918,16 @@ def reset_data(db: Session, actor: str, *, since: dt.datetime | None) -> dict:
     ids = select(m.Transaction.id).where(cond)
     n_txn = db.scalar(select(func.count()).select_from(m.Transaction).where(cond))
     # Net-settlement batches touching anything being deleted are removed whole, reopening what survives.
+    credit_movements = db.scalars(select(m.PlayerCreditMovement).where(
+        m.PlayerCreditMovement.transaction_id.in_(ids),
+        m.PlayerCreditMovement.kind.in_(("application", "team_transfer")),
+        m.PlayerCreditMovement.reversed_at.is_(None))).all()
+    for movement in credit_movements:
+        credit = db.get(m.PlayerCredit, movement.credit_id)
+        if credit is not None:
+            credit.remaining_amount = q2(min(credit.original_amount,
+                                              credit.remaining_amount + movement.amount))
+    db.flush()
     batch_rows = db.scalars(select(m.Settlement).where(m.Settlement.batch_id.in_(
         select(m.Settlement.batch_id).where(m.Settlement.batch_id.is_not(None),
                                             m.Settlement.transaction_id.in_(ids)
