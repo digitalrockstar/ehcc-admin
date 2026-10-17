@@ -23,6 +23,15 @@ CREATE TABLE IF NOT EXISTS public.player_credits (
   created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+-- Additive column checks for older/partially-created tables.
+ALTER TABLE public.player_credits ADD COLUMN IF NOT EXISTS team_id INTEGER REFERENCES public.teams(id);
+ALTER TABLE public.player_credits ADD COLUMN IF NOT EXISTS account_id INTEGER REFERENCES public.accounts(id);
+ALTER TABLE public.player_credits ADD COLUMN IF NOT EXISTS source_transaction_id INTEGER REFERENCES public.transactions(id) ON DELETE SET NULL;
+ALTER TABLE public.player_credits ADD COLUMN IF NOT EXISTS original_amount NUMERIC(12,2) NOT NULL DEFAULT 0;
+ALTER TABLE public.player_credits ADD COLUMN IF NOT EXISTS remaining_amount NUMERIC(12,2) NOT NULL DEFAULT 0;
+ALTER TABLE public.player_credits ADD COLUMN IF NOT EXISTS note VARCHAR(200);
+ALTER TABLE public.player_credits ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE public.player_credits ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP;
 CREATE INDEX IF NOT EXISTS ix_player_credits_team_id ON public.player_credits(team_id);
 CREATE INDEX IF NOT EXISTS ix_player_credits_account_id ON public.player_credits(account_id);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_player_credit_source_account ON public.player_credits(source_transaction_id, account_id);
@@ -37,4 +46,10 @@ CREATE TABLE IF NOT EXISTS public.player_credit_movements (
   reversed_at TIMESTAMPTZ
 );
 ALTER TABLE public.player_credit_movements ADD COLUMN IF NOT EXISTS reversed_at TIMESTAMPTZ;
+ALTER TABLE public.player_credit_movements ADD COLUMN IF NOT EXISTS credit_id INTEGER REFERENCES public.player_credits(id);
+ALTER TABLE public.player_credit_movements ADD COLUMN IF NOT EXISTS kind VARCHAR(12);
+ALTER TABLE public.player_credit_movements ADD COLUMN IF NOT EXISTS amount NUMERIC(12,2);
+ALTER TABLE public.player_credit_movements ADD COLUMN IF NOT EXISTS transaction_id INTEGER REFERENCES public.transactions(id) ON DELETE SET NULL;
+ALTER TABLE public.player_credit_movements ADD COLUMN IF NOT EXISTS allocation_id INTEGER REFERENCES public.allocations(id) ON DELETE SET NULL;
+ALTER TABLE public.player_credit_movements ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP;
 CREATE INDEX IF NOT EXISTS ix_player_credit_movements_credit_id ON public.player_credit_movements(credit_id);
