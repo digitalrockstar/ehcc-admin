@@ -169,6 +169,23 @@ def test_edit_after_collection_preserves_payment_and_creates_player_credit(db, t
     pending = ledger.pending_of(ledger.pending_positions(db, team.id), bala.id)
     assert pending["owed"] == D("580.00")
 
+    # Increasing the old split creates only the additional due; the original ₹170 transfer stays.
+    d.amount = D("1200")
+    ledger.update_transaction(db, t.id, d, "test")
+    db.commit()
+    db.expire_all()
+    allocation = db.scalar(select(m.Allocation).where(
+        m.Allocation.transaction_id == t.id, m.Allocation.account_id == bala.id))
+    assert allocation.allocated_amount == D("200.00")
+    assert allocation.settlement_status == 0
+    extra = ledger.collect(db, allocation.id, "test")
+    db.commit()
+    assert extra.amount == D("30.00")
+    active_collections = db.scalars(select(m.Settlement).where(
+        m.Settlement.transaction_id == t.id, m.Settlement.account_id == bala.id,
+        m.Settlement.kind == "collection", m.Settlement.status == "active")).all()
+    assert sorted(s.amount for s in active_collections) == [D("30.00"), D("170.00")]
+
 
 def test_player_credit_transfer_can_be_reversed(db, team):
     t = expense(db, team, 1000, "team", NAMES)
