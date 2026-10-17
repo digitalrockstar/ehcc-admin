@@ -937,7 +937,7 @@ def player_history(db: Session, player: m.Player) -> tuple[list[dict], Decimal]:
                            "amount": alloc.allocated_amount, "alloc": alloc,
                            "settled": alloc.settlement_status == 1})
         for movement in credit_by_txn.get(t.id, []):
-            events.append({"t": t, "role": "Credit applied", "delta": -movement.amount if active else ZERO,
+            events.append({"t": t, "role": "Credit applied", "delta": ZERO,
                            "amount": movement.amount, "credit_movement": movement})
         if ("paid_by", acct.id) in roles:
             s = active_by_parent.get((t.id, "reimbursement"))
