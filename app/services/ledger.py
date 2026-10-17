@@ -567,6 +567,9 @@ def _applied_credit(db: Session, allocation: m.Allocation) -> Decimal:
 def allocation_due(db: Session, allocation: m.Allocation) -> Decimal:
     if allocation.transaction.status != "active" or allocation.transaction.type != "expense":
         return ZERO
+    payer = _payer_account(allocation.transaction)
+    if payer is not None and payer.id == allocation.account_id:
+        return ZERO
     return q2(max(ZERO, allocation.allocated_amount - _active_collected(db, allocation)
                    - _applied_credit(db, allocation)))
 
