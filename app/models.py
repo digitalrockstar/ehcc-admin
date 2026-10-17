@@ -233,6 +233,7 @@ class PlayerCreditMovement(Base):
     transaction_id: Mapped[int | None] = mapped_column(ForeignKey("transactions.id", ondelete="SET NULL"))
     allocation_id: Mapped[int | None] = mapped_column(ForeignKey("allocations.id", ondelete="SET NULL"))
     created_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    reversed_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
     __table_args__ = (
         CheckConstraint("kind in ('created','application','team_transfer','adjustment')",
                         name="ck_player_credit_movements_kind"),
