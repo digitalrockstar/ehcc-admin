@@ -9,9 +9,6 @@
 {% else %}
 <div class="head">
   <h1>{{ team.name }} <span class="muted small">{{ account.name }}</span></h1>
-  {% if is_admin %}<div class="actions">
-    <a href="/export/team/{{ team.id }}/csv" class="btn small ghost">Export CSV</a>
-  </div>{% endif %}
 </div>
 <section class="cards">
   <div class="card stat"><div class="lbl">Income</div><div class="val pos">{{ summary.total_in|inr }}</div></div>
