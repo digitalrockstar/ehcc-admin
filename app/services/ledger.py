@@ -564,6 +564,13 @@ def _applied_credit(db: Session, allocation: m.Allocation) -> Decimal:
         m.PlayerCreditMovement.reversed_at.is_(None))))
 
 
+def allocation_due(db: Session, allocation: m.Allocation) -> Decimal:
+    if allocation.transaction.status != "active" or allocation.transaction.type != "expense":
+        return ZERO
+    return q2(max(ZERO, allocation.allocated_amount - _active_collected(db, allocation)
+                   - _applied_credit(db, allocation)))
+
+
 def _active_collected(db: Session, allocation: m.Allocation) -> Decimal:
     return q2(db.scalar(select(func.coalesce(func.sum(m.Settlement.amount), 0)).where(
         m.Settlement.allocation_id == allocation.id,
@@ -977,8 +984,8 @@ def player_history(db: Session, player: m.Player) -> tuple[list[dict], Decimal]:
         active = t.status == "active"
         if alloc:
             events.append({"t": t, "role": "Owed", "delta": alloc.allocated_amount if active else ZERO,
-                           "amount": alloc.allocated_amount, "alloc": alloc,
-                           "settled": alloc.settlement_status == 1})
+                           "amount": alloc.allocated_amount, "due": allocation_due(db, alloc) if active else ZERO,
+                           "alloc": alloc, "settled": alloc.settlement_status == 1})
         for movement in credit_by_txn.get(t.id, []):
             events.append({"t": t, "role": "Credit applied", "delta": ZERO,
                            "amount": movement.amount, "credit_movement": movement})
