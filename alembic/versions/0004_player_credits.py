@@ -33,7 +33,6 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.CheckConstraint("original_amount > 0", name="ck_player_credits_original_amount"),
         sa.CheckConstraint("remaining_amount >= 0 AND remaining_amount <= original_amount", name="ck_player_credits_remaining_amount"),
-        sa.UniqueConstraint("source_transaction_id", "account_id", name="uq_player_credit_source_account"),
     )
     op.create_index("ix_player_credits_team_id", "player_credits", ["team_id"])
     op.create_index("ix_player_credits_account_id", "player_credits", ["account_id"])
@@ -47,6 +46,7 @@ def upgrade() -> None:
         sa.Column("transaction_id", sa.Integer(), sa.ForeignKey("transactions.id", ondelete="SET NULL"), nullable=True),
         sa.Column("allocation_id", sa.Integer(), sa.ForeignKey("allocations.id", ondelete="SET NULL"), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("reversed_at", sa.DateTime(timezone=True), nullable=True),
         sa.CheckConstraint("kind in ('created','application','team_transfer','adjustment')", name="ck_player_credit_movements_kind"),
         sa.CheckConstraint("amount > 0", name="ck_player_credit_movements_amount"),
     )
