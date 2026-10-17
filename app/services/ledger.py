@@ -1001,6 +1001,26 @@ def reset_data(db: Session, actor: str, *, since: dt.datetime | None) -> dict:
                 a.settlement_status, a.settled_transaction_id = 0, None
     db.flush()
     credit_ids = select(m.PlayerCredit.id).where(m.PlayerCredit.source_transaction_id.in_(ids))
+    # If a source transaction is reset, reopen surviving allocations that used its credit.
+    source_applications = db.scalars(select(m.PlayerCreditMovement).where(
+        m.PlayerCreditMovement.credit_id.in_(credit_ids),
+        m.PlayerCreditMovement.kind == "application",
+        m.PlayerCreditMovement.reversed_at.is_(None),
+        m.PlayerCreditMovement.allocation_id.is_not(None))).all()
+    for movement in source_applications:
+        allocation = db.get(m.Allocation, movement.allocation_id)
+        if allocation is None or allocation.transaction_id in db.scalars(ids).all():
+            continue
+        other_credit = q2(db.scalar(select(func.coalesce(func.sum(m.PlayerCreditMovement.amount), 0)).where(
+            m.PlayerCreditMovement.allocation_id == allocation.id,
+            m.PlayerCreditMovement.kind == "application",
+            m.PlayerCreditMovement.reversed_at.is_(None),
+            m.PlayerCreditMovement.credit_id.not_in(credit_ids))))
+        allocation.settlement_status = 1 if (
+            _active_collected(db, allocation) + other_credit >= allocation.allocated_amount) else 0
+        if allocation.settlement_status == 0:
+            allocation.settled_transaction_id = None
+    db.flush()
     db.execute(delete(m.PlayerCreditMovement).where(
         m.PlayerCreditMovement.credit_id.in_(credit_ids)
         | m.PlayerCreditMovement.transaction_id.in_(ids)), execution_options=NOSYNC)
