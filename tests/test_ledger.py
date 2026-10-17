@@ -95,6 +95,46 @@ def test_collection_full_or_none_and_no_duplicates(db, team):
     assert ledger.team_summary(db, team.id)["balance"] == D("-830.00")
 
 
+def test_player_collections_go_to_payer_and_rounding_moves_to_team_balance(db, team):
+    t = expense(db, team, 1000, "Akshay", NAMES)
+    akshay = account_of(db, team.id, "Akshay")
+    # Payer's own allocation is considered covered by the amount they fronted.
+    own = next(a for a in t.allocations if a.account_id == akshay.id)
+    assert own.settlement_status == 1
+    assert own.settled_transaction_id is None
+
+    ledger.collect_all(db, t.id, "test")
+    db.commit()
+    db.expire_all()
+
+    transfers = db.scalars(select(m.Transaction).where(
+        m.Transaction.team_id == team.id, m.Transaction.type == "transfer",
+        m.Transaction.status == "active")).all()
+    assert len(transfers) == 6  # five collections to Akshay plus one rounding adjustment
+    legs = {tr.id: {ta.role: ta.account_id for ta in tr.accounts} for tr in transfers}
+    team_account = ledger.get_team_account(db, team.id)
+    collections = db.scalars(select(m.Settlement).where(
+        m.Settlement.transaction_id == t.id, m.Settlement.kind == "collection",
+        m.Settlement.status == "active")).all()
+    assert len(collections) == 5
+    assert all(legs[s.settlement_transaction_id]["account_in"] == akshay.id for s in collections)
+    rounding = db.scalars(select(m.Settlement).where(
+        m.Settlement.transaction_id == t.id, m.Settlement.kind == "team_balance",
+        m.Settlement.status == "active")).one()
+    assert rounding.amount == D("20.00")
+    assert legs[rounding.settlement_transaction_id] == {
+        "account_out": akshay.id, "account_in": team_account.id
+    }
+    assert ledger.team_summary(db, team.id)["balance"] == D("20.00")
+
+    # Reversing a collection also reverses the dependent rounding adjustment.
+    ledger.reverse_settlement(db, collections[0].id, "test", "test reversal")
+    db.commit()
+    db.expire_all()
+    assert db.get(m.Settlement, rounding.id).status == "reversed"
+    assert ledger.team_summary(db, team.id)["balance"] == D("0.00")
+
+
 def test_database_blocks_duplicate_active_settlement(db, team):
     t = expense(db, team, 1000, "Akshay", NAMES)
     s = ledger.reimburse(db, t.id, "test")
