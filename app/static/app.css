@@ -822,3 +822,17 @@
     }
   }
 }
+
+
+/* Consistent vertical alignment: center every table cell against the tallest item in its row */
+@layer utilities {
+  th,
+  td {
+    vertical-align: middle;
+  }
+
+  table.plain th,
+  table.plain td {
+    vertical-align: middle;
+  }
+}
