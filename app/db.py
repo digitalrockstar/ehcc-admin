@@ -43,20 +43,28 @@ def ensure_schema_compatibility():
                 if default is not None:
                     default_sql = f" DEFAULT {default.arg}"
                 elif not column.nullable:
-                    # Backfill safely from a scalar Python-side default where possible.
-                    py_default = column.default.arg if column.default is not None and not callable(column.default.arg) else None
-                    if py_default is None:
-                        raise RuntimeError(
-                            f"Cannot add required column {table.name}.{column.name} without a server default; "
-                            "run the matching Alembic migration."
-                        )
-                    if isinstance(py_default, str):
-                        literal = "'" + py_default.replace("'", "''") + "'"
-                    elif isinstance(py_default, bool):
-                        literal = "TRUE" if py_default else "FALSE"
-                    else:
-                        literal = str(py_default)
-                    default_sql = f" DEFAULT {literal}"
+                    py_default = column.default.arg if column.default is not None else None
+                    if callable(py_default):
+                        if getattr(py_default, "__name__", "") == "utcnow":
+                            default_sql = " DEFAULT CURRENT_TIMESTAMP"
+                        else:
+                            py_default = py_default()
+                    if not default_sql:
+                        if isinstance(py_default, str):
+                            literal = "'" + py_default.replace("'", "''") + "'"
+                        elif isinstance(py_default, bool):
+                            literal = "TRUE" if py_default else "FALSE"
+                        elif py_default is not None:
+                            literal = str(py_default)
+                        elif column.type.__class__.__name__ in ("DateTime", "Date"):
+                            literal = "CURRENT_TIMESTAMP"
+                        elif column.type.__class__.__name__ == "Boolean":
+                            literal = "FALSE"
+                        elif column.type.__class__.__name__ == "String":
+                            literal = "''"
+                        else:
+                            literal = "0"
+                        default_sql = f" DEFAULT {literal}"
                 conn.execute(text(
                     f'ALTER TABLE "{table.name}" ADD COLUMN "{column.name}" {compiled}{default_sql}{nullable}'
                 ))
