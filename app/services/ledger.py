@@ -601,8 +601,16 @@ def _reverse_row(db: Session, s: m.Settlement, actor: str, reason: str | None) -
     if s.allocation_id:
         al = db.get(m.Allocation, s.allocation_id)
         if al is not None:
-            al.settlement_status = 0
-            al.settled_transaction_id = None
+            collected = _active_collected(db, al)
+            applied = _applied_credit(db, al)
+            al.settlement_status = 1 if q2(collected + applied) >= al.allocated_amount else 0
+            if al.settlement_status:
+                last = db.scalar(select(m.Settlement).where(
+                    m.Settlement.allocation_id == al.id, m.Settlement.kind == "collection",
+                    m.Settlement.status == "active").order_by(m.Settlement.id.desc()))
+                al.settled_transaction_id = last.settlement_transaction_id if last else None
+            else:
+                al.settled_transaction_id = None
     parent = db.get(m.Transaction, s.transaction_id)
     log(db, actor, "settlement.reverse", "settlement", s.id, parent.team_id if parent else None,
         {"kind": s.kind, "amount": s.amount, "parent": s.transaction_id, "batch": s.batch_id, "reason": reason})
