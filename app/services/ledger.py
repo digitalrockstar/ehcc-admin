@@ -285,6 +285,7 @@ def update_transaction(db: Session, txn_id: int, d: TxnInput, actor: str) -> m.T
     new_allocs = {acct.id: (acct, share) for acct, share in plan["allocs"]}
     for aid, old in list(old_allocs.items()):
         if aid not in new_allocs:
+            _reverse_credit_applications(db, old, actor)
             paid = collected.get(aid, ZERO)
             if paid > 0:
                 _upsert_player_credit(db, t.team_id, aid, t.id, paid,
@@ -300,7 +301,9 @@ def update_transaction(db: Session, txn_id: int, d: TxnInput, actor: str) -> m.T
             t.allocations.append(old)
         old.allocated_amount = share
         paid = collected.get(aid, ZERO)
-        old.settlement_status = 1 if (aid == payer_id or paid >= share) else 0
+        _reconcile_credit_applications(db, old, share, actor)
+        applied_credit = _applied_credit(db, old)
+        old.settlement_status = 1 if (aid == payer_id or paid + applied_credit >= share) else 0
         if old.settlement_status == 0:
             old.settled_transaction_id = None
         elif paid > 0:
@@ -406,6 +409,58 @@ def collect(db: Session, allocation_id: int, actor: str) -> m.Settlement:
     log(db, actor, "settlement.collect", "transaction", t.id, t.team_id,
         {"from": a.account.name, "to": recipient.name, "amount": amount_due, "transfer_id": tr.id})
     return s
+
+
+def _reverse_credit_applications(db: Session, allocation: m.Allocation, actor: str) -> None:
+    movements = db.scalars(select(m.PlayerCreditMovement).where(
+        m.PlayerCreditMovement.allocation_id == allocation.id,
+        m.PlayerCreditMovement.kind == "application",
+        m.PlayerCreditMovement.reversed_at.is_(None))).all()
+    for movement in movements:
+        movement.reversed_at = m.utcnow()
+        credit = db.get(m.PlayerCredit, movement.credit_id)
+        if credit is not None:
+            credit.remaining_amount = q2(min(credit.original_amount,
+                                              credit.remaining_amount + movement.amount))
+            log(db, actor, "player_credit.application_reverse", "player_credit", credit.id,
+                credit.team_id, {"allocation_id": allocation.id, "amount": movement.amount})
+
+
+def _reconcile_credit_applications(db: Session, allocation: m.Allocation,
+                                   new_amount: Decimal, actor: str) -> None:
+    """Keep credit applied to an allocation at or below its revised amount after cash collections."""
+    cash_paid = _active_collected(db, allocation)
+    allowed = q2(max(ZERO, new_amount - cash_paid))
+    applied = _applied_credit(db, allocation)
+    excess = q2(applied - allowed)
+    if excess <= ZERO:
+        return
+    movements = db.scalars(select(m.PlayerCreditMovement).where(
+        m.PlayerCreditMovement.allocation_id == allocation.id,
+        m.PlayerCreditMovement.kind == "application",
+        m.PlayerCreditMovement.reversed_at.is_(None)).order_by(
+        m.PlayerCreditMovement.id.desc())).all()
+    for movement in movements:
+        if excess <= ZERO:
+            break
+        credit = db.get(m.PlayerCredit, movement.credit_id)
+        movement.reversed_at = m.utcnow()
+        if credit is not None:
+            credit.remaining_amount = q2(min(credit.original_amount,
+                                              credit.remaining_amount + movement.amount))
+        if movement.amount > excess:
+            replacement_amount = q2(movement.amount - excess)
+            if credit is not None:
+                credit.remaining_amount = q2(credit.remaining_amount - replacement_amount)
+                db.add(m.PlayerCreditMovement(
+                    credit_id=movement.credit_id, kind="application", amount=replacement_amount,
+                    transaction_id=allocation.transaction_id, allocation_id=allocation.id))
+            excess = ZERO
+        else:
+            excess = q2(excess - movement.amount)
+        if credit is not None:
+            log(db, actor, "player_credit.application_adjust", "player_credit", credit.id,
+                credit.team_id, {"allocation_id": allocation.id, "reversed_amount": movement.amount})
 
 
 def _upsert_player_credit(db: Session, team_id: int, account_id: int, source_transaction_id: int,
