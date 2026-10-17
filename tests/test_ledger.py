@@ -588,3 +588,19 @@ def test_conflict_error_for_duplicate_player(db, team):
         masters.create_player(db, team.id, "Akshay", None, "t")
     assert exc_info.value.status_code == 409
     assert exc_info.value.field == "player_name"
+
+
+def test_team_expected_balance_only_offsets_collections_received_by_team(db, team):
+    # A player-fronted expense is reimbursed from the team account, while other
+    # players' collections go directly to that player and must not offset team cash.
+    t = expense(db, team, 4250, "Akshay", NAMES)
+    pending = ledger.team_pending_totals(ledger.pending_positions(db, team.id))
+    assert pending["reimb"] == D("4250.00")
+    assert pending["owed"] == D("3825.00")  # payer's own share is already covered
+    assert pending["owed_to_team"] == D("0.00")
+    assert pending["net"] == D("4250.00")
+
+    # When the team pays, outstanding player collections will enter the team account.
+    team_expense = expense(db, team, 1000, "team", NAMES, category="Nets")
+    pending = ledger.team_pending_totals(ledger.pending_positions(db, team.id))
+    assert pending["owed_to_team"] == D("1020.00")
