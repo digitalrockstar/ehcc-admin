@@ -598,7 +598,7 @@ def test_team_expected_balance_only_offsets_collections_received_by_team(db, tea
     assert pending["reimb"] == D("4250.00")
     assert pending["owed"] == D("3825.00")  # payer's own share is already covered
     assert pending["owed_to_team"] == D("0.00")
-    assert pending["net"] == D("4250.00")
+    assert pending["net"] == D("425.00")
 
     # When the team pays, outstanding player collections will enter the team account.
     team_expense = expense(db, team, 1000, "team", NAMES, category="Nets")
