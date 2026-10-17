@@ -22,6 +22,31 @@
     <p class="hint">One transfer for the difference, and every reimbursement and collection above is marked settled together. Undoing any of them undoes the whole batch. Or settle items one by one with the buttons below.</p>
   {% endif %}
 </div>{% endif %}
+{% if credits %}
+<div class="card" id="player-credits"><h2>Player credit</h2>
+  <p class="hint">Unused credit stays with this player until an admin explicitly applies it to an expense or transfers it to the team account.</p>
+  <div class="scroll"><table><thead><tr><th>Source</th><th class="num">Original</th><th class="num">Available</th>{% if is_admin %}<th>Actions</th>{% endif %}</tr></thead><tbody>
+  {% for credit in credits %}
+    <tr><td>{{ credit.note or ('Transaction #' ~ credit.source_transaction_id if credit.source_transaction_id else 'Player credit') }}</td>
+      <td class="num">{{ credit.original_amount|inr }}</td><td class="num">{{ credit.remaining_amount|inr }}</td>
+      {% if is_admin %}<td>
+        {% if credit_allocations %}
+        <form method="post" action="/players/{{ player.id }}/credits/{{ credit.id }}/apply" class="inline-form">
+          {{ ui.csrf_input() }}
+          <select name="allocation_id" required aria-label="Expense to apply credit to">
+            {% for a in credit_allocations %}<option value="{{ a.id }}">#{{ a.transaction_id }} · {{ a.transaction.item_description or (a.transaction.category.name if a.transaction.category else 'Expense') }} · {{ a.allocated_amount|inr }}</option>{% endfor %}
+          </select>
+          <button class="btn small">Apply credit</button>
+        </form>
+        {% endif %}
+        <form method="post" action="/players/{{ player.id }}/credits/{{ credit.id }}/transfer" class="inline-form" data-confirm="Transfer this entire available credit to the team account?">
+          {{ ui.csrf_input() }}<button class="btn small ghost">Transfer to team</button>
+        </form>
+      </td>{% endif %}
+    </tr>
+  {% endfor %}</tbody></table></div>
+</div>
+{% endif %}
 <p class="hint swipe">Swipe sideways to see all columns.</p>
 <div class="card flush scroll"><table>
   <thead><tr><th>Date</th><th>Type</th><th>Item / Category</th><th class="num">Amount</th><th>Role</th><th>Settlement</th><th class="num">Balance</th></tr></thead>
