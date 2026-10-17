@@ -76,7 +76,7 @@ function initTxnForm(form) {
     if (n === 1) { box.textContent = 'Charged ' + money(amt) + '.'; return; }
     const stepP = Math.round(step * 100);
     const share = Math.ceil(amt / (n * stepP)) * stepP;
-    box.textContent = `Each of ${n} owes ${money(share)}. Total ${money(share * n)}. Surplus to team ${money(share * n - amt)}.`;
+    box.textContent = `Each of ${n} owes ${money(share)}. Total ${money(share * n)}. Team balance increase ${money(share * n - amt)}.`;
   }
   function applyType() {
     const t = typeNow();
