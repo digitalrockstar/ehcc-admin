@@ -59,8 +59,20 @@ def test_net_outstanding_is_owed_minus_paid(db, team):
 
 def test_reimbursement_is_full_once_and_a_transfer(db, team):
     t = expense(db, team, 1000, "Akshay", NAMES)
+    before_balance = ledger.team_summary(db, team.id)["balance"]
+    before_pending = ledger.team_pending_totals(ledger.pending_positions(db, team.id))
+    before_expected = before_balance - before_pending["net"]
+
     ledger.reimburse(db, t.id, "test")
     db.commit()
+    db.expire_all()
+
+    after_balance = ledger.team_summary(db, team.id)["balance"]
+    after_pending = ledger.team_pending_totals(ledger.pending_positions(db, team.id))
+    after_expected = after_balance - after_pending["net"]
+    assert before_expected == after_expected
+    assert before_pending["reimb"] == D("1000.00")
+    assert after_pending["reimb"] == D("0.00")
     transfers = db.scalars(select(m.Transaction).where(m.Transaction.type == "transfer")).all()
     assert len(transfers) == 1 and transfers[0].amount == D("1000.00")
     assert db.get(m.Transaction, t.id).type == "expense"
