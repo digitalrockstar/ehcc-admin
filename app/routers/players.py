@@ -113,6 +113,34 @@ def settle_net(player_id: int, request: Request, form=Depends(admin_form), db: S
                 f"/players/{player_id}")
 
 
+@router.post("/players/{player_id}/credits/{credit_id}/transfer")
+def transfer_credit(player_id: int, credit_id: int, request: Request, form=Depends(admin_form),
+                    db: Session = Depends(get_db)):
+    def action():
+        player = db.get(m.Player, player_id)
+        credit = db.get(m.PlayerCredit, credit_id)
+        if player is None or credit is None or credit.account_id != player.account.id:
+            raise NotFoundError("Player credit not found.")
+        return ledger.transfer_player_credit_to_team(db, credit_id, admin_name(request))
+    return _run(request, form, db, action, lambda amount: f"Transferred {inr(amount)} of credit to the team account.",
+                f"/players/{player_id}")
+
+
+@router.post("/players/{player_id}/credits/{credit_id}/apply")
+def apply_credit(player_id: int, credit_id: int, request: Request, form=Depends(admin_form),
+                 db: Session = Depends(get_db)):
+    raw = str(form.get("allocation_id", "")).strip()
+    allocation_id = int(raw) if raw.isdigit() else 0
+    def action():
+        player = db.get(m.Player, player_id)
+        credit = db.get(m.PlayerCredit, credit_id)
+        if player is None or credit is None or credit.account_id != player.account.id:
+            raise NotFoundError("Player credit not found.")
+        return ledger.apply_player_credit(db, credit_id, allocation_id, admin_name(request))
+    return _run(request, form, db, action, lambda amount: f"Applied {inr(amount)} credit to the selected expense.",
+                f"/players/{player_id}")
+
+
 @router.post("/players/{player_id}/edit")
 def edit(player_id: int, request: Request, form=Depends(admin_form), db: Session = Depends(get_db)):
     return _run(request, form, db, lambda: masters.update_player(
