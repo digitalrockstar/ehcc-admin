@@ -622,12 +622,18 @@ def _active_group(db: Session, s: m.Settlement) -> list[m.Settlement]:
             rows.extend(rounding)
         return rows
     rows = [s]
-    # The rounding transfer is valid only while all collections remain settled.
     if s.kind == "collection":
+        # A collection reversal also reverses the dependent team-balance adjustment.
         rounding = db.scalars(select(m.Settlement).where(
             m.Settlement.transaction_id == s.transaction_id,
             m.Settlement.kind == "team_balance", m.Settlement.status == "active")).all()
         rows.extend(rounding)
+    elif s.kind == "team_balance":
+        # Reversing the adjustment invalidates the full set of collections that triggered it.
+        collections = db.scalars(select(m.Settlement).where(
+            m.Settlement.transaction_id == s.transaction_id,
+            m.Settlement.kind == "collection", m.Settlement.status == "active")).all()
+        rows.extend(collections)
     return rows
 
 
