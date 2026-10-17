@@ -177,9 +177,27 @@ def test_edit_after_collection_preserves_payment_and_creates_player_credit(db, t
         m.Settlement.kind == "collection", m.Settlement.status == "active")).all()
     assert sorted(s.amount for s in active_collections) == [D("30.00"), D("170.00")]
 
+
+
+def test_player_credit_is_explicitly_applied_to_future_obligation(db, team):
+    t = expense(db, team, 1000, "team", NAMES)
+    bala = account_of(db, team.id, "Bala")
+    allocation = next(a for a in t.allocations if a.account_id == bala.id)
+    ledger.collect(db, allocation.id, "test")
+    db.commit()
+
+    d = ledger.TxnInput(team_id=team.id, date=t.transaction_date, type="expense",
+                        amount=D("900"), category_id=t.category_id,
+                        paid_by=ledger.get_team_account(db, team.id).id,
+                        charged_to=[a.account_id for a in t.allocations])
+    ledger.update_transaction(db, t.id, d, "test")
+    db.commit()
+    credit = db.scalar(select(m.PlayerCredit).where(
+        m.PlayerCredit.source_transaction_id == t.id, m.PlayerCredit.account_id == bala.id))
+    assert credit.remaining_amount == D("20.00")
+
     future = expense(db, team, 600, "team", ["Bala"])
-    future_allocation = future.allocations[0]
-    applied = ledger.apply_player_credit(db, credit.id, future_allocation.id, "test")
+    applied = ledger.apply_player_credit(db, credit.id, future.allocations[0].id, "test")
     db.commit()
     assert applied == D("20.00")
     assert credit.remaining_amount == D("0.00")
