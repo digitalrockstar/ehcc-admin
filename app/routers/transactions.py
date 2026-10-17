@@ -179,8 +179,15 @@ def detail(txn_id: int, request: Request, db: Session = Depends(get_db)):
     ).order_by(m.AuditLog.id)).all()
     link = row["link"]
     parent = db.get(m.Transaction, link.transaction_id) if link and not link.batch_id else None
-    return page(request, db, "transaction_detail.html", team=team, row=row, history=history, parent=parent, pend=pending,
-                teambar_path="/transactions")
+    credit_applied = {aid: amount for aid, amount in db.execute(
+        select(m.PlayerCreditMovement.allocation_id,
+               func.sum(m.PlayerCreditMovement.amount))
+        .where(m.PlayerCreditMovement.allocation_id.in_([a.id for a in t.allocations] or [-1]),
+               m.PlayerCreditMovement.kind == "application",
+               m.PlayerCreditMovement.reversed_at.is_(None))
+        .group_by(m.PlayerCreditMovement.allocation_id)).all()}
+    return page(request, db, "transaction_detail.html", team=team, row=row, history=history, parent=parent,
+                pend=pending, credit_applied=credit_applied, teambar_path="/transactions")
 
 
 def _do(request, form, db, action, ok_msg, default_next):
