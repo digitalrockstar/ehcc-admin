@@ -836,6 +836,14 @@ def player_history(db: Session, player: m.Player) -> tuple[list[dict], Decimal]:
         if s.status == "active":
             active_by_parent[(s.transaction_id, s.kind)] = s
     events = []
+    credit_moves = db.scalars(select(m.PlayerCreditMovement).join(
+        m.PlayerCredit, m.PlayerCredit.id == m.PlayerCreditMovement.credit_id
+    ).where(m.PlayerCredit.account_id == acct.id,
+            m.PlayerCreditMovement.kind == "application")).all()
+    credit_by_txn: dict[int, list[m.PlayerCreditMovement]] = {}
+    for movement in credit_moves:
+        if movement.transaction_id:
+            credit_by_txn.setdefault(movement.transaction_id, []).append(movement)
     for t in tx:
         roles = {(ta.role, ta.account_id) for ta in t.accounts}
         alloc = next((a for a in t.allocations if a.account_id == acct.id), None)
@@ -844,6 +852,9 @@ def player_history(db: Session, player: m.Player) -> tuple[list[dict], Decimal]:
             events.append({"t": t, "role": "Owed", "delta": alloc.allocated_amount if active else ZERO,
                            "amount": alloc.allocated_amount, "alloc": alloc,
                            "settled": alloc.settlement_status == 1})
+        for movement in credit_by_txn.get(t.id, []):
+            events.append({"t": t, "role": "Credit applied", "delta": -movement.amount if active else ZERO,
+                           "amount": movement.amount, "credit_movement": movement})
         if ("paid_by", acct.id) in roles:
             s = active_by_parent.get((t.id, "reimbursement"))
             events.append({"t": t, "role": "Paid", "delta": -t.amount if active else ZERO, "amount": t.amount,
@@ -894,6 +905,12 @@ def reset_data(db: Session, actor: str, *, since: dt.datetime | None) -> dict:
             a = db.get(m.Allocation, s.allocation_id)
             if a:
                 a.settlement_status, a.settled_transaction_id = 0, None
+    db.flush()
+    credit_ids = select(m.PlayerCredit.id).where(m.PlayerCredit.source_transaction_id.in_(ids))
+    db.execute(delete(m.PlayerCreditMovement).where(
+        m.PlayerCreditMovement.credit_id.in_(credit_ids)
+        | m.PlayerCreditMovement.transaction_id.in_(ids)), execution_options=NOSYNC)
+    db.execute(delete(m.PlayerCredit).where(m.PlayerCredit.source_transaction_id.in_(ids)), execution_options=NOSYNC)
     db.flush()
     db.execute(update(m.Allocation).where(m.Allocation.settled_transaction_id.in_(ids))
                .values(settled_transaction_id=None, settlement_status=0), execution_options=NOSYNC)
