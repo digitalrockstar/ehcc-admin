@@ -838,8 +838,6 @@ def team_summary(db: Session, team_id: int) -> dict:
     team_paid = _sum_by_account(db, team_id, role="paid_by", types=("expense",)).get(acct.id, ZERO)
     opening = opening_balance(db, team_id)
     balance = opening + total_in + t_in - t_out - team_paid
-    surplus = q2(db.scalar(select(func.coalesce(func.sum(m.Transaction.surplus_amount), 0)).where(
-        m.Transaction.team_id == team_id, m.Transaction.status == "active", m.Transaction.type == "expense")))
     cats = db.execute(
         select(m.Category.name, func.sum(m.Transaction.amount))
         .join(m.Transaction, m.Transaction.category_id == m.Category.id)
@@ -849,7 +847,7 @@ def team_summary(db: Session, team_id: int) -> dict:
     by_category = [(n, q2(v)) for n, v in cats if q2(v) > 0]
     return {"total_in": total_in, "total_out": total_out, "balance": balance, "opening": opening,
             "transfers_in": t_in, "transfers_out": t_out, "paid_by_team": team_paid,
-            "surplus": surplus, "by_category": by_category}
+            "by_category": by_category}
 
 
 def player_history(db: Session, player: m.Player) -> tuple[list[dict], Decimal]:
