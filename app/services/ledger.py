@@ -701,6 +701,23 @@ def void_transaction(db: Session, txn_id: int, actor: str, reason: str | None = 
     t = _lock_txn(db, txn_id)
     if t.status != "active":
         raise ConflictError("This transaction is already voided or reversed.")
+    # A credit created by this expense cannot survive voiding its source while used elsewhere.
+    source_credits = db.scalars(select(m.PlayerCredit).where(
+        m.PlayerCredit.source_transaction_id == txn_id).with_for_update()).all()
+    for credit in source_credits:
+        active_usage = db.scalar(select(func.count()).select_from(m.PlayerCreditMovement).where(
+            m.PlayerCreditMovement.credit_id == credit.id,
+            m.PlayerCreditMovement.kind.in_(("application", "team_transfer")),
+            m.PlayerCreditMovement.reversed_at.is_(None)))
+        if active_usage:
+            raise ConflictError("Reverse this credit's applications or team transfer before voiding its source transaction.")
+        credit.remaining_amount = ZERO
+        for movement in db.scalars(select(m.PlayerCreditMovement).where(
+            m.PlayerCreditMovement.credit_id == credit.id,
+            m.PlayerCreditMovement.kind == "created",
+            m.PlayerCreditMovement.reversed_at.is_(None))).all():
+            movement.reversed_at = m.utcnow()
+
     t.status = "voided"
     t.voided_at, t.voided_by, t.void_reason = m.utcnow(), actor, reason
     # Restore any credit applied to this now-voided expense.
