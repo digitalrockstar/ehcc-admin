@@ -880,3 +880,29 @@
     height: 1.05rem;
   }
 }
+
+
+/* Portrait mobile: normalize the archive form's inline baseline with the edit form */
+@media (max-width: 640px) and (orientation: portrait) {
+  #categories .catlist li {
+    align-items: center;
+  }
+  #categories .catlist form.inline {
+    display: flex;
+    flex: 0 0 38px;
+    width: 38px;
+    height: 38px;
+    margin: 0;
+    padding: 0;
+    align-items: center;
+    justify-content: center;
+    vertical-align: middle;
+  }
+  #categories .catlist form.inline .icon-action {
+    margin: 0;
+    align-self: center;
+  }
+  #categories .catlist .category-edit .icon-action {
+    align-self: center;
+  }
+}
