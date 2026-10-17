@@ -290,7 +290,9 @@ def update_transaction(db: Session, txn_id: int, d: TxnInput, actor: str) -> m.T
         if aid not in new_allocs:
             _reverse_credit_applications(db, old, actor)
             paid = collected.get(aid, ZERO)
-            if paid > 0:
+            existing_credit = db.scalar(select(m.PlayerCredit.id).where(
+                m.PlayerCredit.source_transaction_id == t.id, m.PlayerCredit.account_id == aid))
+            if paid > 0 or existing_credit:
                 _upsert_player_credit(db, t.team_id, aid, t.id, paid,
                                       f"Credit from removed allocation on transaction #{t.id}", actor)
             t.allocations.remove(old)
@@ -317,8 +319,11 @@ def update_transaction(db: Session, txn_id: int, d: TxnInput, actor: str) -> m.T
             old.settled_transaction_id = last.settlement_transaction_id if last else None
         else:
             old.settled_transaction_id = None
-        if paid > share:
-            _upsert_player_credit(db, t.team_id, aid, t.id, paid - share,
+        existing_credit = db.scalar(select(m.PlayerCredit.id).where(
+            m.PlayerCredit.source_transaction_id == t.id, m.PlayerCredit.account_id == aid))
+        overpayment = q2(max(ZERO, paid - share))
+        if overpayment > ZERO or existing_credit:
+            _upsert_player_credit(db, t.team_id, aid, t.id, overpayment,
                                   f"Overpayment from edited transaction #{t.id}", actor)
     db.flush()
     db.refresh(t)
@@ -467,15 +472,15 @@ def _reconcile_credit_applications(db: Session, allocation: m.Allocation,
 
 
 def _upsert_player_credit(db: Session, team_id: int, account_id: int, source_transaction_id: int,
-                          amount: Decimal, note: str, actor: str) -> m.PlayerCredit:
-    """Keep one outstanding credit per source transaction and player account."""
-    amount = q2(amount)
-    if amount <= ZERO:
-        raise LedgerError("Credit amount must be positive.")
+                          amount: Decimal, note: str, actor: str) -> m.PlayerCredit | None:
+    """Synchronize the unspent credit with the current overpayment on a source transaction."""
+    amount = q2(max(ZERO, amount))
     credit = db.scalar(select(m.PlayerCredit).where(
         m.PlayerCredit.source_transaction_id == source_transaction_id,
         m.PlayerCredit.account_id == account_id).with_for_update())
     if credit is None:
+        if amount <= ZERO:
+            return None
         credit = m.PlayerCredit(team_id=team_id, account_id=account_id,
                                 source_transaction_id=source_transaction_id,
                                 original_amount=amount, remaining_amount=amount, note=note)
@@ -483,20 +488,24 @@ def _upsert_player_credit(db: Session, team_id: int, account_id: int, source_tra
         db.flush()
         db.add(m.PlayerCreditMovement(credit_id=credit.id, kind="created", amount=amount,
                                       transaction_id=source_transaction_id))
-    else:
-        # Credits already used/transferred are immutable history; only increase the remaining
-        # amount when a later edit creates additional overpayment.
-        delta = q2(amount - credit.original_amount)
-        if delta > ZERO:
-            credit.original_amount = q2(credit.original_amount + delta)
-            credit.remaining_amount = q2(credit.remaining_amount + delta)
-            credit.note = note
-            db.add(m.PlayerCreditMovement(credit_id=credit.id, kind="adjustment", amount=delta,
-                                          transaction_id=source_transaction_id))
-    log(db, actor, "player_credit.create", "player_credit", credit.id, team_id,
-        {"account_id": account_id, "amount": amount, "source_transaction_id": source_transaction_id})
-    return credit
+        log(db, actor, "player_credit.create", "player_credit", credit.id, team_id,
+            {"account_id": account_id, "amount": amount, "source_transaction_id": source_transaction_id})
+        return credit
 
+    old_remaining = q2(credit.remaining_amount)
+    if amount == old_remaining:
+        return credit
+    delta = q2(amount - old_remaining)
+    credit.remaining_amount = amount
+    if amount > credit.original_amount:
+        credit.original_amount = amount
+    credit.note = note
+    db.add(m.PlayerCreditMovement(credit_id=credit.id, kind="adjustment", amount=abs(delta),
+                                  transaction_id=source_transaction_id))
+    log(db, actor, "player_credit.adjust", "player_credit", credit.id, team_id,
+        {"account_id": account_id, "from": old_remaining, "to": amount,
+         "source_transaction_id": source_transaction_id})
+    return credit
 
 def player_credit_balance(db: Session, account_id: int) -> Decimal:
     return q2(db.scalar(select(func.coalesce(func.sum(m.PlayerCredit.remaining_amount), 0)).where(
