@@ -328,10 +328,13 @@ def test_income_and_transfer_and_team_balance(db, team):
                                            category_id=cat(db, "Team Contribution", "income").id, paid_by=bala.id), "t")
     ledger.create_transaction(db, TxnInput(team_id=team.id, date=dt.date(2026, 9, 2), type="transfer", amount=D("300"),
                                            account_in=bala.id, account_out=ta.id), "t")
+    # A collection received by the team account counts as dashboard income.
+    ledger.create_transaction(db, TxnInput(team_id=team.id, date=dt.date(2026, 9, 3), type="transfer", amount=D("50"),
+                                           account_in=ta.id, account_out=bala.id), "t")
     expense(db, team, 400, "team", ["team"], category="Nets")
     s = ledger.team_summary(db, team.id)
-    assert s["total_in"] == 1200 and s["total_out"] == 400
-    assert s["balance"] == D("500") + 1200 - 300 - 400
+    assert s["total_in"] == 1250 and s["total_out"] == 400
+    assert s["balance"] == D("500") + 1200 + 50 - 300 - 400
     by = {r["player"].player_name: r for r in ledger.player_balances(db, team.id)}
     assert by["Bala"]["paid"] == D("200") - D("300") and by["Bala"]["net"] == D("100")  # owed nothing, received 300 > paid 200
 
