@@ -404,9 +404,16 @@ def _reverse_row(db: Session, s: m.Settlement, actor: str, reason: str | None) -
 def _active_group(db: Session, s: m.Settlement) -> list[m.Settlement]:
     """A net settlement is one batch: its rows are reversed together."""
     if s.batch_id:
-        return list(db.scalars(select(m.Settlement).where(m.Settlement.batch_id == s.batch_id,
+        rows = list(db.scalars(select(m.Settlement).where(m.Settlement.batch_id == s.batch_id,
                                                           m.Settlement.status == "active")
                                .order_by(m.Settlement.id).execution_options(populate_existing=True)).all())
+        parent_ids = {row.transaction_id for row in rows}
+        if any(row.kind == "collection" for row in rows):
+            rounding = db.scalars(select(m.Settlement).where(
+                m.Settlement.transaction_id.in_(parent_ids),
+                m.Settlement.kind == "team_balance", m.Settlement.status == "active")).all()
+            rows.extend(rounding)
+        return rows
     rows = [s]
     # The rounding transfer is valid only while all collections remain settled.
     if s.kind == "collection":
@@ -570,6 +577,10 @@ def settle_net(db: Session, player_id: int, actor: str) -> dict:
                 a.settlement_status = 1
                 a.settled_transaction_id = tr.id if tr else None
             db.flush()
+            for parent_id in {a.transaction_id for a in allocs}:
+                parent = db.get(m.Transaction, parent_id)
+                if parent is not None:
+                    _finalize_team_balance_rounding(db, parent, actor)
     except IntegrityError:
         raise ConflictError("Something on this player was settled at the same time. Reload and try again.")
     log(db, actor, "settlement.net", "player", p.id, p.team_id,
