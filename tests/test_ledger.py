@@ -604,3 +604,15 @@ def test_team_expected_balance_only_offsets_collections_received_by_team(db, tea
     team_expense = expense(db, team, 1000, "team", NAMES, category="Nets")
     pending = ledger.team_pending_totals(ledger.pending_positions(db, team.id))
     assert pending["owed_to_team"] == D("1020.00")
+
+
+
+def test_reimbursement_excludes_payers_own_charged_share(db, team):
+    t = expense(db, team, 4250, "Akshay", NAMES)
+    pending = ledger.team_pending_totals(ledger.pending_positions(db, team.id))
+    akshay = account_of(db, team.id, "Akshay")
+    position = ledger.pending_of(ledger.pending_positions(db, team.id), akshay.id)
+    assert position["reimb"] == D("3825.00")
+    assert pending["reimb"] == D("3825.00")
+    assert pending["owed"] == D("3825.00")
+    assert pending["net"] == D("0.00")
