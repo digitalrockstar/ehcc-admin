@@ -20,11 +20,11 @@
 {%- endif -%}
 {%- endmacro %}
 
-{% macro action(url, label, next, cls='btn small', confirm=None, extra=None) %}
+{% macro action(url, label, next, cls='btn small', confirm=None, extra=None, attrs=None) %}
 <form method="post" action="{{ url }}" class="inline"{% if confirm %} data-confirm="{{ confirm }}"{% endif %}>
   {{ csrf_input() }}<input type="hidden" name="next" value="{{ next }}">
   {% if extra %}{% for k, v in extra.items() %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}{% endif %}
-  <button class="{{ cls }}">{{ label }}</button>
+  <button class="{{ cls }}" {% if attrs %}{% for k, v in attrs.items() %}{{ k }}="{{ v }}" {% endfor %}{% endif %}>{{ label }}</button>
 </form>
 {% endmacro %}
 
