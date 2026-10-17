@@ -59,7 +59,7 @@
 </section>
 
 <section class="card" id="rounding"><h2>Allocation rounding</h2>
-  <p>When an expense is split across several parties, each share is rounded up to the nearest amount below. The difference is kept as team surplus.</p>
+  <p>When an expense is split across several parties, each share is rounded up to the nearest amount below. The rounding difference is added to the team account balance.</p>
   <form method="post" action="/settings/rounding" class="inline-form">{{ ui.csrf_input() }}
     <label>Round up to nearest ₹ <input name="step" value="{{ step }}" inputmode="numeric" size="4"></label><button class="btn small">Save</button></form>
 </section>
