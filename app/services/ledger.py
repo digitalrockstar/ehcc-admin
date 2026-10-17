@@ -259,7 +259,7 @@ def update_transaction(db: Session, txn_id: int, d: TxnInput, actor: str) -> m.T
     collected = {}
     for aid, alloc in old_allocs.items():
         collected[aid] = q2(db.scalar(select(func.coalesce(func.sum(m.Settlement.amount), 0)).where(
-            m.Settlement.transaction_id == t.id, m.Settlement.account_id == aid,
+            m.Settlement.allocation_id == alloc.id,
             m.Settlement.kind == "collection", m.Settlement.status == "active")))
 
     # Reverse only the automatic team-balance adjustment; original collection transfers remain
