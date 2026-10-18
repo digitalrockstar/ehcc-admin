@@ -1169,3 +1169,68 @@
     }
   }
 }
+
+
+/* Final mobile action layout: player/team actions stay on one row; reset choices stay two-column */
+@layer utilities {
+  .danger-zone .reset-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  @media (max-width: 640px) and (orientation: portrait) {
+    .acts:has(.icon-menu) {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: nowrap;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 0.3rem;
+      white-space: nowrap;
+    }
+    .acts:has(.icon-menu) .icon-menu,
+    .acts:has(.icon-menu) > form.inline {
+      display: inline-flex;
+      flex: 0 0 2.35rem;
+      width: 2.35rem;
+      min-width: 0;
+      margin: 0;
+    }
+    .acts:has(.icon-menu) .icon-action,
+    .acts:has(.icon-menu) > form.inline .icon-action {
+      width: 2.35rem;
+      height: 2.35rem;
+      min-width: 2.35rem;
+      min-height: 2.35rem;
+      padding: 0.35rem;
+    }
+    .acts:has(.icon-menu) .icon-menu[open] {
+      flex: 0 1 auto;
+      min-width: 0;
+      white-space: normal;
+    }
+
+    #teams td .inline-form {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: nowrap;
+      align-items: center;
+      gap: 0.25rem;
+      width: 100%;
+    }
+    #teams td .inline-form input {
+      flex: 1 1 0;
+      width: 1%;
+      min-width: 0;
+    }
+    #teams td .inline-form .icon-action {
+      flex: 0 0 2.25rem;
+      width: 2.25rem;
+      height: 2.5rem;
+      min-width: 2.25rem;
+      align-self: auto;
+      padding: 0.3rem;
+    }
+    #teams td .inline-form .btn {
+      width: auto;
+    }
+  }
+}
