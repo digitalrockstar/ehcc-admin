@@ -1086,3 +1086,38 @@
     }
   }
 }
+
+
+/* Compact, accessible icon-only actions for dense player and team tables */
+@layer utilities {
+  .icon-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+    padding: 0.45rem;
+    line-height: 1;
+    text-decoration: none;
+  }
+  .icon-action .ico { width: 1.15rem; height: 1.15rem; }
+  .acts .icon-menu { display: inline-block; vertical-align: middle; }
+  .acts .icon-menu > summary { list-style: none; }
+  .acts .icon-menu > summary::-webkit-details-marker { display: none; }
+  .acts .icon-menu > summary::marker { content: ""; }
+  .acts .icon-menu[open] { min-width: 190px; }
+  #teams td .inline-form { gap: 0.35rem; }
+  #teams td .inline-form input { min-width: 0; }
+  #teams td .inline-form .icon-action { flex: 0 0 2.5rem; }
+  .danger-zone .reset-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+  }
+  .danger-zone .reset-options .chip { min-width: 0; height: 100%; }
+  @media (max-width: 420px) {
+    .danger-zone .reset-options { grid-template-columns: minmax(0, 1fr); }
+  }
+}
