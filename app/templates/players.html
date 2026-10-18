@@ -32,12 +32,12 @@
       <td>{% if show_mobile %}{{ p.mob_no or '' }}{% else %}{{ mask_mobile(p.mob_no) }}{% endif %}</td>
       <td class="num">{{ r.owed|inr }}</td><td class="num">{{ r.paid|inr }}</td><td class="num">{{ ui.net(r.net) }}</td>
       {% if is_admin %}<td class="acts">
-        <details><summary>Edit</summary>
+        <details class="icon-menu"><summary class="icon-action" aria-label="Edit player" title="Edit player">{{ ui.icon('edit') }}<span class="sr-only">Edit</span></summary>
           <form method="post" action="/players/{{ p.id }}/edit" class="stack">{{ ui.csrf_input() }}<input type="hidden" name="next" value="/players?team={{ team.id }}">
             <input name="player_name" value="{{ p.player_name }}" maxlength="80" required><input name="mob_no" value="{{ p.mob_no or '' }}" maxlength="20" placeholder="Mobile">
             <button class="btn small">Save</button></form></details>
-        {{ ui.action('/players/%d/archive' % p.id, 'Restore' if p.status == 'archived' else 'Archive', '/players?team=%d' % team.id, 'btn small ghost', None, {'archive': '0' if p.status == 'archived' else '1'}) }}
-        {{ ui.action('/players/%d/delete' % p.id, 'Delete', '/players?team=%d' % team.id, 'btn small danger', 'Delete %s? This only works for players with no transactions.' % p.player_name) }}
+        {{ ui.action('/players/%d/archive' % p.id, ui.icon('archive'), '/players?team=%d' % team.id, 'btn small ghost icon-action', None, {'archive': '0' if p.status == 'archived' else '1'}, {'aria-label': 'Restore player' if p.status == 'archived' else 'Archive player', 'title': 'Restore player' if p.status == 'archived' else 'Archive player'}) }}
+        {{ ui.action('/players/%d/delete' % p.id, ui.icon('delete'), '/players?team=%d' % team.id, 'btn small danger icon-action', 'Delete %s? This only works for players with no transactions.' % p.player_name, None, {'aria-label': 'Delete player', 'title': 'Delete player'}) }}
       </td>{% endif %}
     </tr>{% endfor %}</tbody></table></div>
 <p class="hint">Sorted by who owes the most. Net outstanding is paid minus owed: a minus sign means the player owes the team, a plus sign means the team owes the player.</p>
