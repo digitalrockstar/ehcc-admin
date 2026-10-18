@@ -1121,3 +1121,51 @@
     .danger-zone .reset-options { grid-template-columns: minmax(0, 1fr); }
   }
 }
+
+
+/* Portrait mobile: keep team form controls inline and arrange player actions in two columns */
+@layer utilities {
+  @media (max-width: 640px) and (orientation: portrait) {
+    #teams td .inline-form {
+      flex-direction: row;
+      flex-wrap: nowrap;
+      align-items: center;
+      width: 100%;
+    }
+    #teams td .inline-form input {
+      flex: 1 1 0;
+      width: 1%;
+      min-width: 0;
+    }
+    #teams td .inline-form .icon-action {
+      flex: 0 0 2.5rem;
+      align-self: auto;
+      width: 2.5rem;
+    }
+
+    .acts:has(.icon-menu) {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(2.5rem, max-content));
+      justify-content: start;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .acts:has(.icon-menu) .icon-menu {
+      width: auto;
+      min-width: 0;
+    }
+    .acts:has(.icon-menu) > form.inline {
+      display: block;
+      width: auto;
+      margin: 0;
+    }
+    .acts:has(.icon-menu) > form.inline .icon-action {
+      width: 2.5rem;
+      min-width: 2.5rem;
+    }
+    .acts:has(.icon-menu) .icon-menu[open] {
+      grid-column: 1 / -1;
+      min-width: min(190px, 100%);
+    }
+  }
+}
