@@ -12,11 +12,11 @@
     <tbody>{% for r in rows %}
       <tr class="{{ 'voided' if r.team.status == 'archived' }}">
         <td><form method="post" action="/settings/teams/{{ r.team.id }}/edit" class="inline-form">{{ ui.csrf_input() }}
-          <input name="name" value="{{ r.team.name }}" maxlength="80" required aria-label="Team name"><button class="btn small ghost">Rename</button></form></td>
+          <input name="name" value="{{ r.team.name }}" maxlength="80" required aria-label="Team name"><button class="btn small ghost icon-action" aria-label="Rename team" title="Rename team">{{ ui.icon('edit') }}</button></form></td>
         <td>{{ r.account.name }}</td><td>{{ r.team.status|capitalize }}</td><td class="num">{{ r.players }}</td>
         <td><form method="post" action="/settings/teams/{{ r.team.id }}/opening-balance" class="inline-form">{{ ui.csrf_input() }}
-          <input name="amount" value="{{ r.opening }}" inputmode="decimal" aria-label="Starting balance"><button class="btn small ghost">Save</button></form></td>
-        <td>{{ ui.action('/settings/teams/%d/archive' % r.team.id, 'Restore' if r.team.status == 'archived' else 'Archive', '/settings#teams', 'btn small ghost', 'Archive this team? Its history stays.' if r.team.status == 'active' else None, {'archive': '0' if r.team.status == 'archived' else '1'}) }}</td>
+          <input name="amount" value="{{ r.opening }}" inputmode="decimal" aria-label="Starting balance"><button class="btn small ghost icon-action" aria-label="Save starting balance" title="Save starting balance">{{ ui.icon('save') }}</button></form></td>
+        <td>{{ ui.action('/settings/teams/%d/archive' % r.team.id, ui.icon('archive'), '/settings#teams', 'btn small ghost icon-action', 'Archive this team? Its history stays.' if r.team.status == 'active' else None, {'archive': '0' if r.team.status == 'archived' else '1'}, {'aria-label': 'Restore team' if r.team.status == 'archived' else 'Archive team', 'title': 'Restore team' if r.team.status == 'archived' else 'Archive team'}) }}</td>
       </tr>{% else %}<tr><td colspan="6" class="muted">No teams yet. Add the first one below.</td></tr>{% endfor %}</tbody></table></div>
   <h3>Add team</h3>
   <form method="post" action="/settings/teams/add" class="inline-form">{{ ui.csrf_input() }}
@@ -67,7 +67,7 @@
 <section class="card danger-zone" id="reset"><h2>Data reset</h2>
   <p>Deletes transactions, allocations and settlements. Teams, players, categories and starting balances stay. The audit log is never deleted and records this reset.</p>
   <form method="post" action="/settings/reset" class="stack" data-confirm="This permanently deletes ledger data. Continue?">{{ ui.csrf_input() }}
-    <div class="chips">
+    <div class="chips reset-options">
       <label class="chip"><input type="radio" name="scope" value="all" checked><span>Delete all transactions</span></label>
       <label class="chip"><input type="radio" name="scope" value="since"><span>Delete from a date and time</span></label></div>
     <label>Only if you chose the second option: on or after (India time) <input type="datetime-local" name="since"></label>
