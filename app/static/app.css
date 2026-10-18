@@ -1234,3 +1234,112 @@
     }
   }
 }
+
+
+/* Targeted layout correction for narrow screens and the Settings teams table */
+@layer utilities {
+  /* The reset choices are always exactly two columns, including very narrow phones. */
+  #reset .reset-options {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0.5rem;
+  }
+  #reset .reset-options .chip {
+    width: 100%;
+    min-width: 0;
+    justify-content: center;
+    text-align: center;
+    padding-inline: 0.55rem;
+  }
+
+  /* Keep all three player controls on one line. The edit details control remains compact. */
+  .card.flush table td.acts {
+    white-space: nowrap;
+  }
+  .card.flush table td.acts:has(> .icon-menu) {
+    display: table-cell;
+    min-width: 132px;
+    vertical-align: middle;
+  }
+  .card.flush table td.acts > .icon-menu,
+  .card.flush table td.acts > form.inline {
+    display: inline-block;
+    vertical-align: middle;
+    margin: 0 0.12rem 0 0;
+  }
+  .card.flush table td.acts > .icon-menu {
+    width: 2.35rem;
+    min-width: 2.35rem;
+  }
+  .card.flush table td.acts > form.inline .icon-action,
+  .card.flush table td.acts > .icon-menu > summary.icon-action {
+    width: 2.35rem;
+    height: 2.35rem;
+    min-width: 2.35rem;
+    min-height: 2.35rem;
+    padding: 0.25rem;
+  }
+
+  /* Team name and balance inputs keep their action icons beside them. */
+  #teams td form.inline-form {
+    display: flex;
+    flex-flow: row nowrap;
+    align-items: center;
+    gap: 0.3rem;
+    min-width: 0;
+  }
+  #teams td form.inline-form input {
+    flex: 1 1 auto;
+    width: 1%;
+    min-width: 0;
+  }
+  #teams td form.inline-form button.icon-action {
+    display: inline-flex;
+    flex: 0 0 2.35rem;
+    width: 2.35rem;
+    height: 2.35rem;
+    min-width: 2.35rem;
+    min-height: 2.35rem;
+    align-self: auto;
+  }
+
+  /* Avoid clipping the Settings table in narrow portrait viewports: hide redundant
+     account-name column (it is deterministically named from the team) and size columns. */
+  @media (max-width: 900px) {
+    #teams .scroll table { table-layout: fixed; }
+    #teams .scroll th:nth-child(1), #teams .scroll td:nth-child(1) { width: 31%; }
+    #teams .scroll th:nth-child(2), #teams .scroll td:nth-child(2) { display: none; }
+    #teams .scroll th:nth-child(3), #teams .scroll td:nth-child(3) { width: 16%; }
+    #teams .scroll th:nth-child(4), #teams .scroll td:nth-child(4) { width: 12%; }
+    #teams .scroll th:nth-child(5), #teams .scroll td:nth-child(5) { width: 29%; }
+    #teams .scroll th:nth-child(6), #teams .scroll td:nth-child(6) { width: 12%; }
+    #teams .scroll td { padding: 0.45rem 0.35rem; overflow-wrap: anywhere; }
+  }
+
+  @media (max-width: 640px) and (orientation: portrait) {
+    .card.flush table td.acts:has(> .icon-menu) {
+      display: table-cell !important;
+      min-width: 132px;
+      white-space: nowrap;
+    }
+    .card.flush table td.acts > .icon-menu,
+    .card.flush table td.acts > form.inline {
+      display: inline-block !important;
+      width: 2.25rem;
+      min-width: 2.25rem;
+      margin-right: 0.08rem;
+    }
+    .card.flush table td.acts > .icon-menu > summary.icon-action,
+    .card.flush table td.acts > form.inline .icon-action {
+      width: 2.25rem;
+      height: 2.25rem;
+      min-width: 2.25rem;
+      min-height: 2.25rem;
+    }
+    #teams td form.inline-form button.icon-action {
+      flex-basis: 2.25rem;
+      width: 2.25rem;
+      min-width: 2.25rem;
+    }
+  }
+}
