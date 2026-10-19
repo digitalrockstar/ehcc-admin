@@ -1390,3 +1390,33 @@
     height: 2.25rem;
   }
 }
+
+
+/* Override the generic mobile .acts column rule specifically for transaction actions.
+   Use table-cell + inline links so the controls cannot inherit flex-column stacking. */
+@layer utilities {
+  @media (max-width: 640px) and (orientation: portrait) {
+    table.txns td.acts {
+      display: table-cell !important;
+      width: 5.5rem !important;
+      min-width: 5.5rem !important;
+      white-space: nowrap !important;
+      vertical-align: middle !important;
+    }
+    table.txns td.acts > a.icon-action {
+      display: inline-flex !important;
+      position: static !important;
+      float: none !important;
+      flex-direction: row !important;
+      flex: 0 0 2rem !important;
+      width: 2rem !important;
+      min-width: 2rem !important;
+      max-width: 2rem !important;
+      height: 2rem !important;
+      min-height: 2rem !important;
+      margin: 0 0.15rem 0 0 !important;
+      padding: 0.25rem !important;
+      vertical-align: middle !important;
+    }
+  }
+}
