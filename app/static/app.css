@@ -1343,3 +1343,13 @@
     }
   }
 }
+
+
+/* Consistent icon-only transaction actions, matching player/settings controls */
+@layer utilities {
+  .acts .icon-action .ico { width: 1.15rem; height: 1.15rem; }
+  .txns td.acts { white-space: nowrap; vertical-align: middle; }
+  .txns td.acts .icon-action { vertical-align: middle; margin-inline: 0.1rem; }
+  .txns td.acts .icon-action:focus-visible { outline-offset: 2px; }
+  .transaction-actions .icon-action { vertical-align: middle; }
+}
