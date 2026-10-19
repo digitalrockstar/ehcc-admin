@@ -1353,3 +1353,40 @@
   .txns td.acts .icon-action:focus-visible { outline-offset: 2px; }
   .transaction-actions .icon-action { vertical-align: middle; }
 }
+
+
+/* Keep transaction Edit and Copy icons together on portrait phones */
+@layer utilities {
+  .txns td.acts {
+    display: table-cell !important;
+    min-width: 5.5rem;
+    white-space: nowrap !important;
+    vertical-align: middle;
+  }
+  .txns td.acts > a.icon-action {
+    display: inline-flex !important;
+    flex: 0 0 2.25rem !important;
+    width: 2.25rem !important;
+    min-width: 2.25rem !important;
+    max-width: 2.25rem;
+    height: 2.25rem;
+    min-height: 2.25rem;
+    padding: 0.35rem;
+    margin: 0 0.15rem 0 0;
+    vertical-align: middle;
+  }
+  .head > .acts:has(> a.icon-action) {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0.35rem;
+  }
+  .head > .acts:has(> a.icon-action) > a.icon-action {
+    display: inline-flex;
+    flex: 0 0 2.25rem;
+    width: 2.25rem;
+    min-width: 2.25rem;
+    height: 2.25rem;
+  }
+}
