@@ -35,8 +35,8 @@
       <td>{{ r.col1 }}</td><td>{{ r.col2 }}</td>
       <td>{{ ui.settle(r, request.url.path ~ '?' ~ request.url.query) }}</td>
       {% if is_admin %}<td class="acts">
-        {% if r.t.status == 'active' and not r.link %}<a href="/transactions/{{ r.t.id }}/edit">Edit</a>{% endif %}
-        <a href="/transactions/new?copy_from={{ r.t.id }}">Copy</a></td>{% endif %}
+        {% if r.t.status == 'active' and not r.link %}<a class="btn small ghost icon-action" href="/transactions/{{ r.t.id }}/edit" aria-label="Edit transaction {{ r.t.id }}" title="Edit transaction">{{ ui.icon('edit') }}</a>{% endif %}
+        <a class="btn small ghost icon-action" href="/transactions/new?copy_from={{ r.t.id }}" aria-label="Copy transaction {{ r.t.id }}" title="Copy transaction">{{ ui.icon('copy') }}</a></td>{% endif %}
     </tr>
   {% endfor %}
   </tbody></table></div>

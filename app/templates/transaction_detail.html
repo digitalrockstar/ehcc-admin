@@ -5,8 +5,8 @@
 {% block content %}
 <div class="head"><h1>Transaction #{{ t.id }} {{ ui.status(t) }}</h1>
   {% if is_admin %}<div class="acts">
-    {% if t.status == 'active' and not row.link %}<a class="btn small" href="/transactions/{{ t.id }}/edit">Edit</a>{% endif %}
-    <a class="btn small ghost" href="/transactions/new?copy_from={{ t.id }}">Copy as new</a></div>{% endif %}
+    {% if t.status == 'active' and not row.link %}<a class="btn small ghost icon-action" href="/transactions/{{ t.id }}/edit" aria-label="Edit transaction {{ t.id }}" title="Edit transaction">{{ ui.icon('edit') }}</a>{% endif %}
+    <a class="btn small ghost icon-action" href="/transactions/new?copy_from={{ t.id }}" aria-label="Copy transaction {{ t.id }}" title="Copy transaction as new">{{ ui.icon('copy') }}</a></div>{% endif %}
 </div>
 <div class="card {{ 'voided' if t.status != 'active' }}">
   <dl class="facts">
