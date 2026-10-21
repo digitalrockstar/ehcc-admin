@@ -20,8 +20,11 @@
   <div class="card stat future-balance">
     <div class="lbl">Future balance</div>
     <div class="val {{ 'pos' if summary.balance - pending.net >= 0 else 'neg' }}">{{ (summary.balance - pending.net)|inr(true) }}</div>
+    <div class="future-breakdown">
+      <div class="future-subcard"><div class="sub-label">To Collect</div><div class="sub-value pos">{{ pending.owed|inr(true) }}</div></div>
+      <div class="future-subcard"><div class="sub-label">Owed Back</div><div class="sub-value neg">{{ pending.reimb|inr(true) }}</div></div>
+    </div>
     <div class="hint">After pending settlements</div>
-    <div class="hint">To collect {{ pending.owed|inr }} · Owed to players {{ pending.reimb|inr }}</div>
   </div>
 </section>
 <section class="two">
