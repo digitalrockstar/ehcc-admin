@@ -5,6 +5,13 @@ from functools import lru_cache
 
 # slug: (label, bg, surface, text, primary, accent)
 _BASE = {
+    "champagne-gold": ("Champagne Gold", "#fffaf0", "#fffdf7", "#332a19", "#F5D58A", "#8a5b16"),
+    "pastel-mint": ("Pastel Mint", "#f3fff8", "#ffffff", "#18392a", "#B9F3D0", "#176b4d"),
+    "blush-pink": ("Blush Pink", "#fff5f8", "#ffffff", "#3d2030", "#F3B9CE", "#9b315d"),
+    "pastel-peach": ("Pastel Peach", "#fff8f0", "#ffffff", "#422b1b", "#F5B978", "#92521c"),
+    "soft-lavender": ("Soft Lavender", "#f8f5ff", "#ffffff", "#2e2442", "#C5B1E4", "#684a9b"),
+    "pale-lilac": ("Pale Lilac", "#fcf8ff", "#ffffff", "#34243e", "#E7D7F1", "#76538c"),
+    "pearl-white": ("Pearl White", "#FFF0F5", "#ffffff", "#3b2630", "#FFF0F5", "#a13e67"),
     "cricket-whites": ("Cricket Whites", "#f4f6f1", "#ffffff", "#1b2a1b", "#1f7a3d", "#c0392b"),
     "paper": ("Paper", "#faf7f0", "#fffdf8", "#2b2b2b", "#8a5a00", "#b5451b"),
     "sky": ("Sky", "#eef6ff", "#ffffff", "#10233a", "#1f6fd1", "#b45309"),

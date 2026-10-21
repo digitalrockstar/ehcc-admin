@@ -51,9 +51,10 @@
   <div class="themes">
     {% for th in themes %}
     <form method="post" action="/settings/theme">{{ ui.csrf_input() }}<input type="hidden" name="theme" value="{{ th.slug }}">
-      <button class="swatch {{ 'on' if th.slug == current_theme }}" style="{% for k, v in th.vars.items() %}{{ k }}:{{ v }};{% endfor %}" aria-label="Apply theme {{ th.label }}">
-        <span class="sw-head">{{ th.label }}</span><span class="sw-body">Aa 1,234</span>
-        <span class="sw-chip">Primary</span></button></form>
+      <button class="swatch theme-line {{ 'on' if th.slug == current_theme }}" style="{% for k, v in th.vars.items() %}{{ k }}:{{ v }};{% endfor %}" aria-label="Apply theme {{ th.label }}">
+        <span class="theme-name">{{ th.label }}</span>
+        <span class="theme-colors" aria-hidden="true"><i class="theme-bg"></i><i class="theme-primary"></i></span>
+      </button></form>
     {% endfor %}
   </div>
 </section>
