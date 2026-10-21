@@ -1572,3 +1572,19 @@
   }
   #themes .theme-line:active { transform: none; }
 }
+
+
+/* Dashboard financial summaries: fixed 2x2 stat cards on desktop and mobile. */
+@layer utilities {
+  .dashboard-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
+  .dashboard-stats > .card { min-width: 0; padding: clamp(0.75rem, 1.8vw, 1.1rem); overflow-wrap: anywhere; }
+  .dashboard-stats .val { font-size: clamp(1.15rem, 3vw, 1.7rem); line-height: 1.2; }
+  .dashboard-stats .hint { font-size: 0.78rem; }
+  .dashboard-stats .future-balance { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 5%, var(--surface)); }
+  @media (max-width: 360px) {
+    .dashboard-stats { gap: 0.5rem; }
+    .dashboard-stats > .card { padding: 0.65rem; }
+    .dashboard-stats .lbl { font-size: 0.75rem; }
+    .dashboard-stats .val { font-size: 1.05rem; }
+  }
+}
