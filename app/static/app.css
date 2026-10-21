@@ -1588,3 +1588,13 @@
     .dashboard-stats .val { font-size: 1.05rem; }
   }
 }
+
+
+/* Dashboard summary cards: four across in landscape, two by two in portrait/mobile. */
+@layer utilities {
+  @media (orientation: landscape) {
+    .dashboard-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .dashboard-stats > .card { padding: 0.75rem; }
+    .dashboard-stats .val { font-size: clamp(1rem, 1.8vw, 1.55rem); }
+  }
+}
