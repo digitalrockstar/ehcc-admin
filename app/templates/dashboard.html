@@ -21,8 +21,8 @@
     <div class="lbl">Future balance</div>
     <div class="val {{ 'pos' if summary.balance - pending.net >= 0 else 'neg' }}">{{ (summary.balance - pending.net)|inr(true) }}</div>
     <div class="future-breakdown">
-      <div class="future-subcard"><div class="sub-label">To Collect</div><div class="sub-value pos">{{ pending.owed|inr(true) }}</div></div>
-      <div class="future-subcard"><div class="sub-label">Owed Back</div><div class="sub-value neg">{{ pending.reimb|inr(true) }}</div></div>
+      <div class="future-subcard"><div class="sub-label">To Collect</div><div class="sub-value {{ 'pos' if pending.owed > 0 else 'zero-amount' }}">{% if pending.owed > 0 %}+{{ pending.owed|inr }}{% else %}0{% endif %}</div></div>
+      <div class="future-subcard"><div class="sub-label">Owed Back</div><div class="sub-value {{ 'neg' if pending.reimb > 0 else 'zero-amount' }}">{% if pending.reimb > 0 %}-{{ pending.reimb|inr }}{% else %}0{% endif %}</div></div>
     </div>
     <div class="hint">After pending settlements</div>
   </div>
