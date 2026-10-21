@@ -10,17 +10,19 @@
 <div class="head">
   <h1>{{ team.name }} <span class="muted small">{{ account.name }}</span></h1>
 </div>
-<section class="cards">
+<section class="cards dashboard-stats">
   <div class="card stat"><div class="lbl">Income</div><div class="val pos">{{ summary.total_in|inr }}</div></div>
   <div class="card stat"><div class="lbl">Expenses</div><div class="val neg">{{ summary.total_out|inr }}</div></div>
   <div class="card stat"><div class="lbl">Team account balance</div>
     <div class="val {{ 'neg' if summary.balance < 0 }}">{{ summary.balance|inr }}</div>
     <div class="hint">Starting {{ summary.opening|inr }}, cash in less cash out</div>
-    {% if pending.reimb or pending.owed %}
-    <div class="expected {{ 'pos' if summary.balance - pending.net >= 0 else 'neg' }}">
-      Expected after pending: {{ (summary.balance - pending.net)|inr(true) }}
-      <span class="hint">owes players {{ pending.reimb|inr }}, to collect {{ pending.owed|inr }}</span>
-    </div>{% endif %}</div>
+  </div>
+  <div class="card stat future-balance">
+    <div class="lbl">Future balance</div>
+    <div class="val {{ 'pos' if summary.balance - pending.net >= 0 else 'neg' }}">{{ (summary.balance - pending.net)|inr(true) }}</div>
+    <div class="hint">After pending settlements</div>
+    <div class="hint">To collect {{ pending.owed|inr }} · Owed to players {{ pending.reimb|inr }}</div>
+  </div>
 </section>
 <section class="two">
   <div class="card"><h2>Expenses by category</h2>
