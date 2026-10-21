@@ -1634,3 +1634,9 @@
     .future-subcard .sub-value { font-size: 0.75rem; }
   }
 }
+
+
+/* Neutral zero values for the Future Balance breakdown. */
+@layer utilities {
+  .future-subcard .zero-amount { color: #d97706; }
+}
