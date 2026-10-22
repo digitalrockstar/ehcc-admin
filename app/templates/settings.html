@@ -8,7 +8,7 @@
 <section class="card" id="teams"><h2>Teams and team accounts</h2>
   <p class="hint">Each team gets its own team account when it is created. The starting balance belongs to that account.</p>
   <div class="scroll responsive-cards settings-team-cards"><table class="settings-team-table">
-    <thead><tr><th>Team</th><th>Team account</th><th>Status</th><th class="num">Total players | Active players</th><th>Starting balance</th><th></th></tr></thead>
+    <thead><tr><th>Team</th><th>Team account</th><th>Status</th><th class="num">Players</th><th>Starting balance</th><th></th></tr></thead>
     <tbody>{% for r in rows %}
       <tr class="{{ 'voided' if r.team.status == 'archived' }}">
         <td class="team-name-cell" data-label="Team"><form method="post" action="/settings/teams/{{ r.team.id }}/edit" class="inline-form">{{ ui.csrf_input() }}
