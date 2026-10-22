@@ -32,10 +32,10 @@
       <td data-label="Type"><span class="plain-type">{{ r.t.type|capitalize }}</span> {{ ui.status(r.t) }}</td>
       <td data-label="Item / Category" class="item-name-cell"><strong>{{ r.item }}</strong></td>
       <td class="num" data-label="Amount">{{ r.t.amount|inr }}</td>
-      <td data-label="Paid By">{{ r.col1 }}</td><td data-label="Charged To">{{ r.col2 }}</td>
       {% if is_admin %}<td class="acts" data-label="Actions">
         {% if r.t.status == 'active' and not r.link %}<a class="btn small ghost icon-action" href="/transactions/{{ r.t.id }}/edit" aria-label="Edit transaction {{ r.t.id }}" title="Edit transaction">{{ ui.icon('edit') }}</a>{% endif %}
         <a class="btn small ghost icon-action" href="/transactions/new?copy_from={{ r.t.id }}" aria-label="Copy transaction {{ r.t.id }}" title="Copy transaction">{{ ui.icon('copy') }}</a></td>{% endif %}
+      <td data-label="Paid By">{{ r.col1 }}</td><td data-label="Charged To">{{ r.col2 }}</td>
     </tr>
   {% endfor %}
   </tbody></table></div>
