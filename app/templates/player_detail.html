@@ -25,10 +25,10 @@
 {% if credits %}
 <div class="card" id="player-credits"><h2>Player credit</h2>
   <p class="hint">Unused credit stays with this player until an admin explicitly applies it to an expense or transfers it to the team account.</p>
-  <div class="scroll"><table><thead><tr><th>Source</th><th class="num">Original</th><th class="num">Available</th>{% if is_admin %}<th>Actions</th>{% endif %}</tr></thead><tbody>
+  <div class="scroll responsive-cards"><table><thead><tr><th>Source</th><th class="num">Original</th><th class="num">Available</th>{% if is_admin %}<th>Actions</th>{% endif %}</tr></thead><tbody>
   {% for credit in credits %}
-    <tr><td>{{ credit.note or ('Transaction #' ~ credit.source_transaction_id if credit.source_transaction_id else 'Player credit') }}</td>
-      <td class="num">{{ credit.original_amount|inr }}</td><td class="num">{{ credit.remaining_amount|inr }}</td>
+    <tr><td data-label="Source">{{ credit.note or ('Transaction #' ~ credit.source_transaction_id if credit.source_transaction_id else 'Player credit') }}</td>
+      <td class="num" data-label="Original">{{ credit.original_amount|inr }}</td><td class="num" data-label="Available">{{ credit.remaining_amount|inr }}</td>
       {% if is_admin %}<td>
         {% if credit_allocations %}
         <form method="post" action="/players/{{ player.id }}/credits/{{ credit.id }}/apply" class="inline-form">
@@ -48,14 +48,14 @@
 </div>
 {% endif %}
 <p class="hint swipe">Swipe sideways to see all columns.</p>
-<div class="card flush scroll"><table>
+<div class="card flush scroll responsive-cards"><table>
   <thead><tr><th>Date</th><th>Type</th><th>Item / Category</th><th class="num">Amount</th><th>Role</th><th>Settlement</th><th class="num">Balance</th></tr></thead>
   <tbody>
   {% for e in events %}{% set t = e.t %}
     <tr class="{{ 'voided' if t.status != 'active' }}">
-      <td>{{ t.transaction_date|dmy }}</td><td>{{ ui.tpill(t.type) }} {{ ui.status(t) }}</td>
-      <td><a href="/transactions/{{ t.id }}">{{ item_label(t) }}</a></td>
-      <td class="num">{{ e.amount|inr }}</td><td>{{ e.role }}</td>
+      <td data-label="Date">{{ t.transaction_date|dmy }}</td><td data-label="Type">{{ ui.tpill(t.type) }} {{ ui.status(t) }}</td>
+      <td data-label="Item / Category"><a href="/transactions/{{ t.id }}">{{ item_label(t) }}</a></td>
+      <td class="num" data-label="Amount">{{ e.amount|inr }}</td><td data-label="Role">{{ e.role }}</td>
       <td>
         {% if t.status == 'active' and e.role == 'Owed' %}
           {% if e.settled %}<span class="chipstate on">PAID</span>
@@ -67,7 +67,7 @@
           {% else %}<span class="chipstate">Not reimbursed</span>{% endif %}
         {% endif %}
       </td>
-      <td class="num">{% if t.status == 'active' %}{{ ui.net(e.running) }}{% else %}<span class="muted">—</span>{% endif %}</td>
+      <td class="num" data-label="Balance">{% if t.status == 'active' %}{{ ui.net(e.running) }}{% else %}<span class="muted">—</span>{% endif %}</td>
     </tr>
   {% else %}<tr><td colspan="7" class="muted">No transactions for this player yet.</td></tr>{% endfor %}
   </tbody></table></div>
