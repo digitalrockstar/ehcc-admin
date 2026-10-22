@@ -29,7 +29,7 @@
   <tbody>{% for r in rows %}{% set p = r.player %}
     <tr data-href="/players/{{ p.id }}" class="clickable {{ 'voided' if p.status == 'archived' }}">
       <td class="player-name-cell" data-label="Player"><strong>{{ p.player_name }}</strong></td>
-      <td>{% if show_mobile %}{{ p.mob_no or '' }}{% else %}{{ mask_mobile(p.mob_no) }}{% endif %}</td>
+      <td data-label="Mobile">{% if show_mobile %}{{ p.mob_no or '' }}{% else %}{{ mask_mobile(p.mob_no) }}{% endif %}</td>
       <td class="player-metric-cell" data-label="OWED"><span class="metric-label">OWED</span><span class="metric-value">{{ r.owed|inr }}</span></td><td class="player-metric-cell" data-label="PAID"><span class="metric-label">PAID</span><span class="metric-value">{{ r.paid|inr }}</span></td><td class="player-metric-cell" data-label="NET"><span class="metric-label">NET</span><span class="metric-value">{{ ui.net(r.net) }}</span></td>
       {% if is_admin %}<td class="acts player-actions" data-label="Actions">
         <details class="icon-menu edit-popover"><summary class="icon-action" aria-label="Edit player" title="Edit player">{{ ui.icon('edit') }}<span class="sr-only">Edit</span></summary>
