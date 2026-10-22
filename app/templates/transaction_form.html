@@ -74,7 +74,9 @@
   </fieldset>
   <p id="preview" class="span preview" aria-live="polite"></p>
   <script type="application/json" id="cat-data">{{ cat_json|tojson }}</script>
-  <div class="span actions"><button class="btn">{{ 'Save changes' if txn else 'Save transaction' }}</button>
-    <a href="{{ ('/transactions/%d' % txn.id) if txn else '/transactions' }}">Cancel</a></div>
+  <div class="span actions txn-form-actions">
+    <button type="submit" class="btn icon-action" aria-label="{{ 'Save changes' if txn else 'Save transaction' }}" title="{{ 'Save changes' if txn else 'Save transaction' }}">{{ ui.icon('check') }}</button>
+    <a class="btn icon-action" href="{{ ('/transactions/%d' % txn.id) if txn else '/transactions' }}" aria-label="Cancel" title="Cancel">{{ ui.icon('close') }}</a>
+  </div>
 </form>
 {% endblock %}
