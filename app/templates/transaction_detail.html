@@ -3,12 +3,14 @@
 {% set t = row.t %}
 {% block title %}Transaction #{{ t.id }}{% endblock %}
 {% block content %}
-<div class="head"><h1>Transaction #{{ t.id }} {{ ui.status(t) }}</h1>
+<div class="head transaction-heading">
+  <a class="btn small ghost icon-action transaction-back" href="/transactions?team={{ t.team_id }}" aria-label="Back to transactions" title="Back to transactions">{{ ui.icon('arrow-left') }}</a>
+  <h1>Transaction #{{ t.id }} {{ ui.status(t) }}</h1>
   {% if is_admin %}<div class="acts">
     {% if t.status == 'active' and not row.link %}<a class="btn small ghost icon-action" href="/transactions/{{ t.id }}/edit" aria-label="Edit transaction {{ t.id }}" title="Edit transaction">{{ ui.icon('edit') }}</a>{% endif %}
     <a class="btn small ghost icon-action" href="/transactions/new?copy_from={{ t.id }}" aria-label="Copy transaction {{ t.id }}" title="Copy transaction as new">{{ ui.icon('copy') }}</a></div>{% endif %}
 </div>
-<div class="card {{ 'voided' if t.status != 'active' }}">
+<div class="card transaction-detail {{ 'voided' if t.status != 'active' }}">
   <dl class="facts">
     <dt>Team</dt><dd>{{ t.team.name }}</dd>
     <dt>Date</dt><dd>{{ t.transaction_date|dmy }}</dd>
