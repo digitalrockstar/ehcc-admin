@@ -1847,3 +1847,13 @@
   }
   .transaction-heading > .acts { grid-area:actions!important; display:flex!important; align-items:center!important; justify-content:flex-end!important; gap:.2rem!important; }
 }
+
+
+/* Table-cell compatibility: the mobile action cell stays visually centred even
+   when older compact-table rules force display:table-cell !important. */
+@media (max-width:640px) and (orientation:portrait) {
+  .responsive-cards > table > tbody > tr > td.player-actions {
+    text-align:center!important;
+    justify-content:center!important;
+  }
+}
