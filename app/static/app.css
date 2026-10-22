@@ -2016,3 +2016,50 @@
     margin-bottom:.2rem!important;
   }
 }
+
+
+/* Dashboard and mobile card alignment corrections */
+@media (max-width:640px) and (orientation:portrait) {
+  .responsive-cards > table:not(.txns) > tbody > tr:not(.dategroup) > td.player-metric-cell {
+    align-items:flex-start!important; text-align:left!important;
+  }
+  .responsive-cards > table:not(.txns) > tbody > tr:not(.dategroup) > td.player-metric-cell .metric-label,
+  .responsive-cards > table:not(.txns) > tbody > tr:not(.dategroup) > td.player-metric-cell .metric-value {
+    width:100%!important; text-align:left!important;
+  }
+  .responsive-cards > table.txns > tbody > tr:not(.dategroup) > td[data-label="Amount"],
+  .responsive-cards > table.txns > tbody > tr:not(.dategroup) > td[data-label="Amount"]::before {
+    text-align:right!important;
+  }
+  .dashboard-balance-cards > table > tbody > tr {
+    grid-template-columns:minmax(0,1fr) auto auto!important;
+    align-items:center!important; gap:.3rem!important;
+  }
+  .dashboard-balance-cards > table > tbody > tr > td {
+    min-width:0!important; align-self:center!important; padding:.1rem!important;
+  }
+  .dashboard-balance-cards > table > tbody > tr > td.num {
+    white-space:nowrap!important; font-size:.82rem!important;
+  }
+  .dashboard-balance-cards > table > tbody > tr > td:last-child {
+    display:flex!important; justify-content:flex-end!important; align-items:center!important;
+    grid-column:auto!important; grid-row:1!important;
+  }
+  .dashboard-balance-cards .settle-icon {
+    display:inline-flex!important; align-items:center!important; justify-content:center!important;
+    width:1.8rem!important; height:1.8rem!important; padding:0!important;
+    flex:0 0 1.8rem!important; margin:0!important; white-space:nowrap!important;
+  }
+  .dashboard-recent > table > tbody > tr:not(.dategroup) > td[data-label="Amount"] {
+    grid-column:3!important; grid-row:2!important; justify-self:end!important;
+    text-align:right!important; white-space:nowrap!important;
+  }
+}
+a.icon-action, button.icon-action, .icon-action.btn {
+  border-color:transparent!important; background:transparent!important; box-shadow:none!important;
+}
+a.icon-action:hover, button.icon-action:hover, .icon-action.btn:hover {
+  border-color:transparent!important; background:color-mix(in srgb, var(--primary) 10%, transparent)!important;
+  box-shadow:none!important; transform:none!important;
+}
+a.icon-action svg, button.icon-action svg, .icon-action.btn svg { display:block; stroke:currentColor; }
