@@ -28,13 +28,13 @@
   <thead><tr><th>Player</th><th>Mobile</th><th class="num">Owed</th><th class="num">Paid</th><th class="num">Net outstanding</th>{% if is_admin %}<th></th>{% endif %}</tr></thead>
   <tbody>{% for r in rows %}{% set p = r.player %}
     <tr data-href="/players/{{ p.id }}" class="clickable {{ 'voided' if p.status == 'archived' }}">
-      <td data-label="Player"><a href="/players/{{ p.id }}">{{ p.player_name }}</a></td>
+      <td class="player-name-cell" data-label="Player"><strong>{{ p.player_name }}</strong></td>
       <td>{% if show_mobile %}{{ p.mob_no or '' }}{% else %}{{ mask_mobile(p.mob_no) }}{% endif %}</td>
-      <td class="num" data-label="Owed">{{ r.owed|inr }}</td><td class="num" data-label="Paid">{{ r.paid|inr }}</td><td class="num" data-label="Net outstanding">{{ ui.net(r.net) }}</td>
-      {% if is_admin %}<td class="acts" data-label="Actions">
-        <details class="icon-menu"><summary class="icon-action" aria-label="Edit player" title="Edit player">{{ ui.icon('edit') }}<span class="sr-only">Edit</span></summary>
-          <form method="post" action="/players/{{ p.id }}/edit" class="stack">{{ ui.csrf_input() }}<input type="hidden" name="next" value="/players?team={{ team.id }}">
-            <input name="player_name" value="{{ p.player_name }}" maxlength="80" required><input name="mob_no" value="{{ p.mob_no or '' }}" maxlength="20" placeholder="Mobile">
+      <td class="player-metric-cell" data-label="OWED"><span class="metric-label">OWED</span><span class="metric-value">{{ r.owed|inr }}</span></td><td class="player-metric-cell" data-label="PAID"><span class="metric-label">PAID</span><span class="metric-value">{{ r.paid|inr }}</span></td><td class="player-metric-cell" data-label="NET"><span class="metric-label">NET</span><span class="metric-value">{{ ui.net(r.net) }}</span></td>
+      {% if is_admin %}<td class="acts player-actions" data-label="Actions">
+        <details class="icon-menu edit-popover"><summary class="icon-action" aria-label="Edit player" title="Edit player">{{ ui.icon('edit') }}<span class="sr-only">Edit</span></summary>
+          <form method="post" action="/players/{{ p.id }}/edit" class="stack edit-player-form">{{ ui.csrf_input() }}<input type="hidden" name="next" value="/players?team={{ team.id }}">
+            <label>Name<input name="player_name" value="{{ p.player_name }}" maxlength="80" required></label><label>Mobile<input name="mob_no" value="{{ p.mob_no or '' }}" maxlength="20" placeholder="Mobile"></label>
             <button class="btn small">Save</button></form></details>
         {{ ui.action('/players/%d/archive' % p.id, ui.icon('restore' if p.status == 'archived' else 'archive'), '/players?team=%d' % team.id, 'btn small ghost icon-action', None, {'archive': '0' if p.status == 'archived' else '1'}, {'aria-label': 'Restore player' if p.status == 'archived' else 'Archive player', 'title': 'Restore player' if p.status == 'archived' else 'Archive player'}) }}
         {{ ui.action('/players/%d/delete' % p.id, ui.icon('delete'), '/players?team=%d' % team.id, 'btn small danger icon-action', 'Delete %s? This only works for players with no transactions.' % p.player_name, None, {'aria-label': 'Delete player', 'title': 'Delete player'}) }}
