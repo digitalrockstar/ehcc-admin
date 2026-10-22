@@ -32,6 +32,7 @@ function initPage() {
         ['position','left','right','top','width','maxHeight','overflowY'].forEach(k => { form.style[k] = ''; });
         return;
       }
+      if (!window.matchMedia('(max-width:640px) and (orientation:portrait)').matches) return;
       requestAnimationFrame(() => {
         const rect = trigger.getBoundingClientRect();
         const width = Math.min(280, window.innerWidth - 24);
