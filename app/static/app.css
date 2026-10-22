@@ -2168,3 +2168,40 @@ a.icon-action svg, button.icon-action svg, .icon-action.btn svg { display:block;
   border:0!important; background:transparent!important; box-shadow:none!important;
 }
 .txn-form-actions .icon-action svg { width:1.45rem!important; height:1.45rem!important; }
+
+
+/* Final layout corrections from the supplied screenshots. */
+@media (orientation:landscape) {
+  .responsive-cards > table:not(.txns) > tbody > tr > td.player-metric-cell {
+    text-align:right!important; vertical-align:middle!important;
+  }
+  .responsive-cards > table:not(.txns) > tbody > tr > td.player-metric-cell .metric-label,
+  .responsive-cards > table:not(.txns) > tbody > tr > td.player-metric-cell .metric-value {
+    display:block!important; width:100%!important; white-space:normal!important;
+  }
+  .responsive-cards > table:not(.txns) > tbody > tr > td.player-metric-cell .metric-label {
+    margin-bottom:.2rem!important; font-size:.68rem!important; line-height:1.2!important;
+  }
+}
+@media (max-width:640px) and (orientation:portrait) {
+  .responsive-cards > table:not(.txns) > tbody > tr:not(.dategroup) > td[data-label="OWED"],
+  .responsive-cards > table:not(.txns) > tbody > tr:not(.dategroup) > td[data-label="NET"] {
+    align-items:flex-end!important; text-align:right!important;
+  }
+  .responsive-cards > table:not(.txns) > tbody > tr:not(.dategroup) > td[data-label="OWED"] .metric-label,
+  .responsive-cards > table:not(.txns) > tbody > tr:not(.dategroup) > td[data-label="OWED"] .metric-value,
+  .responsive-cards > table:not(.txns) > tbody > tr:not(.dategroup) > td[data-label="NET"] .metric-label,
+  .responsive-cards > table:not(.txns) > tbody > tr:not(.dategroup) > td[data-label="NET"] .metric-value {
+    text-align:right!important;
+  }
+}
+/* The transaction form actions are a single horizontal icon row at all sizes. */
+.txn-form-actions {
+  display:flex!important; flex-direction:row!important; justify-content:center!important;
+  align-items:center!important; gap:1.5rem!important; flex-wrap:nowrap!important;
+}
+.txn-form-actions > button, .txn-form-actions > a {
+  display:inline-flex!important; flex:0 0 3rem!important; width:3rem!important;
+  min-width:3rem!important; max-width:3rem!important; height:3rem!important;
+  align-items:center!important; justify-content:center!important; margin:0!important;
+}
