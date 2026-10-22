@@ -20,6 +20,36 @@ function initPage() {
     location.href = tr.dataset.href;
   }));
 
+  // Keep the player edit popup inside the visible mobile viewport.
+  document.querySelectorAll('details.edit-popover').forEach(details => {
+    if (details.dataset.popupPositioner === 'ready') return;
+    details.dataset.popupPositioner = 'ready';
+    details.addEventListener('toggle', () => {
+      const form = details.querySelector('.edit-player-form');
+      const trigger = details.querySelector('summary');
+      if (!form || !trigger) return;
+      if (!details.open) {
+        ['position','left','right','top','width','maxHeight','overflowY'].forEach(k => { form.style[k] = ''; });
+        return;
+      }
+      requestAnimationFrame(() => {
+        const rect = trigger.getBoundingClientRect();
+        const width = Math.min(280, window.innerWidth - 24);
+        form.style.position = 'fixed';
+        form.style.width = width + 'px';
+        form.style.maxHeight = Math.max(180, window.innerHeight - 100) + 'px';
+        form.style.overflowY = 'auto';
+        form.style.right = 'auto';
+        const left = Math.max(12, Math.min(rect.left, window.innerWidth - width - 12));
+        form.style.left = left + 'px';
+        const height = form.getBoundingClientRect().height;
+        let top = rect.bottom + 8;
+        if (top + height > window.innerHeight - 76) top = rect.top - height - 8;
+        form.style.top = Math.max(12, Math.min(top, window.innerHeight - Math.min(height, window.innerHeight - 24) - 12)) + 'px';
+      });
+    });
+  });
+
   // Sidebar / mobile nav toggle
   const menu = document.getElementById('menu-btn');
   const setNav = open => {
