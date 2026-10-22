@@ -1640,3 +1640,50 @@
 @layer utilities {
   .future-subcard .zero-amount { color: #d97706; }
 }
+
+
+/* Responsive table-to-card pattern: cards on narrow portrait screens, tables elsewhere. */
+@layer utilities {
+  @media (max-width: 640px) and (orientation: portrait) {
+    .responsive-cards { overflow: visible !important; }
+    .responsive-cards > table,
+    .responsive-cards > table.txns { min-width: 0 !important; width: 100%; }
+    .responsive-cards > table > thead { display: none; }
+    .responsive-cards > table > tbody { display: grid; gap: 0.65rem; padding: 0.65rem; }
+    .responsive-cards > table > tbody > tr:not(.dategroup) {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 0.35rem 0.75rem;
+      padding: 0.7rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--surface);
+      min-width: 0;
+    }
+    .responsive-cards > table > tbody > tr:not(.dategroup) > td {
+      display: flex; flex-direction: column; justify-content: center;
+      min-width: 0; padding: 0.15rem 0; border: 0; background: transparent !important;
+      text-align: left; overflow-wrap: anywhere; vertical-align: middle;
+    }
+    .responsive-cards > table > tbody > tr:not(.dategroup) > td::before {
+      content: attr(data-label); color: var(--muted); font-size: 0.68rem;
+      line-height: 1.2; margin-bottom: 0.12rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.025em;
+    }
+    .responsive-cards > table > tbody > tr:not(.dategroup) > td.num { text-align: left; white-space: normal; }
+    .responsive-cards > table > tbody > tr:not(.dategroup) > td:empty { display: none; }
+    .responsive-cards > table > tbody > tr:not(.dategroup) > td.acts {
+      grid-column: 1 / -1; flex-direction: row; justify-content: flex-end;
+      align-items: center; gap: 0.35rem; padding-top: 0.35rem;
+      border-top: 1px solid var(--border);
+    }
+    .responsive-cards > table > tbody > tr:not(.dategroup) > td.acts::before { content: none; }
+    .responsive-cards > table > tbody > tr.dategroup { display: block; }
+    .responsive-cards > table > tbody > tr.dategroup > th {
+      display: block; border: 0; border-left: 3px solid var(--primary);
+      border-radius: 0; padding: 0.35rem 0.6rem; text-align: left;
+    }
+    .responsive-cards .settle { flex-wrap: wrap; }
+    .responsive-cards .btn.small { padding: 0.2rem 0.45rem; }
+  }
+}
