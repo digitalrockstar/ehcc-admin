@@ -20,6 +20,16 @@ function initPage() {
     location.href = tr.dataset.href;
   }));
 
+  // Cancel player edits without submitting the form.
+  document.querySelectorAll('.edit-player-form .edit-cancel').forEach(button => {
+    button.addEventListener('click', () => {
+      const form = button.closest('form');
+      const details = button.closest('details.edit-popover');
+      if (form) form.reset();
+      if (details) details.open = false;
+    });
+  });
+
   // Keep the player edit popup inside the visible mobile viewport.
   document.querySelectorAll('details.edit-popover').forEach(details => {
     if (details.dataset.popupPositioner === 'ready') return;
