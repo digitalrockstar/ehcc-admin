@@ -39,13 +39,13 @@
   </div>
   <div class="card"><h2>Outstanding balances</h2>
     {% if top %}
-    <table class="plain"><tbody>
+    <div class="dashboard-balance-cards responsive-cards"><table class="plain"><tbody>
       {% for r in top %}<tr>
-        <td><a href="/players/{{ r.player.id }}">{{ r.player.player_name }}</a></td>
+        <td data-label="Player"><strong>{{ r.player.player_name }}</strong></td>
         <td class="num">{{ ui.net(r.net) }}</td>
-        {% if is_admin %}<td class="num">{{ ui.action('/players/%d/settle-net' % r.player.id, 'Settle', request.url.path, 'btn small', 'Settle the net amount for %s (%s) in one transfer?' % (r.player.player_name, (r.net|abs)|inr)) }}</td>{% endif %}
+        {% if is_admin %}<td class="num">{{ ui.action('/players/%d/settle-net' % r.player.id, ui.icon('wallet'), request.url.path, 'btn small ghost icon-action settle-icon', 'Settle the net amount for %s (%s) in one transfer?' % (r.player.player_name, (r.net|abs)|inr)) }}</td>{% endif %}
       </tr>{% endfor %}
-    </tbody></table>
+    </tbody></table></div>
     {% else %}<p class="muted">Everyone is settled up.</p>{% endif %}
   </div>
 </section>
@@ -55,8 +55,8 @@
   <div class="scroll responsive-cards"><table>
     <thead><tr><th>Date</th><th>Type</th><th>Item / Category</th><th class="num">Amount</th></tr></thead>
     <tbody>{% for r in recent %}
-      <tr><td data-label="Date">{{ r.t.transaction_date|dmy }}</td><td data-label="Type">{{ ui.tpill(r.t.type) }}</td>
-        <td data-label="Item / Category"><a href="/transactions/{{ r.t.id }}">{{ r.item }}</a></td><td class="num" data-label="Amount">{{ r.t.amount|inr }}</td></tr>
+      <tr data-href="/transactions/{{ r.t.id }}" tabindex="0" role="link" aria-label="Open transaction {{ r.t.id }}" class="card-row-link"><td data-label="Date">{{ r.t.transaction_date|dmy }}</td><td data-label="Type"><span class="plain-type">{{ r.t.type|capitalize }}</span></td>
+        <td data-label="Item / Category" class="item-name-cell"><strong>{{ r.item }}</strong></td><td class="num" data-label="Amount">{{ r.t.amount|inr }}</td></tr>
     {% endfor %}</tbody></table></div>
   {% else %}<p class="muted">Nothing recorded yet.</p>{% endif %}
 </div>
