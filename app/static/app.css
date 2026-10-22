@@ -1903,3 +1903,69 @@
   width:2.5rem; height:2.5rem; padding:.35rem; flex:0 0 auto;
 }
 .edit-player-actions .edit-cancel { color:var(--muted); border-color:var(--border); }
+
+
+/* Mobile card refinements from visual review: balanced player metrics and
+   a dedicated amount column beside the two transaction party rows. */
+@media (max-width:640px) and (orientation:portrait) {
+  /* Player cards: mobile number on the left; owed on the right.
+     Paid and net form a balanced second row. */
+  .responsive-cards > table:not(.txns) > tbody > tr:not(.dategroup) {
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+    column-gap:1rem!important;
+  }
+  .responsive-cards > table:not(.txns) > tbody > tr:not(.dategroup) > td.player-name-cell {
+    grid-column:1/-1!important;
+  }
+  .responsive-cards > table:not(.txns) > tbody > tr:not(.dategroup) > td[data-label="Mobile"] {
+    grid-column:1!important; grid-row:2!important;
+    text-align:left!important; align-self:center!important;
+    min-width:0!important; overflow-wrap:anywhere!important;
+  }
+  .responsive-cards > table:not(.txns) > tbody > tr:not(.dategroup) > td[data-label="Mobile"]::before {
+    content:"MOBILE"!important; display:block!important;
+    font-size:.68rem!important; font-weight:600!important; color:var(--muted)!important;
+    text-align:left!important; margin-bottom:.15rem;
+  }
+  .responsive-cards > table:not(.txns) > tbody > tr:not(.dategroup) > td.player-metric-cell {
+    min-width:0!important; display:flex!important; flex-direction:column!important;
+    justify-content:center!important; align-items:center!important;
+    text-align:center!important; padding:.45rem .15rem!important;
+  }
+  .responsive-cards > table:not(.txns) > tbody > tr:not(.dategroup) > td[data-label="OWED"] {
+    grid-column:2!important; grid-row:2!important;
+  }
+  .responsive-cards > table:not(.txns) > tbody > tr:not(.dategroup) > td[data-label="PAID"] {
+    grid-column:1!important; grid-row:3!important;
+  }
+  .responsive-cards > table:not(.txns) > tbody > tr:not(.dategroup) > td[data-label="NET"] {
+    grid-column:2!important; grid-row:3!important;
+  }
+  .responsive-cards > table:not(.txns) > tbody > tr:not(.dategroup) > td.player-actions {
+    grid-column:1/-1!important; grid-row:4!important;
+  }
+
+  /* Transaction cards: Amount occupies the right column alongside both
+     left-side party rows, with labels and values stacked naturally. */
+  .responsive-cards > table.txns > tbody > tr:not(.dategroup) {
+    grid-template-columns:minmax(0,1fr) minmax(0,.72fr) minmax(2.5rem,auto)!important;
+    column-gap:.65rem!important;
+  }
+  .responsive-cards > table.txns > tbody > tr:not(.dategroup) > td[data-label="Amount"] {
+    grid-column:2!important; grid-row:4 / span 2!important;
+    align-self:center!important; justify-self:stretch!important;
+    text-align:right!important; white-space:nowrap!important;
+    min-width:0!important; padding-left:0!important; padding-right:0!important;
+  }
+  .responsive-cards > table.txns > tbody > tr:not(.dategroup) > td[data-label="Amount"]::before {
+    display:block!important; text-align:right!important;
+  }
+  .responsive-cards > table.txns > tbody > tr:not(.dategroup) > td[data-label="Paid By"],
+  .responsive-cards > table.txns > tbody > tr:not(.dategroup) > td[data-label="Charged To"] {
+    grid-column:1!important; text-align:left!important;
+    white-space:normal!important; overflow-wrap:anywhere!important;
+    min-width:0!important; padding-right:0!important;
+  }
+  .responsive-cards > table.txns > tbody > tr:not(.dategroup) > td[data-label="Paid By"] { grid-row:4!important; }
+  .responsive-cards > table.txns > tbody > tr:not(.dategroup) > td[data-label="Charged To"] { grid-row:5!important; }
+}
