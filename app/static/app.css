@@ -2113,3 +2113,30 @@ a.icon-action svg, button.icon-action svg, .icon-action.btn svg { display:block;
   box-shadow:none!important;
 }
 .icon-action { padding:.2rem!important; }
+
+
+/* Recent transaction mobile card: all metadata on one aligned row under title. */
+@media (max-width:640px) and (orientation:portrait) {
+  .dashboard-recent > table > tbody > tr:not(.dategroup) {
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto!important;
+    column-gap:.65rem!important; align-items:start!important;
+  }
+  .dashboard-recent > table > tbody > tr:not(.dategroup) > td.item-name-cell {
+    grid-column:1/-1!important; grid-row:1!important;
+  }
+  .dashboard-recent > table > tbody > tr:not(.dategroup) > td[data-label="Date"] {
+    grid-column:1!important; grid-row:2!important; min-width:0!important;
+  }
+  .dashboard-recent > table > tbody > tr:not(.dategroup) > td[data-label="Type"] {
+    grid-column:2!important; grid-row:2!important; min-width:0!important;
+  }
+  .dashboard-recent > table > tbody > tr:not(.dategroup) > td[data-label="Amount"] {
+    grid-column:3!important; grid-row:2!important;
+    justify-self:end!important; align-self:start!important;
+    text-align:right!important; white-space:nowrap!important;
+    min-width:max-content!important; padding-left:.2rem!important;
+  }
+  .dashboard-recent > table > tbody > tr:not(.dategroup) > td[data-label="Amount"]::before {
+    display:block!important; text-align:right!important;
+  }
+}
