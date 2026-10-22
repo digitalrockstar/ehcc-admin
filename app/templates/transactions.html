@@ -20,20 +20,19 @@
 {% if rows %}
 <p class="hint swipe">Swipe sideways to see all columns.</p>
 <div class="card flush scroll responsive-cards"><table class="txns">
-  <thead><tr><th>#</th><th>Type</th><th>Item / Category</th><th class="num">Amount</th><th>Paid By / Account In</th><th>Charged To / Account Out</th><th>Reimbursement / Collection</th>{% if is_admin %}<th></th>{% endif %}</tr></thead>
+  <thead><tr><th>#</th><th>Type</th><th>Item / Category</th><th class="num">Amount</th><th>Paid By</th><th>Charged To</th>{% if is_admin %}<th></th>{% endif %}</tr></thead>
   <tbody>
   {% set ns = namespace(d=None) %}
   {% for r in rows %}
     {% if ns.d != r.t.transaction_date %}{% set ns.d = r.t.transaction_date %}
-      <tr class="dategroup"><th colspan="{{ 8 if is_admin else 7 }}">{{ r.t.transaction_date|dmy }} <span class="muted">&middot; {{ team.name }} &middot; {{ account.name }}</span></th></tr>
+      <tr class="dategroup"><th colspan="{{ 7 if is_admin else 6 }}">{{ r.t.transaction_date|dmy }} <span class="muted">&middot; {{ team.name }} &middot; {{ account.name }}</span></th></tr>
     {% endif %}
-    <tr class="{{ 'voided' if r.t.status != 'active' }}">
+    <tr data-href="/transactions/{{ r.t.id }}" tabindex="0" role="link" aria-label="Open transaction {{ r.t.id }}" class="card-row-link {{ 'voided' if r.t.status != 'active' }}">
       <td class="muted" data-label="#"> {{ r.t.id }}</td>
-      <td data-label="Type">{{ ui.tpill(r.t.type) }} {{ ui.status(r.t) }}</td>
-      <td data-label="Item / Category"><a href="/transactions/{{ r.t.id }}">{{ r.item }}</a></td>
+      <td data-label="Type"><span class="plain-type">{{ r.t.type|capitalize }}</span> {{ ui.status(r.t) }}</td>
+      <td data-label="Item / Category" class="item-name-cell"><strong>{{ r.item }}</strong></td>
       <td class="num" data-label="Amount">{{ r.t.amount|inr }}</td>
-      <td data-label="Paid By / Account In">{{ r.col1 }}</td><td data-label="Charged To / Account Out">{{ r.col2 }}</td>
-      <td data-label="Reimbursement / Collection">{{ ui.settle(r, request.url.path ~ '?' ~ request.url.query) }}</td>
+      <td data-label="Paid By">{{ r.col1 }}</td><td data-label="Charged To">{{ r.col2 }}</td>
       {% if is_admin %}<td class="acts" data-label="Actions">
         {% if r.t.status == 'active' and not r.link %}<a class="btn small ghost icon-action" href="/transactions/{{ r.t.id }}/edit" aria-label="Edit transaction {{ r.t.id }}" title="Edit transaction">{{ ui.icon('edit') }}</a>{% endif %}
         <a class="btn small ghost icon-action" href="/transactions/new?copy_from={{ r.t.id }}" aria-label="Copy transaction {{ r.t.id }}" title="Copy transaction">{{ ui.icon('copy') }}</a></td>{% endif %}
