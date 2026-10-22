@@ -7,16 +7,16 @@
 
 <section class="card" id="teams"><h2>Teams and team accounts</h2>
   <p class="hint">Each team gets its own team account when it is created. The starting balance belongs to that account.</p>
-  <div class="scroll"><table>
+  <div class="scroll responsive-cards settings-team-cards"><table>
     <thead><tr><th>Team</th><th>Team account</th><th>Status</th><th class="num">Players</th><th>Starting balance</th><th></th></tr></thead>
     <tbody>{% for r in rows %}
       <tr class="{{ 'voided' if r.team.status == 'archived' }}">
-        <td><form method="post" action="/settings/teams/{{ r.team.id }}/edit" class="inline-form">{{ ui.csrf_input() }}
+        <td class="team-name-cell" data-label="Team"><form method="post" action="/settings/teams/{{ r.team.id }}/edit" class="inline-form">{{ ui.csrf_input() }}
           <input name="name" value="{{ r.team.name }}" maxlength="80" required aria-label="Team name"><button class="btn small ghost icon-action" aria-label="Rename team" title="Rename team">{{ ui.icon('edit') }}</button></form></td>
-        <td>{{ r.account.name }}</td><td>{{ r.team.status|capitalize }}</td><td class="num">{{ r.players }}</td>
-        <td><form method="post" action="/settings/teams/{{ r.team.id }}/opening-balance" class="inline-form">{{ ui.csrf_input() }}
+        <td class="team-account-cell" data-label="Team account">{{ r.account.name }}</td><td data-label="Status">{{ r.team.status|capitalize }}</td><td class="num" data-label="Players">{{ r.players }}</td>
+        <td data-label="Starting balance"><form method="post" action="/settings/teams/{{ r.team.id }}/opening-balance" class="inline-form">{{ ui.csrf_input() }}
           <input name="amount" value="{{ r.opening }}" inputmode="decimal" aria-label="Starting balance"><button class="btn small ghost icon-action" aria-label="Save starting balance" title="Save starting balance">{{ ui.icon('save') }}</button></form></td>
-        <td>{{ ui.action('/settings/teams/%d/archive' % r.team.id, ui.icon('restore' if r.team.status == 'archived' else 'archive'), '/settings#teams', 'btn small ghost icon-action', 'Archive this team? Its history stays.' if r.team.status == 'active' else None, {'archive': '0' if r.team.status == 'archived' else '1'}, {'aria-label': 'Restore team' if r.team.status == 'archived' else 'Archive team', 'title': 'Restore team' if r.team.status == 'archived' else 'Archive team'}) }}</td>
+        <td class="team-card-actions" data-label="Actions">{{ ui.action('/settings/teams/%d/archive' % r.team.id, ui.icon('restore' if r.team.status == 'archived' else 'archive'), '/settings#teams', 'btn small ghost icon-action', 'Archive this team? Its history stays.' if r.team.status == 'active' else None, {'archive': '0' if r.team.status == 'archived' else '1'}, {'aria-label': 'Restore team' if r.team.status == 'archived' else 'Archive team', 'title': 'Restore team' if r.team.status == 'archived' else 'Archive team'}) }}</td>
       </tr>{% else %}<tr><td colspan="6" class="muted">No teams yet. Add the first one below.</td></tr>{% endfor %}</tbody></table></div>
   <h3>Add team</h3>
   <form method="post" action="/settings/teams/add" class="inline-form">{{ ui.csrf_input() }}
@@ -39,7 +39,7 @@
       <form method="post" action="/settings/categories/add" class="inline-form">{{ ui.csrf_input() }}<input type="hidden" name="kind" value="{{ kind }}">
         <input name="name" placeholder="New {{ kind }} category" maxlength="60" required value="{{ form_data.get('name', '') }}"{% if errors.get('name') %} class="invalid"{% endif %}>
         {% if errors.get('name') %}<span class="field-error">{{ errors['name'] }}</span>{% endif %}
-        <button class="btn small">Add</button></form>
+        <button class="btn small icon-only-btn" aria-label="Add category" title="Add category">+</button></form>
     </div>
   {% endfor %}
   </div>
@@ -61,17 +61,16 @@
 
 <section class="card" id="rounding"><h2>Allocation rounding</h2>
   <p>When an expense is split across several parties, each share is rounded up to the nearest amount below. The rounding difference is added to the team account balance.</p>
-  <form method="post" action="/settings/rounding" class="inline-form">{{ ui.csrf_input() }}
-    <label>Round up to nearest ₹ <input name="step" value="{{ step }}" inputmode="numeric" size="4"></label><button class="btn small">Save</button></form>
+  <form method="post" action="/settings/rounding" class="inline-save">{{ ui.csrf_input() }}
+    <label>Round up to nearest ₹ <input name="step" value="{{ step }}" inputmode="numeric" size="4"></label><button class="btn small ghost icon-action icon-only-btn" aria-label="Save allocation rounding" title="Save">{{ ui.icon('save') }}</button></form>
 </section>
 
 <section class="card danger-zone" id="reset"><h2>Data reset</h2>
   <p>Deletes transactions, allocations and settlements. Teams, players, categories and starting balances stay. The audit log is never deleted and records this reset.</p>
   <form method="post" action="/settings/reset" class="stack" data-confirm="This permanently deletes ledger data. Continue?">{{ ui.csrf_input() }}
-    <div class="chips reset-options">
-      <label class="chip"><input type="radio" name="scope" value="all" checked><span>Delete all transactions</span></label>
-      <label class="chip"><input type="radio" name="scope" value="since"><span>Delete from a date and time</span></label></div>
-    <label>Only if you chose the second option: on or after (India time) <input type="datetime-local" name="since"></label>
+    <label>Delete scope <select name="scope" id="reset-scope"><option value="all">All transactions</option><option value="since">From date and time</option></select></label>
+    <label id="reset-since-wrap" hidden>On or after (India time) <input type="datetime-local" name="since" id="reset-since"></label>
+    <script>document.addEventListener("DOMContentLoaded",()=>{const s=document.getElementById("reset-scope"),w=document.getElementById("reset-since-wrap"),d=document.getElementById("reset-since");const sync=()=>{const on=s.value==="since";w.hidden=!on;d.required=on};s.addEventListener("change",sync);sync()});</script>
     <label>Type DELETE to confirm <input name="confirm" autocomplete="off"></label>
     <button class="btn danger">Delete data</button></form>
 </section>
