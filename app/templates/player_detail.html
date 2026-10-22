@@ -7,8 +7,7 @@
 <section class="cards">
   <div class="card stat"><div class="lbl">Total owed</div><div class="val">{{ owed|inr }}</div></div>
   <div class="card stat"><div class="lbl">Total paid</div><div class="val">{{ paid|inr }}</div></div>
-  <div class="card stat accent"><div class="lbl">Net outstanding</div><div class="val">{{ ui.net(net) }}</div>
-    <div class="hint">Minus: player owes the team. Plus: team owes the player.</div></div>
+  <div class="card stat accent"><div class="lbl">Net outstanding</div><div class="val">{{ ui.net(net) }}</div></div>
 </section>
 {% if pend.owed_n or pend.reimb_n %}
 <div class="card" id="settle-net"><h2>Pending settlement</h2>
@@ -54,7 +53,7 @@
   {% for e in events %}{% set t = e.t %}
     <tr class="{{ 'voided' if t.status != 'active' }}">
       <td data-label="Date">{{ t.transaction_date|dmy }}</td><td data-label="Type">{{ ui.tpill(t.type) }} {{ ui.status(t) }}</td>
-      <td data-label="Item / Category"><a href="/transactions/{{ t.id }}">{{ item_label(t) }}</a></td>
+      <td data-label="Item / Category"><a class="goto" href="/transactions/{{ t.id }}" aria-label="Open transaction {{ t.id }}" title="Open transaction">{{ ui.icon('arrow-up-right') }}</a>{{ item_label(t) }}</td>
       <td class="num" data-label="Amount">{{ e.amount|inr }}</td><td data-label="Role">{{ e.role }}</td>
       <td>
         {% if t.status == 'active' and e.role == 'Owed' %}

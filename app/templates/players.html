@@ -25,7 +25,7 @@
 {% if rows %}
 <p class="hint swipe">Swipe sideways to see all columns.</p>
 <div class="card flush scroll responsive-cards"><table>
-  <thead><tr><th>Player</th><th>Mobile</th><th class="num">Owed</th><th class="num">Paid</th><th class="num">Net outstanding</th>{% if is_admin %}<th></th>{% endif %}</tr></thead>
+  <thead><tr><th>Player</th><th>Mobile</th><th class="num">Owed</th><th class="num">Paid</th><th class="num">Net</th>{% if is_admin %}<th></th>{% endif %}</tr></thead>
   <tbody>{% for r in rows %}{% set p = r.player %}
     <tr data-href="/players/{{ p.id }}" class="clickable {{ 'voided' if p.status == 'archived' }}">
       <td class="player-name-cell" data-label="Player"><strong>{{ p.player_name }}</strong></td>

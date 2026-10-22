@@ -2261,7 +2261,8 @@ td.num, th.num { text-align: right; }
   .dashboard-stats .val.zero-amount, .val.zero-amount { color: #d97706 !important; }
 
   /* Settings > Appearance: 3 columns at every width */
-  #themes .themes { display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: .5rem !important; }
+  #themes .themes { display: grid !important; grid-template-columns: minmax(0, 1fr) !important; gap: .5rem !important; }
+  @media (min-width: 641px), (orientation: landscape) { #themes .themes { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; } }
   #themes .themes form { min-width: 0; }
   #themes .swatch.theme-line { min-width: 0; padding: .45rem; }
 
@@ -2275,7 +2276,6 @@ td.num, th.num { text-align: right; }
   /* Portrait cards */
   @media (max-width: 640px) and (orientation: portrait) {
     /* Dashboard stat cards: centred */
-    .dashboard-stats > .card.stat, .dashboard-stats .lbl, .dashboard-stats .val { text-align: center !important; }
 
     /* Transactions: amount sits at the right, spanning the Paid by and Charged to rows */
     .responsive-cards > table.txns > tbody > tr:not(.dategroup) {
@@ -2298,16 +2298,32 @@ td.num, th.num { text-align: right; }
 
     /* Settings > Teams: name box, starting-balance box, then Status | Players | Actions on one row */
     .settings-team-cards > table > tbody > tr:not(.dategroup) {
-      display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: .5rem .6rem !important; align-items: center !important;
+      display: grid !important; grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: .5rem .6rem !important; align-items: start !important;
     }
     .settings-team-cards > table > tbody > tr:not(.dategroup) > td { min-width: 0 !important; }
     .settings-team-cards > table > tbody > tr:not(.dategroup) > td.team-name-cell { grid-column: 1 / -1 !important; grid-row: 1 !important; }
     .settings-team-cards > table > tbody > tr:not(.dategroup) > td[data-label="Starting balance"] { grid-column: 1 / -1 !important; grid-row: 2 !important; }
     .settings-team-cards > table > tbody > tr:not(.dategroup) > td[data-label="Status"] { grid-column: 1 !important; grid-row: 3 !important; }
     .settings-team-cards > table > tbody > tr:not(.dategroup) > td[data-label="Players"] { grid-column: 2 !important; grid-row: 3 !important; }
-    .settings-team-cards > table > tbody > tr:not(.dategroup) > td.team-card-actions { grid-column: 3 !important; grid-row: 3 !important; display: flex !important; justify-content: flex-end !important; border: 0 !important; padding: 0 !important; }
+    .settings-team-cards > table > tbody > tr:not(.dategroup) > td.team-card-actions { grid-column: 3 !important; grid-row: 3 !important; display: flex !important; flex-direction: column !important; align-items: flex-end !important; justify-content: flex-start !important; align-self: start !important; border: 0 !important; padding: 0 !important; }
     .settings-team-cards > table > tbody > tr:not(.dategroup) > td.team-account-cell { display: none !important; }
     .settings-team-cards .inline-form { display: flex !important; flex-wrap: nowrap !important; width: 100% !important; align-items: center !important; }
     .settings-team-cards .inline-form input { flex: 1 1 auto !important; width: 100% !important; min-width: 0 !important; }
   }
+}
+
+@layer utilities {
+  /* Dashboard stat cards centred at every width */
+  .dashboard-stats > .card.stat, .dashboard-stats .lbl, .dashboard-stats .val { text-align: center !important; }
+  /* Players table view: Owed / Paid / Net centred under their headers */
+  @media (min-width: 641px), (orientation: landscape) {
+    .responsive-cards > table:not(.txns) > thead th.num { text-align: center !important; }
+    .responsive-cards > table:not(.txns) > tbody > tr > td.player-metric-cell { text-align: center !important; vertical-align: middle !important; }
+    .responsive-cards > table:not(.txns) > tbody > tr > td.player-metric-cell .metric-value { display: block !important; width: 100% !important; text-align: center !important; }
+  }
+  /* Small arrow link at the start of a row instead of a hyperlinked name */
+  a.goto { display: inline-flex; align-items: center; justify-content: center; width: 1.5rem; height: 1.5rem; margin-right: .4rem; vertical-align: middle; border-radius: .4rem; color: var(--link); text-decoration: none; }
+  a.goto:hover { background: color-mix(in srgb, var(--primary) 12%, transparent); }
+  a.goto:active { transform: scale(.92); }
+  a.goto .ico { width: .95rem; height: .95rem; }
 }
