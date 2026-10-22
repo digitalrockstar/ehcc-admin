@@ -1695,3 +1695,48 @@
 @media(max-width:640px) and (orientation:portrait){.settings-team-cards>table>thead{display:none}.settings-team-cards>table>tbody>tr:not(.dategroup){grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.settings-team-cards .team-name-cell,.settings-team-cards .team-account-cell,.settings-team-cards .team-card-actions{grid-column:1/-1}.dashboard-balance-cards>table>tbody{display:grid;gap:.55rem}.dashboard-balance-cards>table>tbody>tr{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:.5rem;align-items:center;padding:.65rem;border:1px solid var(--border);border-radius:var(--radius-md)}.dashboard-balance-cards>table>tbody>tr>td{border:0;padding:.1rem;vertical-align:middle}}
 .icon-only-btn{display:inline-flex;align-items:center;justify-content:center;width:2rem;height:2rem;padding:.25rem}.inline-save{display:flex;gap:.45rem;align-items:center;flex-wrap:nowrap}.inline-save label{display:flex;gap:.45rem;align-items:center;white-space:nowrap}.edit-popover{position:relative}.edit-player-form{position:absolute;z-index:20;right:0;top:calc(100% + .35rem);width:min(260px,80vw);padding:.75rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:var(--shadow-md)}.edit-player-form input{width:100%;min-width:0}
 }
+
+
+/* Mobile layout fixes — October 2026 */
+@media (max-width: 640px) and (orientation: portrait) {
+  .settings-team-cards > table > tbody > tr:not(.dategroup) { grid-template-columns:minmax(0,1fr) minmax(0,1fr); align-items:start; }
+  .settings-team-cards > table > tbody > tr:not(.dategroup) > td { min-width:0; overflow-wrap:normal; word-break:normal; }
+  .settings-team-cards .team-name-cell,.settings-team-cards .team-account-cell,.settings-team-cards .team-card-actions { grid-column:1/-1; }
+  .settings-team-cards .inline-form { display:flex; flex-wrap:nowrap; width:100%; align-items:center; }
+  .settings-team-cards .inline-form input { min-width:0; width:100%; flex:1 1 auto; }
+  .settings-team-cards .team-card-actions { justify-content:flex-start!important; }
+  .settings-team-cards td::before { overflow-wrap:normal; word-break:normal; }
+  .responsive-cards > table.txns > tbody > tr:not(.dategroup) { position:relative; }
+  .responsive-cards > table.txns > tbody > tr:not(.dategroup) > td:first-child { grid-column:1; white-space:nowrap; overflow-wrap:normal; }
+  .responsive-cards > table.txns > tbody > tr:not(.dategroup) > td.acts { grid-column:2; grid-row:3; justify-content:flex-end; align-self:end; border-top:0; padding-top:0; }
+  .responsive-cards > table.txns > tbody > tr:not(.dategroup) > td.item-name-cell { grid-column:1/-1; }
+  .dashboard-balance-cards > table > tbody > tr { grid-template-columns:minmax(0,1fr) auto auto; }
+  .dashboard-balance-cards > table > tbody > tr > td { border:0; padding:.1rem; vertical-align:middle; }
+  .dashboard-balance-cards > table > tbody > tr > td.num { white-space:nowrap!important; font-size:.82rem; }
+  .dashboard-balance-cards .settle-icon { flex:0 0 auto; white-space:nowrap; }
+  .dashboard-balance-cards > table > tbody > tr > td::before { content:none!important; }
+  .dashboard-balance-cards > table > tbody > tr > td:first-child { display:flex; flex-direction:column; min-width:0; }
+  .dashboard-balance-cards > table > tbody > tr > td:first-child::before { content:"PLAYER"!important; }
+  .dashboard-balance-cards > table > tbody > tr > td:first-child strong { white-space:nowrap; }
+  .responsive-cards .settle { flex-wrap:nowrap; }
+  .dashboard-recent > table > tbody > tr:not(.dategroup) { grid-template-columns:repeat(3,minmax(0,1fr)); align-items:start; }
+  .dashboard-recent > table > tbody > tr:not(.dategroup) > td.item-name-cell { grid-column:1/-1; grid-row:1; padding-bottom:.35rem; }
+  .dashboard-recent > table > tbody > tr:not(.dategroup) > td.item-name-cell strong { font-size:.95rem; }
+  .dashboard-recent > table > tbody > tr:not(.dategroup) > td.num { white-space:nowrap!important; }
+  .dashboard-recent > table > tbody > tr:not(.dategroup) > td::before { font-size:.62rem; }
+  .transaction-heading { display:flex; flex-wrap:nowrap; align-items:center; justify-content:space-between; gap:.5rem; }
+  .transaction-heading h1 { min-width:0; font-size:1.05rem; white-space:nowrap; }
+  .transaction-heading .acts { display:flex; gap:.3rem; flex:0 0 auto; }
+  .transaction-back { margin-right:auto; }
+  .transaction-detail .facts { grid-template-columns:minmax(0,1fr); gap:.15rem; }
+  .transaction-detail .facts dt { margin-top:.25rem; }
+  .transaction-detail .facts dd { overflow-wrap:anywhere; }
+}
+@media (orientation:landscape) and (max-width:1100px) {
+  #themes .themes { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.5rem; }
+  #themes .themes form { min-width:0; }
+  #themes .swatch.theme-line { min-width:0; padding:.45rem; }
+  #themes .theme-line .theme-name { font-size:.8rem; }
+  #themes .theme-line .theme-colors { gap:.2rem; }
+  #themes .theme-line .theme-colors i { width:1.1rem; height:1.1rem; }
+}
