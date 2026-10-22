@@ -151,3 +151,15 @@ function initTxnForm(form) {
   }));
   applyType();
 }
+
+// Make transaction cards and rows keyboard- and pointer-accessible.
+document.addEventListener('click', function(e) {
+  const row = e.target.closest('tr[data-href]');
+  if (!row || e.target.closest('a,button,input,select,textarea,summary,form,details')) return;
+  window.location.href = row.dataset.href;
+});
+document.addEventListener('keydown', function(e) {
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('tr[data-href]')) {
+    e.preventDefault(); window.location.href = e.target.dataset.href;
+  }
+});
