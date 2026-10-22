@@ -7,7 +7,7 @@
 {% else %}
 <div class="head">
   <h1>Transactions <span class="muted small">{{ team.name }} &middot; {{ account.name }}</span></h1>
-  {% if is_admin and team.status == 'active' %}<a class="btn" href="/transactions/new?team_id={{ team.id }}">+ Add transaction</a>{% endif %}
+  {% if is_admin and team.status == 'active' %}<a class="btn" href="/transactions/new?team_id={{ team.id }}">{{ ui.icon('plus') }}<span>Add transaction</span></a>{% endif %}
 </div>
 <form class="filters" method="get" action="/transactions">
   <input type="hidden" name="team" value="{{ team.id }}">

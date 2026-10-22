@@ -32,7 +32,6 @@
     <a href="/login" {% if path == '/login' %}class="on"{% endif %}>{{ ui.icon('login') }}<span>Login</span></a>
     {% endif %}
   </nav>
-  </nav>
   <div class="who">
     {% if is_admin %}<span class="muted">Signed in as {{ admin_name }}</span>
       <form method="post" action="/logout" class="inline"><input type="hidden" name="csrf_token" value="{{ csrf }}"><button class="linkbtn">{{ ui.icon('logout') }}<span>Log out</span></button></form>

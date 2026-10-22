@@ -2228,3 +2228,26 @@ a.icon-action svg, button.icon-action svg, .icon-action.btn svg { display:block;
     content:"PLAYERS"!important;
   }
 }
+
+/* ============================================================
+   Consistency pass (apple-design): one rule set for every action,
+   card and number. Keep this block last so it wins over earlier layers.
+   ============================================================ */
+.btn, .linkbtn { display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem; }
+.btn .ico, .linkbtn .ico { width: 1.1rem; height: 1.1rem; }
+.btn.small .ico, .chipbtn .ico { width: 1rem; height: 1rem; }
+.chipbtn { display: inline-flex; align-items: center; gap: 0.35rem; }
+/* Press feedback is instant and the same everywhere */
+.btn:active:not(:disabled), .chipbtn:active, .icon-action:active { transform: scale(0.97); transition-duration: 60ms; }
+/* One focus ring for every control */
+.btn:focus-visible, .linkbtn:focus-visible, .chipbtn:focus-visible, .icon-action:focus-visible, .sidebar nav a:focus-visible, .bottomnav a:focus-visible {
+  outline: 2px solid var(--primary); outline-offset: 2px;
+}
+/* Cards: same padding, heading rhythm and number alignment on every screen */
+.card > h2:first-child, .card > .head:first-child { margin-top: 0; margin-bottom: 0.75rem; }
+.card.stat .lbl { text-align: left; }
+.card.stat .val, td.num, th.num, .num { font-variant-numeric: tabular-nums; }
+td.num, th.num { text-align: right; }
+@media (prefers-reduced-motion: reduce) {
+  .btn:active:not(:disabled), .chipbtn:active, .icon-action:active { transform: none; }
+}

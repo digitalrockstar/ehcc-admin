@@ -36,11 +36,11 @@
           <select name="allocation_id" required aria-label="Expense to apply credit to">
             {% for a in credit_allocations %}<option value="{{ a.id }}">#{{ a.transaction_id }} · {{ a.transaction.item_description or (a.transaction.category.name if a.transaction.category else 'Expense') }} · {{ a.allocated_amount|inr }}</option>{% endfor %}
           </select>
-          <button class="btn small">Apply credit</button>
+          <button class="btn small">{{ ui.icon('check') }}<span>Apply credit</span></button>
         </form>
         {% endif %}
         <form method="post" action="/players/{{ player.id }}/credits/{{ credit.id }}/transfer" class="inline-form" data-confirm="Transfer this entire available credit to the team account?">
-          {{ ui.csrf_input() }}<button class="btn small ghost">Transfer to team</button>
+          {{ ui.csrf_input() }}<button class="btn small ghost">{{ ui.icon('transactions') }}<span>Transfer to team</span></button>
         </form>
       </td>{% endif %}
     </tr>

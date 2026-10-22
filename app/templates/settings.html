@@ -23,7 +23,7 @@
     <input name="name" placeholder="Team name" maxlength="80" required value="{{ form_data.get('name', '') }}"{% if errors.get('name') %} class="invalid"{% endif %}>
     {% if errors.get('name') %}<span class="field-error">{{ errors['name'] }}</span>{% endif %}
     <input name="opening" placeholder="Starting balance (optional)" inputmode="decimal">
-    <button class="btn">Create team and account</button></form>
+    <button class="btn">{{ ui.icon('plus') }}<span>Create team and account</span></button></form>
 </section>
 
 <section class="card" id="categories"><h2>Categories</h2>
@@ -39,7 +39,7 @@
       <form method="post" action="/settings/categories/add" class="inline-form">{{ ui.csrf_input() }}<input type="hidden" name="kind" value="{{ kind }}">
         <input name="name" placeholder="New {{ kind }} category" maxlength="60" required value="{{ form_data.get('name', '') }}"{% if errors.get('name') %} class="invalid"{% endif %}>
         {% if errors.get('name') %}<span class="field-error">{{ errors['name'] }}</span>{% endif %}
-        <button class="btn small icon-only-btn" aria-label="Add category" title="Add category">+</button></form>
+        <button class="btn small icon-only-btn" aria-label="Add category" title="Add category">{{ ui.icon('plus') }}</button></form>
     </div>
   {% endfor %}
   </div>
@@ -72,6 +72,6 @@
     <label id="reset-since-wrap" hidden>On or after (India time) <input type="datetime-local" name="since" id="reset-since"></label>
     <script>document.addEventListener("DOMContentLoaded",()=>{const s=document.getElementById("reset-scope"),w=document.getElementById("reset-since-wrap"),d=document.getElementById("reset-since");const sync=()=>{const on=s.value==="since";w.hidden=!on;d.required=on};s.addEventListener("change",sync);sync()});</script>
     <label>Type DELETE to confirm <input name="confirm" autocomplete="off"></label>
-    <button class="btn danger">Delete data</button></form>
+    <button class="btn danger">{{ ui.icon('delete') }}<span>Delete data</span></button></form>
 </section>
 {% endblock %}

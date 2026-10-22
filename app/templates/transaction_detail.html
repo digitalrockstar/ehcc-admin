@@ -49,7 +49,7 @@
   <p class="hint">{% if row.link and row.link.batch_id %}This undoes the whole net settlement and reopens every reimbursement and collection settled with it.{% elif row.link %}This reverses the {{ row.link.kind }} and reopens the balance.{% else %}Voiding keeps the record for audit, removes it from balances, and reverses any reimbursement or collections linked to it.{% endif %}</p>
   <form method="post" action="/transactions/{{ t.id }}/void" class="inline-form" data-confirm="{{ 'Reverse this settlement?' if row.link else 'Void this transaction?' }}">
     {{ ui.csrf_input() }}<input name="reason" maxlength="200" placeholder="Reason (optional)">
-    <button class="btn danger">{{ 'Reverse' if row.link else 'Void' }}</button></form>
+    <button class="btn danger">{{ ui.icon('undo' if row.link else 'void') }}<span>{{ 'Reverse' if row.link else 'Void' }}</span></button></form>
 </div>{% endif %}
 
 {% if is_admin and history %}

@@ -15,11 +15,11 @@
     {% if errors.get('player_name') %}<span class="field-error">{{ errors['player_name'] }}</span>{% endif %}
     <input name="mob_no" placeholder="Mobile (optional)" inputmode="tel" maxlength="20" value="{{ form_data.get('mob_no', '') }}"{% if errors.get('mob_no') %} class="invalid"{% endif %}>
     {% if errors.get('mob_no') %}<span class="field-error">{{ errors['mob_no'] }}</span>{% endif %}
-    <button class="btn">Add player</button></form>
+    <button class="btn">{{ ui.icon('plus') }}<span>Add player</span></button></form>
   <details class="import"><summary>Import from CSV</summary>
     <form method="post" action="/players/import" enctype="multipart/form-data" class="inline-form">{{ ui.csrf_input() }}
       <input type="hidden" name="team_id" value="{{ team.id }}"><input type="hidden" name="next" value="/players?team={{ team.id }}">
-      <input type="file" name="file" accept=".csv,text/csv" required><button class="btn">Import</button></form>
+      <input type="file" name="file" accept=".csv,text/csv" required><button class="btn">{{ ui.icon('upload') }}<span>Import</span></button></form>
     <p class="hint">Columns: player_name, mob_no. A header row is optional. Names already in this team are skipped.</p></details>
 </div>{% endif %}
 {% if rows %}
@@ -35,7 +35,7 @@
         <details class="icon-menu edit-popover"><summary class="icon-action" aria-label="Edit player" title="Edit player">{{ ui.icon('edit') }}<span class="sr-only">Edit</span></summary>
           <form method="post" action="/players/{{ p.id }}/edit" class="stack edit-player-form">{{ ui.csrf_input() }}<input type="hidden" name="next" value="/players?team={{ team.id }}">
             <label>Name<input name="player_name" value="{{ p.player_name }}" maxlength="80" required></label><label>Mobile<input name="mob_no" value="{{ p.mob_no or '' }}" maxlength="20" placeholder="Mobile"></label>
-            <div class="edit-player-actions"><button type="submit" class="btn small icon-action" aria-label="Save player" title="Save">{{ ui.icon('check') }}</button><button type="button" class="btn small ghost icon-action edit-cancel" aria-label="Cancel editing" title="Cancel">{{ ui.icon('close') }}</button></div></form></details>
+            <div class="edit-player-actions"><button type="submit" class="btn small icon-action" aria-label="Save player" title="Save">{{ ui.icon('save') }}</button><button type="button" class="btn small ghost icon-action edit-cancel" aria-label="Cancel editing" title="Cancel">{{ ui.icon('close') }}</button></div></form></details>
         {{ ui.action('/players/%d/archive' % p.id, ui.icon('restore' if p.status == 'archived' else 'archive'), '/players?team=%d' % team.id, 'btn small ghost icon-action', None, {'archive': '0' if p.status == 'archived' else '1'}, {'aria-label': 'Restore player' if p.status == 'archived' else 'Archive player', 'title': 'Restore player' if p.status == 'archived' else 'Archive player'}) }}
         {{ ui.action('/players/%d/delete' % p.id, ui.icon('delete'), '/players?team=%d' % team.id, 'btn small danger icon-action', 'Delete %s? This only works for players with no transactions.' % p.player_name, None, {'aria-label': 'Delete player', 'title': 'Delete player'}) }}
       </td>{% endif %}
