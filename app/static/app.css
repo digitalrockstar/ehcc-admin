@@ -1780,3 +1780,70 @@
   .transaction-heading h1 { grid-area:title; min-width:0; margin:0; white-space:nowrap; font-size:1.02rem; text-align:center; }
   .transaction-heading .acts { grid-area:actions; display:flex; justify-content:flex-end; gap:.25rem; }
 }
+
+
+/* Mobile follow-up: remove duplicated player labels and stabilise settings/transaction cards. */
+@media (max-width:640px) and (orientation:portrait) {
+  /* Metric labels are already rendered inside each player metric. */
+  .responsive-cards > table > tbody > tr > td.player-metric-cell::before { content:none!important; display:none!important; }
+  .responsive-cards > table > tbody > tr > td.player-metric-cell { justify-content:center; }
+  /* Centre the player action group and keep its buttons on one line. */
+  .responsive-cards > table > tbody > tr > td.player-actions {
+    display:flex!important; flex-direction:row!important; flex-wrap:nowrap!important;
+    grid-column:1/-1!important; justify-content:center!important; align-items:center!important;
+    width:100%!important; min-width:0!important; gap:.35rem!important;
+  }
+  .responsive-cards > table > tbody > tr > td.player-actions > .icon-menu,
+  .responsive-cards > table > tbody > tr > td.player-actions > form.inline {
+    display:inline-flex!important; flex:0 0 2.35rem!important;
+    width:2.35rem!important; min-width:2.35rem!important; margin:0!important;
+  }
+  /* Override fixed table-column widths in the mobile Settings card layout. */
+  #teams .settings-team-table { table-layout:auto!important; }
+  #teams .settings-team-table th,
+  #teams .settings-team-table td { width:auto!important; }
+  #teams .settings-team-table th:nth-child(2),
+  #teams .settings-team-table td:nth-child(2) { display:none!important; }
+  #teams .settings-team-table > tbody > tr:not(.dategroup) > td.team-name-cell,
+  #teams .settings-team-table > tbody > tr:not(.dategroup) > td.team-card-actions,
+  #teams .settings-team-table > tbody > tr:not(.dategroup) > td:nth-child(5) { grid-column:1/-1!important; }
+  #teams .settings-team-table td.team-name-cell form,
+  #teams .settings-team-table td:nth-child(5) form {
+    display:flex!important; flex-flow:row nowrap!important; align-items:center!important;
+    width:100%!important; min-width:0!important;
+  }
+  #teams .settings-team-table td.team-name-cell input,
+  #teams .settings-team-table td:nth-child(5) input {
+    display:block!important; flex:1 1 0!important; width:100%!important; min-width:0!important;
+  }
+  #teams .settings-team-table td::before { white-space:normal; overflow-wrap:normal!important; word-break:normal!important; }
+  #teams .settings-team-table tr.voided td,
+  #teams .settings-team-table tr.voided td::before { text-decoration:none!important; }
+  /* Use a genuine right-hand column for transaction actions. */
+  .responsive-cards > table.txns > tbody > tr:not(.dategroup) {
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(2.5rem,1fr)!important;
+  }
+  .responsive-cards > table.txns > tbody > tr:not(.dategroup) > td.txn-number::before { content:none!important; display:none!important; }
+  .responsive-cards > table.txns > tbody > tr:not(.dategroup) > td.acts {
+    grid-column:3!important; grid-row:1!important; text-align:right!important;
+    justify-content:flex-end!important; padding-right:0!important; min-width:0!important; width:auto!important;
+  }
+  .responsive-cards > table.txns > tbody > tr:not(.dategroup) > td.acts > a.icon-action { margin-left:auto!important; }
+  .responsive-cards > table.txns > tbody > tr:not(.dategroup) > td[data-label="Paid By"],
+  .responsive-cards > table.txns > tbody > tr:not(.dategroup) > td[data-label="Charged To"] {
+    font-size:.84rem!important; white-space:nowrap!important; overflow-wrap:normal!important;
+  }
+  .responsive-cards > table.txns > tbody > tr:not(.dategroup) > td[data-label="Paid By"] { grid-column:1!important; }
+  .responsive-cards > table.txns > tbody > tr:not(.dategroup) > td[data-label="Charged To"] { grid-column:2!important; }
+  /* Keep the transaction detail controls in one compact header row. */
+  .transaction-heading {
+    display:grid!important; grid-template-columns:2.25rem minmax(0,1fr) auto!important;
+    grid-template-areas:"back title actions"!important; align-items:center!important; gap:.35rem!important;
+  }
+  .transaction-heading > .transaction-back { grid-area:back!important; }
+  .transaction-heading > h1 {
+    grid-area:title!important; margin:0!important; min-width:0!important;
+    text-align:center!important; white-space:nowrap!important; font-size:1rem!important;
+  }
+  .transaction-heading > .acts { grid-area:actions!important; display:flex!important; align-items:center!important; justify-content:flex-end!important; gap:.2rem!important; }
+}
