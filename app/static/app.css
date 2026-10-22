@@ -1857,3 +1857,31 @@
     justify-content:center!important;
   }
 }
+
+
+/* Final mobile layout pass: player mobile heading, transaction amount alignment, and centred edit popup. */
+@media (max-width:640px) and (orientation:portrait) {
+  /* Keep the amount in a right-hand column spanning the two left-hand detail rows. */
+  .responsive-cards > table.txns > tbody > tr:not(.dategroup) {
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+  }
+  .responsive-cards > table.txns > tbody > tr:not(.dategroup) > td[data-label="Amount"] {
+    grid-column:2!important;
+    grid-row:4 / span 2!important;
+    align-self:center!important;
+    justify-self:stretch!important;
+    text-align:right!important;
+    white-space:nowrap!important;
+  }
+  .responsive-cards > table.txns > tbody > tr:not(.dategroup) > td[data-label="Paid By"] {
+    grid-column:1!important; grid-row:4!important;
+    white-space:normal!important; overflow-wrap:anywhere!important;
+  }
+  .responsive-cards > table.txns > tbody > tr:not(.dategroup) > td[data-label="Charged To"] {
+    grid-column:1!important; grid-row:5!important;
+    white-space:normal!important; overflow-wrap:anywhere!important;
+  }
+  .responsive-cards > table.txns > tbody > tr:not(.dategroup) > td[data-label="Amount"]::before {
+    text-align:right!important;
+  }
+}
