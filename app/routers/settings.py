@@ -24,7 +24,8 @@ def settings(request: Request, db: Session = Depends(get_db), _=Depends(require_
     for t in teams:
         acct = ledger.get_team_account(db, t.id)
         rows.append({"team": t, "account": acct, "opening": ledger.opening_balance(db, t.id),
-                     "players": db.scalar(select(func.count()).select_from(m.Player).where(m.Player.team_id == t.id))})
+                     "players": db.scalar(select(func.count()).select_from(m.Player).where(m.Player.team_id == t.id)),
+                     "active_players": db.scalar(select(func.count()).select_from(m.Player).where(m.Player.team_id == t.id, m.Player.status == "active"))})
     cats = db.scalars(select(m.Category).order_by(m.Category.kind, m.Category.sort_order)).all()
     return page(request, db, "settings.html", teambar=False, rows=rows,
                 categories=cats, themes=theme_list(), current_theme=ledger.get_setting(db, "theme", DEFAULT_THEME),
