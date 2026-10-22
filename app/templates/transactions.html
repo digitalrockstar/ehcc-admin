@@ -28,7 +28,7 @@
       <tr class="dategroup"><th colspan="{{ 7 if is_admin else 6 }}">{{ r.t.transaction_date|dmy }} <span class="muted">&middot; {{ team.name }} &middot; {{ account.name }}</span></th></tr>
     {% endif %}
     <tr data-href="/transactions/{{ r.t.id }}" tabindex="0" role="link" aria-label="Open transaction {{ r.t.id }}" class="card-row-link {{ 'voided' if r.t.status != 'active' }}">
-      <td class="muted" data-label="#"> {{ r.t.id }}</td>
+      <td class="muted txn-number" data-label="#">#{{ r.t.id }}</td>
       <td data-label="Type"><span class="plain-type">{{ r.t.type|capitalize }}</span> {{ ui.status(r.t) }}</td>
       <td data-label="Item / Category" class="item-name-cell"><strong>{{ r.item }}</strong></td>
       <td class="num" data-label="Amount">{{ r.t.amount|inr }}</td>
