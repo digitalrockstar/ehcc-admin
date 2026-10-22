@@ -52,11 +52,11 @@
 <div class="card"><h2>Recent transactions</h2>
   {% if recent %}
   <p class="hint swipe">Swipe sideways to see all columns.</p>
-  <div class="scroll responsive-cards"><table>
+  <div class="scroll responsive-cards dashboard-recent"><table>
     <thead><tr><th>Date</th><th>Type</th><th>Item / Category</th><th class="num">Amount</th></tr></thead>
     <tbody>{% for r in recent %}
       <tr data-href="/transactions/{{ r.t.id }}" tabindex="0" role="link" aria-label="Open transaction {{ r.t.id }}" class="card-row-link"><td data-label="Date">{{ r.t.transaction_date|dmy }}</td><td data-label="Type"><span class="plain-type">{{ r.t.type|capitalize }}</span></td>
-        <td data-label="Item / Category" class="item-name-cell"><strong>{{ r.item }}</strong></td><td class="num" data-label="Amount">{{ r.t.amount|inr }}</td></tr>
+        <td data-label="Amount" class="num">{{ r.t.amount|inr }}</td><td data-label="Item / Category" class="item-name-cell"><strong>{% if r.link and r.link.kind == "collection" %}Collection from {{ r.link.account.name }} for #{{ r.link.transaction_id }}{% else %}{{ r.item }}{% endif %}</strong></td></tr>
     {% endfor %}</tbody></table></div>
   {% else %}<p class="muted">Nothing recorded yet.</p>{% endif %}
 </div>
