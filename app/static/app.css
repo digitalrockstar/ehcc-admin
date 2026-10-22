@@ -1740,3 +1740,43 @@
   #themes .theme-line .theme-colors { gap:.2rem; }
   #themes .theme-line .theme-colors i { width:1.1rem; height:1.1rem; }
 }
+
+
+/* Final compact mobile transaction card/header alignment */
+@media (max-width:640px) and (orientation:portrait) {
+  .responsive-cards > table.txns > tbody > tr:not(.dategroup) {
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;
+    align-items:start;
+    gap:.35rem .55rem;
+  }
+  .responsive-cards > table.txns > tbody > tr:not(.dategroup) > td.txn-number {
+    grid-column:1; grid-row:1; white-space:nowrap; overflow-wrap:normal;
+  }
+  .responsive-cards > table.txns > tbody > tr:not(.dategroup) > td[data-label="Type"] {
+    grid-column:2; grid-row:1;
+  }
+  .responsive-cards > table.txns > tbody > tr:not(.dategroup) > td.acts {
+    grid-column:3; grid-row:1; justify-content:flex-end; align-self:start;
+    padding:0; border:0; min-width:2rem;
+  }
+  .responsive-cards > table.txns > tbody > tr:not(.dategroup) > td.item-name-cell {
+    grid-column:1/-1; grid-row:2;
+  }
+  .responsive-cards > table.txns > tbody > tr:not(.dategroup) > td[data-label="Amount"] {
+    grid-column:1; grid-row:3;
+  }
+  .responsive-cards > table.txns > tbody > tr:not(.dategroup) > td[data-label="Paid By"] {
+    grid-column:1; grid-row:4;
+  }
+  .responsive-cards > table.txns > tbody > tr:not(.dategroup) > td[data-label="Charged To"] {
+    grid-column:2; grid-row:4;
+  }
+  .responsive-cards > table.txns > tbody > tr:not(.dategroup) > td.acts::before { content:none!important; }
+  .transaction-heading {
+    display:grid!important; grid-template-columns:auto minmax(0,1fr) auto;
+    grid-template-areas:"back title actions"; align-items:center; gap:.45rem;
+  }
+  .transaction-heading .transaction-back { grid-area:back; margin:0; }
+  .transaction-heading h1 { grid-area:title; min-width:0; margin:0; white-space:nowrap; font-size:1.02rem; text-align:center; }
+  .transaction-heading .acts { grid-area:actions; display:flex; justify-content:flex-end; gap:.25rem; }
+}
