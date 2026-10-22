@@ -24,14 +24,14 @@
 </div>{% endif %}
 {% if rows %}
 <p class="hint swipe">Swipe sideways to see all columns.</p>
-<div class="card flush scroll"><table>
+<div class="card flush scroll responsive-cards"><table>
   <thead><tr><th>Player</th><th>Mobile</th><th class="num">Owed</th><th class="num">Paid</th><th class="num">Net outstanding</th>{% if is_admin %}<th></th>{% endif %}</tr></thead>
   <tbody>{% for r in rows %}{% set p = r.player %}
     <tr data-href="/players/{{ p.id }}" class="clickable {{ 'voided' if p.status == 'archived' }}">
-      <td><a href="/players/{{ p.id }}">{{ p.player_name }}</a></td>
+      <td data-label="Player"><a href="/players/{{ p.id }}">{{ p.player_name }}</a></td>
       <td>{% if show_mobile %}{{ p.mob_no or '' }}{% else %}{{ mask_mobile(p.mob_no) }}{% endif %}</td>
-      <td class="num">{{ r.owed|inr }}</td><td class="num">{{ r.paid|inr }}</td><td class="num">{{ ui.net(r.net) }}</td>
-      {% if is_admin %}<td class="acts">
+      <td class="num" data-label="Owed">{{ r.owed|inr }}</td><td class="num" data-label="Paid">{{ r.paid|inr }}</td><td class="num" data-label="Net outstanding">{{ ui.net(r.net) }}</td>
+      {% if is_admin %}<td class="acts" data-label="Actions">
         <details class="icon-menu"><summary class="icon-action" aria-label="Edit player" title="Edit player">{{ ui.icon('edit') }}<span class="sr-only">Edit</span></summary>
           <form method="post" action="/players/{{ p.id }}/edit" class="stack">{{ ui.csrf_input() }}<input type="hidden" name="next" value="/players?team={{ team.id }}">
             <input name="player_name" value="{{ p.player_name }}" maxlength="80" required><input name="mob_no" value="{{ p.mob_no or '' }}" maxlength="20" placeholder="Mobile">
