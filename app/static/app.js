@@ -41,7 +41,7 @@ function initPage() {
         form.style.maxHeight = Math.max(180, window.innerHeight - 100) + 'px';
         form.style.overflowY = 'auto';
         form.style.right = 'auto';
-        const left = Math.max(12, Math.min(rect.left, window.innerWidth - width - 12));
+        const left = Math.max(12, (window.innerWidth - width) / 2);
         form.style.left = left + 'px';
         const height = form.getBoundingClientRect().height;
         let top = rect.bottom + 8;
