@@ -1885,3 +1885,21 @@
     text-align:right!important;
   }
 }
+
+
+/* Player edit popup: left-aligned field labels, compact icon-only save/cancel actions. */
+.edit-player-form label {
+  display:flex!important; flex-direction:column!important; align-items:stretch!important;
+  text-align:left!important; gap:.25rem!important; font-weight:600!important;
+}
+.edit-player-form label input {
+  width:100%!important; text-align:left!important; font-weight:400!important;
+}
+.edit-player-actions {
+  display:flex; justify-content:flex-end; align-items:center; gap:.5rem; margin-top:.25rem;
+}
+.edit-player-actions .icon-action {
+  display:inline-flex; align-items:center; justify-content:center;
+  width:2.5rem; height:2.5rem; padding:.35rem; flex:0 0 auto;
+}
+.edit-player-actions .edit-cancel { color:var(--muted); border-color:var(--border); }
