@@ -2063,3 +2063,53 @@ a.icon-action:hover, button.icon-action:hover, .icon-action.btn:hover {
   box-shadow:none!important; transform:none!important;
 }
 a.icon-action svg, button.icon-action svg, .icon-action.btn svg { display:block; stroke:currentColor; }
+
+
+/* Targeted fixes for dashboard desktop/mobile cards and truly unboxed icons. */
+@media (min-width:641px) and (orientation:landscape) {
+  .dashboard-stats { display:grid!important; grid-template-columns:repeat(6,minmax(0,1fr))!important; gap:.75rem!important; }
+  .dashboard-stats > .card.stat { min-width:0!important; padding:.85rem!important; }
+  .dashboard-stats .lbl { font-size:.78rem!important; }
+  .dashboard-stats .val { font-size:1.2rem!important; overflow-wrap:anywhere!important; }
+}
+@media (max-width:640px) and (orientation:portrait) {
+  /* Recent transactions: category/title first, date/type next, amount on the right. */
+  .dashboard-recent > table > tbody > tr:not(.dategroup) {
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;
+    align-items:start!important;
+  }
+  .dashboard-recent > table > tbody > tr:not(.dategroup) > td.item-name-cell {
+    grid-column:1/-1!important; grid-row:1!important;
+  }
+  .dashboard-recent > table > tbody > tr:not(.dategroup) > td[data-label="Date"] {
+    grid-column:1!important; grid-row:2!important;
+  }
+  .dashboard-recent > table > tbody > tr:not(.dategroup) > td[data-label="Type"] {
+    grid-column:2!important; grid-row:2!important;
+  }
+  .dashboard-recent > table > tbody > tr:not(.dategroup) > td[data-label="Amount"] {
+    grid-column:2!important; grid-row:3!important;
+    justify-self:end!important; text-align:right!important; white-space:nowrap!important;
+  }
+  .dashboard-recent > table > tbody > tr:not(.dategroup) > td[data-label="Amount"]::before {
+    text-align:right!important;
+  }
+  /* Outstanding balance: player, net, and settle action remain in one row. */
+  .dashboard-balance-cards > table > tbody > tr {
+    grid-template-columns:minmax(0,1fr) auto 2rem!important;
+    grid-template-rows:auto!important; align-items:center!important;
+  }
+  .dashboard-balance-cards > table > tbody > tr > td:first-child { grid-column:1!important; grid-row:1!important; }
+  .dashboard-balance-cards > table > tbody > tr > td:nth-child(2) { grid-column:2!important; grid-row:1!important; white-space:nowrap!important; }
+  .dashboard-balance-cards > table > tbody > tr > td:last-child { grid-column:3!important; grid-row:1!important; }
+  .dashboard-balance-cards .settle-icon { width:1.8rem!important; height:1.8rem!important; }
+}
+/* Icon controls: no border, outline, background, or shadow in any state. */
+.icon-action, .icon-action.btn, a.icon-action, button.icon-action,
+.icon-action:hover, .icon-action.btn:hover, a.icon-action:hover, button.icon-action:hover,
+.icon-action:focus, .icon-action.btn:focus, a.icon-action:focus, button.icon-action:focus,
+.icon-action:focus-visible, .icon-action.btn:focus-visible, a.icon-action:focus-visible, button.icon-action:focus-visible {
+  border:0!important; outline:0!important; background:transparent!important;
+  box-shadow:none!important;
+}
+.icon-action { padding:.2rem!important; }
