@@ -1969,3 +1969,50 @@
   .responsive-cards > table.txns > tbody > tr:not(.dategroup) > td[data-label="Paid By"] { grid-row:4!important; }
   .responsive-cards > table.txns > tbody > tr:not(.dategroup) > td[data-label="Charged To"] { grid-row:5!important; }
 }
+
+
+/* Final mobile polish: consistent player metric headings, visible editor icons,
+   and a stronger right-aligned transaction amount. */
+@media (max-width:640px) and (orientation:portrait) {
+  .responsive-cards > table:not(.txns) > tbody > tr:not(.dategroup) > td.player-metric-cell .metric-label,
+  .responsive-cards > table:not(.txns) > tbody > tr:not(.dategroup) > td[data-label="Mobile"]::before {
+    display:block!important; color:var(--muted)!important;
+    font-size:.68rem!important; line-height:1.25!important;
+    font-weight:700!important; letter-spacing:.035em!important;
+    text-transform:uppercase!important; margin:0 0 .2rem!important;
+  }
+  .responsive-cards > table:not(.txns) > tbody > tr:not(.dategroup) > td.player-metric-cell .metric-value {
+    display:block!important; font-size:1rem!important; line-height:1.35!important;
+    font-weight:400!important; overflow-wrap:anywhere!important;
+  }
+  .edit-player-actions .icon-action {
+    color:var(--text)!important; background:var(--primary)!important;
+    border:1px solid var(--primary)!important;
+  }
+  .edit-player-actions .edit-cancel {
+    background:var(--surface)!important; color:var(--muted)!important;
+    border-color:var(--border)!important;
+  }
+  .edit-player-actions .icon-action svg {
+    display:block!important; width:1.2rem!important; height:1.2rem!important;
+    min-width:1.2rem!important; min-height:1.2rem!important;
+    stroke:currentColor!important; fill:none!important;
+  }
+  .responsive-cards > table.txns > tbody > tr:not(.dategroup) > td[data-label="Amount"] {
+    font-size:1.15rem!important; font-weight:700!important;
+    text-align:right!important; align-self:center!important;
+  }
+  .responsive-cards > table.txns > tbody > tr:not(.dategroup) > td[data-label="Amount"]::before {
+    font-size:.68rem!important; line-height:1.25!important;
+    font-weight:700!important; letter-spacing:.035em!important;
+    color:var(--muted)!important; text-transform:uppercase!important;
+    margin-bottom:.3rem!important;
+  }
+  .responsive-cards > table.txns > tbody > tr:not(.dategroup) > td[data-label="Paid By"]::before,
+  .responsive-cards > table.txns > tbody > tr:not(.dategroup) > td[data-label="Charged To"]::before {
+    display:block!important; font-size:.68rem!important; line-height:1.25!important;
+    font-weight:700!important; letter-spacing:.035em!important;
+    color:var(--muted)!important; text-transform:uppercase!important;
+    margin-bottom:.2rem!important;
+  }
+}
