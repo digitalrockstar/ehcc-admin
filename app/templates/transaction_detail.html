@@ -55,18 +55,6 @@
     <p>{{ ui.action('/transactions/%d/collect-all' % t.id, 'Collect from everyone left', request.url.path, 'btn', 'Collect in full from every player who has not paid?') }}</p>{% endif %}
   {% if row.reimb %}<h3>Reimbursement to payer</h3><p>{{ ui.settle({'t': t, 'reimb': row.reimb, 'reimb_s': row.reimb_s, 'coll': None, 'link': None}, request.url.path) }}</p>{% endif %}
 </div>
-{% endif %}</td>
-      <td class="num">{{ a.allocated_amount|inr }}</td>
-      <td>{% if a.account.kind == 'team' %}<span class="muted">Team pays directly</span>
-        {% elif a.settlement_status == 1 %}{% if credit_applied.get(a.id, 0) > 0 %}<span class="chipstate on">CREDIT APPLIED</span>{% else %}<span class="chipstate on">PAID</span>{% endif %}
-        {% elif t.status != 'active' %}<span class="muted">Void</span>
-        {% elif is_admin %}{% set pw = (pend.get(a.account_id) or {}).get('reimb', 0) %}{{ ui.action('/allocations/%d/collect' % a.id, 'Collect', request.url.path, 'chipbtn', 'Collect %s in full?' % ((allocation_due.get(a.id, a.allocated_amount))|inr) ~ ((' The team owes this player %s for expenses they paid. To settle only the difference, use Settle net on their player page.' % (pw|inr)) if pw else '')) }}
-        {% else %}<span class="chipstate">Pending</span>{% endif %}</td></tr>
-  {% endfor %}</tbody></table></div>
-  {% if is_admin and t.status == 'active' and row.coll and row.coll.done < row.coll.total %}
-    <p>{{ ui.action('/transactions/%d/collect-all' % t.id, 'Collect from everyone left', request.url.path, 'btn', 'Collect in full from every player who has not paid?') }}</p>{% endif %}
-  {% if row.reimb %}<h3>Reimbursement to payer</h3><p>{{ ui.settle({'t': t, 'reimb': row.reimb, 'reimb_s': row.reimb_s, 'coll': None, 'link': None}, request.url.path) }}</p>{% endif %}
-</div>
 {% endif %}
 
 {% if is_admin and t.status == 'active' %}
