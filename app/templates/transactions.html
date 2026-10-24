@@ -18,36 +18,27 @@
   <noscript><button class="btn small">Filter</button></noscript>
 </form>
 {% if rows %}
-<div class="transaction-grid">
+<p class="hint swipe">Swipe sideways to see all columns.</p>
+<div class="card flush scroll responsive-cards"><table class="txns">
+  <thead><tr><th>#</th><th>Type</th><th>Item / Category</th><th class="num">Amount</th><th>Paid By</th><th>Charged To</th>{% if is_admin %}<th></th>{% endif %}</tr></thead>
+  <tbody>
   {% set ns = namespace(d=None) %}
   {% for r in rows %}
-    {% if ns.d != r.t.transaction_date %}
-      {% set ns.d = r.t.transaction_date %}
-      <div class="transaction-date">{{ r.t.transaction_date|dmy }} <span class="muted">&middot; {{ team.name }} &middot; {{ account.name }}</span></div>
+    {% if ns.d != r.t.transaction_date %}{% set ns.d = r.t.transaction_date %}
+      <tr class="dategroup"><th colspan="{{ 7 if is_admin else 6 }}">{{ r.t.transaction_date|dmy }} <span class="muted">&middot; {{ team.name }} &middot; {{ account.name }}</span></th></tr>
     {% endif %}
-    <article class="transaction-card {{ 'txn-income' if r.t.type == 'income' else ('txn-expense' if r.t.type == 'expense' else 'txn-transfer') }} {{ 'voided' if r.t.status != 'active' }}">
-      <a class="transaction-card-main" href="/transactions/{{ r.t.id }}" aria-label="Open transaction {{ r.t.id }}">
-        <div class="transaction-card-top">
-          <span class="transaction-type">{{ r.t.type|capitalize }}</span>
-          <span class="muted txn-number">#{{ r.t.id }}</span>
-          {{ ui.status(r.t) }}
-        </div>
-        <div class="transaction-card-title">{{ r.item }}</div>
-        <div class="transaction-amount">{{ r.t.amount|inr }}</div>
-        <div class="transaction-parties">
-          <div><span class="transaction-label">{{ 'Paid by / Account in' if r.t.type != 'transfer' else 'From' }}</span><span class="transaction-party">{{ r.col1 }}</span></div>
-          <div><span class="transaction-label">{{ 'Charged to / Account out' if r.t.type != 'transfer' else 'To' }}</span><span class="transaction-party">{{ r.col2 }}</span></div>
-        </div>
-      </a>
-      {% if is_admin %}
-      <div class="transaction-card-actions">
+    <tr data-href="/transactions/{{ r.t.id }}" tabindex="0" role="link" aria-label="Open transaction {{ r.t.id }}" class="card-row-link {{ 'voided' if r.t.status != 'active' }}">
+      <td class="muted txn-number" data-label="#">#{{ r.t.id }}</td>
+      <td data-label="Type"><span class="plain-type">{{ r.t.type|capitalize }}</span> {{ ui.status(r.t) }}</td>
+      <td data-label="Item / Category" class="item-name-cell"><strong>{{ r.item }}</strong></td>
+      <td class="num" data-label="Amount">{{ r.t.amount|inr }}</td>
+      <td data-label="Paid By">{{ r.col1 }}</td><td data-label="Charged To">{{ r.col2 }}</td>
+      {% if is_admin %}<td class="acts" data-label="Actions">
         {% if r.t.status == 'active' and not r.link %}<a class="btn small ghost icon-action" href="/transactions/{{ r.t.id }}/edit" aria-label="Edit transaction {{ r.t.id }}" title="Edit transaction">{{ ui.icon('edit') }}</a>{% endif %}
-        <a class="btn small ghost icon-action" href="/transactions/new?copy_from={{ r.t.id }}" aria-label="Copy transaction {{ r.t.id }}" title="Copy transaction">{{ ui.icon('copy') }}</a>
-      </div>
-      {% endif %}
-    </article>
+        <a class="btn small ghost icon-action" href="/transactions/new?copy_from={{ r.t.id }}" aria-label="Copy transaction {{ r.t.id }}" title="Copy transaction">{{ ui.icon('copy') }}</a></td>{% endif %}
+    </tr>
   {% endfor %}
-</div>
+  </tbody></table></div>
 {% if pages > 1 %}<p class="pager">Page {{ p }} of {{ pages }}
   {% if p > 1 %}<a href="?team={{ team.id }}&type={{ type }}&show={{ show }}&p={{ p - 1 }}">Previous</a>{% endif %}
   {% if p < pages %}<a href="?team={{ team.id }}&type={{ type }}&show={{ show }}&p={{ p + 1 }}">Next</a>{% endif %}</p>{% endif %}
