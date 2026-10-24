@@ -27,10 +27,35 @@
 </div>
 
 {% if t.type == 'expense' %}
-<div class="card"><h2>Who owes what</h2>
-  <div class="scroll"><table><thead><tr><th>Party</th><th class="num">Owes</th><th>Collection</th></tr></thead><tbody>
+<div class="card allocation-section"><h2>Who owes what</h2>
+  <div class="allocation-card-grid">
   {% for a in t.allocations|sort(attribute='id') %}
-    <tr><td>{% if a.account.player %}<a class="goto" href="/players/{{ a.account.player.id }}" aria-label="Open {{ a.account.name }}" title="Open player">{{ ui.icon('arrow-up-right') }}</a>{{ a.account.name }}{% else %}{{ a.account.name }}{% endif %}</td>
+    <article class="allocation-card">
+      <div class="allocation-card-person">
+        {% if a.account.player %}<a class="allocation-person-link" href="/players/{{ a.account.player.id }}" aria-label="Open {{ a.account.name }}" title="Open player">{{ ui.icon('arrow-up-right') }}</a>{% endif %}
+        <div class="allocation-person-name">{{ a.account.name }}</div>
+      </div>
+      <div class="allocation-card-bottom">
+        <div class="allocation-amount-block">
+          <span class="allocation-label">Owes</span>
+          <strong class="allocation-amount">{{ a.allocated_amount|inr }}</strong>
+        </div>
+        <div class="allocation-status">
+          {% if a.account.kind == 'team' %}<span class="allocation-paid team-direct">Team pays directly</span>
+          {% elif a.settlement_status == 1 %}{% if credit_applied.get(a.id, 0) > 0 %}<span class="allocation-paid">CREDIT APPLIED</span>{% else %}<span class="allocation-paid">PAID</span>{% endif %}
+          {% elif t.status != 'active' %}<span class="allocation-void">Void</span>
+          {% elif is_admin %}{% set pw = (pend.get(a.account_id) or {}).get('reimb', 0) %}{{ ui.action('/allocations/%d/collect' % a.id, 'Collect', request.url.path, 'chipbtn allocation-collect', 'Collect %s in full?' % ((allocation_due.get(a.id, a.allocated_amount))|inr) ~ ((' The team owes this player %s for expenses they paid. To settle only the difference, use Settle net on their player page.' % (pw|inr)) if pw else '')) }}
+          {% else %}<span class="allocation-pending">Pending</span>{% endif %}
+        </div>
+      </div>
+    </article>
+  {% endfor %}
+  </div>
+  {% if is_admin and t.status == 'active' and row.coll and row.coll.done < row.coll.total %}
+    <p>{{ ui.action('/transactions/%d/collect-all' % t.id, 'Collect from everyone left', request.url.path, 'btn', 'Collect in full from every player who has not paid?') }}</p>{% endif %}
+  {% if row.reimb %}<h3>Reimbursement to payer</h3><p>{{ ui.settle({'t': t, 'reimb': row.reimb, 'reimb_s': row.reimb_s, 'coll': None, 'link': None}, request.url.path) }}</p>{% endif %}
+</div>
+{% endif %}</td>
       <td class="num">{{ a.allocated_amount|inr }}</td>
       <td>{% if a.account.kind == 'team' %}<span class="muted">Team pays directly</span>
         {% elif a.settlement_status == 1 %}{% if credit_applied.get(a.id, 0) > 0 %}<span class="chipstate on">CREDIT APPLIED</span>{% else %}<span class="chipstate on">PAID</span>{% endif %}
