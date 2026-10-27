@@ -1,6 +1,9 @@
 package com.ehcc.admin;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.webkit.JsResult;
+import android.webkit.WebChromeClient;
 import android.app.DownloadManager;
 import android.content.Intent;
 import android.net.Uri;
@@ -33,6 +36,23 @@ public class MainActivity extends Activity {
                 Uri u = r.getUrl();
                 if (host != null && host.equals(u.getHost())) return false;
                 startActivity(new Intent(Intent.ACTION_VIEW, u));
+                return true;
+            }
+        });
+        web.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public boolean onJsConfirm(WebView v, String url, String msg, JsResult r) {
+                new AlertDialog.Builder(MainActivity.this).setMessage(msg)
+                    .setPositiveButton(android.R.string.ok, (d, w) -> r.confirm())
+                    .setNegativeButton(android.R.string.cancel, (d, w) -> r.cancel())
+                    .setOnCancelListener(d -> r.cancel()).show();
+                return true;
+            }
+            @Override
+            public boolean onJsAlert(WebView v, String url, String msg, JsResult r) {
+                new AlertDialog.Builder(MainActivity.this).setMessage(msg)
+                    .setPositiveButton(android.R.string.ok, (d, w) -> r.confirm())
+                    .setOnCancelListener(d -> r.cancel()).show();
                 return true;
             }
         });
