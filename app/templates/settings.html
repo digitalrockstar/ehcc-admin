@@ -48,6 +48,7 @@
 
 <section class="card" id="themes"><h2>Themes</h2>
   <p class="hint">{{ themes|length }} themes. Every text colour is checked against its background for readability.</p>
+  <div class="glass-note"><p class="hint">Glass adds a frosted, translucent look to any theme. It is saved on this device.</p>{{ ui.glass_switch() }}</div>
   <div class="themes">
     {% for th in themes %}
     <form method="post" action="/settings/theme">{{ ui.csrf_input() }}<input type="hidden" name="theme" value="{{ th.slug }}">

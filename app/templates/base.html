@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-glass="{{ 'on' if glass else 'off' }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -10,8 +10,9 @@
   <link rel="preload" href="/static/fonts/carlito-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/static/fonts/google-sans-code-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/static/app.css?v=20261025-logout">
+  <link rel="stylesheet" href="/static/apple.css?v=20261031-glass">
   <style>{{ theme_css|safe }}</style>
-  <script src="/static/app.js" defer></script>
+  <script src="/static/app.js?v=20261031-glass" defer></script>
 </head>
 <body>
 {% import "_macros.html" as ui with context %}
@@ -33,6 +34,7 @@
     {% endif %}
   </nav>
   <div class="who">
+    {{ ui.glass_switch() }}
     {% if is_admin %}<span class="muted">Signed in as {{ admin_name }}</span>
       <form method="post" action="/logout" class="inline"><input type="hidden" name="csrf_token" value="{{ csrf }}"><button class="linkbtn">{{ ui.icon('logout') }}<span>Log out</span></button></form>
     {% else %}<span class="muted">View only</span>{% endif %}
@@ -51,6 +53,7 @@
   {% endif %}
 </nav>
 <main class="container">
+  <div class="glass-row-mobile">{{ ui.glass_switch() }}</div>
   {% if show_teambar and teams %}
   <div class="teambar"><span class="cap">Team</span>
     {% if teams|length < 4 %}

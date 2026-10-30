@@ -204,3 +204,79 @@ document.addEventListener('keydown', function(e) {
     e.preventDefault(); window.location.href = e.target.dataset.href;
   }
 });
+
+// ---- Glass switch: tap or drag, spring driven, interruptible (Apple fluid-interface rules) ----
+(function () {
+  const root = document.documentElement;
+  const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const project = (v, d = 0.998) => (v / 1000) * d / (1 - d);              // px/s -> resting offset in px
+  const rubber = (o, c = 0.55) => (o * c) / (1 + c * Math.abs(o));          // soft edge past 0..1
+  const isOn = () => root.dataset.glass === 'on';
+  const save = on => { document.cookie = 'ehcc_glass=' + (on ? 'on' : 'off') + ';path=/;max-age=31536000;samesite=lax'; };
+
+  const sw = [...document.querySelectorAll('[data-glass-switch]')].map(el => ({ el, p: isOn() ? 1 : 0, v: 0, raf: 0 }));
+  if (!sw.length) return;
+
+  const paint = s => s.el.style.setProperty('--p', s.p.toFixed(4));
+
+  // Critically damped spring (response 0.3s). Starts from the live value and live velocity.
+  function spring(s, target, zeta = 1) {
+    cancelAnimationFrame(s.raf);
+    if (reduced()) { s.p = target; s.v = 0; paint(s); return; }
+    const k = Math.pow((2 * Math.PI) / 0.3, 2), c = 2 * zeta * Math.sqrt(k);
+    let last = performance.now();
+    const step = now => {
+      const dt = Math.min((now - last) / 1000, 1 / 30); last = now;
+      s.v += (-k * (s.p - target) - c * s.v) * dt;
+      s.p += s.v * dt; paint(s);
+      if (Math.abs(s.p - target) < 0.0005 && Math.abs(s.v) < 0.005) { s.p = target; s.v = 0; paint(s); return; }
+      s.raf = requestAnimationFrame(step);
+    };
+    s.raf = requestAnimationFrame(step);
+  }
+
+  function commit(on, from, v = 0) {
+    const changed = on !== isOn();
+    root.dataset.glass = on ? 'on' : 'off';
+    save(on);
+    sw.forEach(s => {
+      s.el.setAttribute('aria-checked', String(on));
+      if (s === from) s.v = v / (s.el.clientWidth - 32 || 20); // keep the finger's velocity
+      spring(s, on ? 1 : 0, s === from && Math.abs(v) > 200 ? 0.8 : 1);
+    });
+    if (changed && navigator.vibrate) navigator.vibrate(8);
+  }
+
+  sw.forEach(s => {
+    const el = s.el, travel = () => el.clientWidth - 32;
+    el.setAttribute('aria-checked', String(isOn())); paint(s);
+    let drag = null;
+    el.addEventListener('pointerdown', e => {
+      if (e.button) return;
+      cancelAnimationFrame(s.raf);                                          // grab it mid-flight
+      el.setPointerCapture(e.pointerId); el.classList.add('dragging');
+      drag = { x: e.clientX, p: s.p, moved: false, hist: [{ x: e.clientX, t: e.timeStamp }] };
+    });
+    el.addEventListener('pointermove', e => {
+      if (!drag) return;
+      const dx = e.clientX - drag.x;
+      if (!drag.moved && Math.abs(dx) < 4) return;                          // hysteresis
+      drag.moved = true;
+      drag.hist.push({ x: e.clientX, t: e.timeStamp }); if (drag.hist.length > 6) drag.hist.shift();
+      const raw = drag.p + dx / travel();
+      s.p = raw < 0 ? -rubber(-raw) : raw > 1 ? 1 + rubber(raw - 1) : raw; s.v = 0; paint(s);
+    });
+    const end = e => {
+      if (!drag) return;
+      const d = drag; drag = null; el.classList.remove('dragging');
+      if (!d.moved) { commit(!isOn(), s); return; }                         // tap
+      const a = d.hist[0], b = d.hist[d.hist.length - 1];
+      const v = b.t > a.t ? ((b.x - a.x) / (b.t - a.t)) * 1000 : 0;         // px/s
+      const landing = s.p * travel() + project(v);                          // where the flick is heading
+      commit(landing > travel() / 2, s, v);
+    };
+    el.addEventListener('pointerup', end);
+    el.addEventListener('pointercancel', () => { if (drag) { drag = null; el.classList.remove('dragging'); spring(s, isOn() ? 1 : 0); } });
+    el.addEventListener('click', e => { if (e.detail === 0) commit(!isOn(), s); }); // keyboard only
+  });
+})();
