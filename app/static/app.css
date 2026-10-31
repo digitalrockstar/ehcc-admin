@@ -150,7 +150,7 @@ html[data-glass="on"] body::before { opacity: 1; }
 .card.narrow { max-width: 26rem; margin: 3rem auto; }
 .card > h2:first-child { margin-top: 0; }
 .danger-zone { border-color: var(--neg); }
-.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); gap: 1rem; }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); gap: 1rem; margin-bottom: 1rem; }
 .two > .card { margin-bottom: 0; }
 
 .btn {
