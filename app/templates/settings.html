@@ -46,17 +46,20 @@
   <p class="hint">A category named Other always asks for a free-text description on the transaction.</p>
 </section>
 
-<section class="card" id="themes"><h2>Themes</h2>
-  <p class="hint">{{ themes|length }} themes. Every text colour is checked against its background for readability.</p>
-  <div class="glass-note"><p class="hint">Glass adds a frosted, translucent look to any theme. It is saved on this device.</p>{{ ui.glass_switch() }}</div>
-  <div class="themes">
-    {% for th in themes %}
-    <form method="post" action="/settings/theme">{{ ui.csrf_input() }}<input type="hidden" name="theme" value="{{ th.slug }}">
-      <button class="swatch theme-line {{ 'on' if th.slug == current_theme }}" style="{% for k, v in th.vars.items() %}{{ k }}:{{ v }};{% endfor %}" aria-label="Apply theme {{ th.label }}">
-        <span class="theme-name">{{ th.label }}</span>
-        <span class="theme-colors" aria-hidden="true"><i class="theme-bg"></i><i class="theme-primary"></i></span>
-      </button></form>
-    {% endfor %}
+<section id="themes"><h2 class="section-title">Appearance</h2>
+  <div class="card">{{ ui.glass_toggle() }}</div>
+  <div class="card">
+    <div class="seg-filter" role="group" aria-label="Theme tone"><button type="button" data-theme-filter="all" aria-pressed="true">All {{ themes|length }}</button><button type="button" data-theme-filter="light" aria-pressed="false">Light</button><button type="button" data-theme-filter="dark" aria-pressed="false">Dark</button></div>
+    <p class="hint">Every text colour is checked against its background for readability.</p>
+    <div class="themes">
+      {% for th in themes %}
+      <form method="post" action="/settings/theme" data-tone="{{ 'dark' if th.dark else 'light' }}">{{ ui.csrf_input() }}<input type="hidden" name="theme" value="{{ th.slug }}">
+        <button class="tile {{ 'on' if th.slug == current_theme }}" aria-label="Apply theme {{ th.label }}" aria-pressed="{{ 'true' if th.slug == current_theme else 'false' }}">
+          <span class="tile-prev" style="{% for k, v in th.vars.items() %}{{ k }}:{{ v }};{% endfor %}" aria-hidden="true"><i class="t-surface"></i><i class="t-primary"></i><i class="t-accent"></i></span>
+          <span class="tile-info"><span class="tile-name">{{ th.label }}</span><span class="tile-tone">{{ 'DARK' if th.dark else 'LIGHT' }}</span></span>
+        </button></form>
+      {% endfor %}
+    </div>
   </div>
 </section>
 

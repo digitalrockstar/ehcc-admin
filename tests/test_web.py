@@ -185,7 +185,7 @@ def test_favicon_served(client):
 
 def test_sidebar_navigation_markup(client, admin):
     html = admin.get("/").text
-    assert 'id="sidebar"' in html and 'id="menu-btn"' in html and "topbar" not in html
+    assert 'id="sidebar"' in html and 'data-sheet-open="more-sheet"' in html and "topbar" not in html
     assert 'href="/settings"' in html and "Signed in as Tester" in html
     client.cookies.clear()
     assert 'href="/settings"' not in client.get("/").text
@@ -264,8 +264,8 @@ def test_viewer_sees_pending_summary_but_no_button(client, db, team):
 
 def test_sidebar_items_have_icons(client, admin):
     html = admin.get("/").text
-    # 5 sidebar nav + 6 bottom nav + 1 sidebar logout = 13 total
-    assert html.count('class="ico"') == 13
+    # 5 sidebar nav + 1 sidebar logout + 5 bottom nav + 3 More sheet rows = 14 total
+    assert html.count('class="ico"') == 14
     client.cookies.clear()
     v = client.get("/").text
     # 3 sidebar nav + 4 bottom nav (Home, Txns, Players, Login) = 8

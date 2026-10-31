@@ -32,10 +32,12 @@
       <td data-label="Mobile">{% if show_mobile %}{{ p.mob_no or '' }}{% else %}{{ mask_mobile(p.mob_no) }}{% endif %}</td>
       <td class="player-metric-cell" data-label="OWED"><span class="metric-label">OWED</span><span class="metric-value">{{ r.owed|inr }}</span></td><td class="player-metric-cell" data-label="PAID"><span class="metric-label">PAID</span><span class="metric-value">{{ r.paid|inr }}</span></td><td class="player-metric-cell" data-label="NET"><span class="metric-label">NET</span><span class="metric-value">{{ ui.net(r.net) }}</span></td>
       {% if is_admin %}<td class="acts player-actions" data-label="Actions">
-        <details class="icon-menu edit-popover"><summary class="icon-action" aria-label="Edit player" title="Edit player">{{ ui.icon('edit') }}<span class="sr-only">Edit</span></summary>
+        <button type="button" class="icon-action" aria-label="Edit player" title="Edit player" data-sheet-open="edit-{{ p.id }}">{{ ui.icon('edit') }}</button>
+        <dialog class="sheet" id="edit-{{ p.id }}" aria-labelledby="edit-t-{{ p.id }}"><div class="sheet-grip"></div>
           <form method="post" action="/players/{{ p.id }}/edit" class="stack edit-player-form">{{ ui.csrf_input() }}<input type="hidden" name="next" value="/players?team={{ team.id }}">
+            <h2 id="edit-t-{{ p.id }}">Edit player</h2>
             <label>Name<input name="player_name" value="{{ p.player_name }}" maxlength="80" required></label><label>Mobile<input name="mob_no" value="{{ p.mob_no or '' }}" maxlength="20" placeholder="Mobile"></label>
-            <div class="edit-player-actions"><button type="submit" class="btn small icon-action" aria-label="Save player" title="Save">{{ ui.icon('save') }}</button><button type="button" class="btn small ghost icon-action edit-cancel" aria-label="Cancel editing" title="Cancel">{{ ui.icon('close') }}</button></div></form></details>
+            <div class="sheet-actions"><button type="button" class="btn ghost" data-sheet-close>Cancel</button><button type="submit" class="btn" aria-label="Save player">{{ ui.icon('save') }}<span>Save</span></button></div></form></dialog>
         {{ ui.action('/players/%d/archive' % p.id, ui.icon('restore' if p.status == 'archived' else 'archive'), '/players?team=%d' % team.id, 'btn small ghost icon-action', None, {'archive': '0' if p.status == 'archived' else '1'}, {'aria-label': 'Restore player' if p.status == 'archived' else 'Archive player', 'title': 'Restore player' if p.status == 'archived' else 'Archive player'}) }}
         {{ ui.action('/players/%d/delete' % p.id, ui.icon('delete'), '/players?team=%d' % team.id, 'btn small danger icon-action', 'Delete %s? This only works for players with no transactions.' % p.player_name, None, {'aria-label': 'Delete player', 'title': 'Delete player'}) }}
       </td>{% endif %}

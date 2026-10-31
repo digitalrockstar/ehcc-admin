@@ -9,17 +9,12 @@
   <title>{% block title %}EHCC Expense Tracker{% endblock %}</title>
   <link rel="preload" href="/static/fonts/carlito-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/static/fonts/google-sans-code-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/static/app.css?v=20261025-logout">
-  <link rel="stylesheet" href="/static/apple.css?v=20261031-glass">
+  <link rel="stylesheet" href="/static/app.css?v=20261031-ehcc2">
   <style>{{ theme_css|safe }}</style>
-  <script src="/static/app.js?v=20261031-glass" defer></script>
+  <script src="/static/app.js?v=20261031-ehcc2" defer></script>
 </head>
 <body>
 {% import "_macros.html" as ui with context %}
-<header class="mobilebar">
-  <button class="menubtn" id="menu-btn" type="button" aria-controls="sidebar" aria-expanded="false" aria-label="Toggle menu"><span></span><span></span><span></span></button>
-  <a class="brand" href="/">EHCC Expenses</a>
-</header>
 <aside class="sidebar" id="sidebar" aria-label="Main navigation">
   <a class="brand" href="/">EHCC Expenses</a>
   <nav>
@@ -28,32 +23,37 @@
     <a href="/players" {% if path.startswith('/players') %}class="on"{% endif %}>{{ ui.icon('players') }}<span>Players</span></a>
     {% if is_admin %}<a href="/transactions/new" {% if path == '/transactions/new' %}class="on"{% endif %}>{{ ui.icon('add') }}<span>Add transaction</span></a>
     <a href="/settings" {% if path.startswith('/settings') or path == '/audit' %}class="on"{% endif %}>{{ ui.icon('settings') }}<span>Settings</span></a>
-    <form method="post" action="/logout" class="nav-logout-form"><input type="hidden" name="csrf_token" value="{{ csrf }}"><button type="submit" class="nav-logout-button">{{ ui.icon('logout') }}<span>Logout</span></button></form>
     {% else %}
     <a href="/login" {% if path == '/login' %}class="on"{% endif %}>{{ ui.icon('login') }}<span>Login</span></a>
     {% endif %}
   </nav>
   <div class="who">
-    {{ ui.glass_switch() }}
     {% if is_admin %}<span class="muted">Signed in as {{ admin_name }}</span>
       <form method="post" action="/logout" class="inline"><input type="hidden" name="csrf_token" value="{{ csrf }}"><button class="linkbtn">{{ ui.icon('logout') }}<span>Log out</span></button></form>
     {% else %}<span class="muted">View only</span>{% endif %}
   </div>
 </aside>
-<div class="backdrop" id="backdrop"></div>
 <nav class="bottomnav" aria-label="Mobile navigation">
   <a href="/" {% if path == '/' %}class="on" aria-current="page"{% endif %}>{{ ui.icon('dashboard') }}<span>Home</span></a>
   <a href="/transactions" {% if path.startswith('/transactions') and path != '/transactions/new' %}class="on"{% endif %}>{{ ui.icon('transactions') }}<span>Txns</span></a>
+  {% if is_admin %}<a href="/transactions/new" class="nav-add" aria-label="Add transaction"><span class="plus">{{ ui.icon('plus') }}</span><span>Add</span></a>{% endif %}
   <a href="/players" {% if path.startswith('/players') %}class="on"{% endif %}>{{ ui.icon('players') }}<span>Players</span></a>
-  {% if is_admin %}<a href="/transactions/new" {% if path == '/transactions/new' %}class="on"{% endif %}>{{ ui.icon('add') }}<span>Add</span></a>
-  <a href="/settings" {% if path.startswith('/settings') or path == '/audit' %}class="on"{% endif %}>{{ ui.icon('settings') }}<span>Settings</span></a>
-  <form method="post" action="/logout" class="nav-logout-form"><input type="hidden" name="csrf_token" value="{{ csrf }}"><button type="submit" class="nav-logout-button">{{ ui.icon('logout') }}<span>Logout</span></button></form>
-  {% else %}
-  <a href="/login" {% if path == '/login' %}class="on"{% endif %}>{{ ui.icon('login') }}<span>Login</span></a>
-  {% endif %}
+  {% if is_admin %}<button type="button" data-sheet-open="more-sheet" aria-haspopup="dialog">{{ ui.icon('more') }}<span>More</span></button>
+  {% else %}<a href="/login" {% if path == '/login' %}class="on"{% endif %}>{{ ui.icon('login') }}<span>Login</span></a>{% endif %}
 </nav>
+{% if is_admin %}
+<dialog class="sheet" id="more-sheet" aria-labelledby="more-title">
+  <div class="sheet-grip"></div>
+  <h2 id="more-title">More</h2>
+  <div class="sheet-list">
+    <a href="/settings">{{ ui.icon('settings') }}<span>Settings &amp; themes</span></a>
+    <a href="/audit">{{ ui.icon('transactions') }}<span>Audit log</span></a>
+    <form method="post" action="/logout"><input type="hidden" name="csrf_token" value="{{ csrf }}"><button type="submit">{{ ui.icon('logout') }}<span>Log out</span></button></form>
+  </div>
+  <p class="sheet-meta">Signed in as {{ admin_name }}</p>
+</dialog>
+{% endif %}
 <main class="container">
-  <div class="glass-row-mobile">{{ ui.glass_switch() }}</div>
   {% if show_teambar and teams %}
   <div class="teambar"><span class="cap">Team</span>
     {% if teams|length < 4 %}

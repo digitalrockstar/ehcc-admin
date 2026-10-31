@@ -10,13 +10,15 @@
 <div class="head">
   <h1>{{ team.name }} <span class="muted small">{{ account.name }}</span></h1>
 </div>
+<section class="hero-cards">
+  <div class="card stat hero team-balance"><div class="lbl">Current Team Balance</div><div class="val {{ 'neg' if summary.balance < 0 else ('zero-amount' if summary.balance == 0) }}">{{ summary.balance|inr }}</div></div>
+  <div class="card stat hero future-balance"><div class="lbl">Net Future Balance</div><div class="val {{ 'zero-amount' if summary.balance - pending.net == 0 else ('pos' if summary.balance - pending.net > 0 else 'neg') }}">{{ (summary.balance - pending.net)|inr(true) }}</div></div>
+</section>
 <section class="cards dashboard-stats">
   <div class="card stat"><div class="lbl">Income</div><div class="val {{ 'pos' if summary.total_in else 'zero-amount' }}">{{ summary.total_in|inr }}</div></div>
   <div class="card stat"><div class="lbl">Expenses</div><div class="val {{ 'neg' if summary.total_out else 'zero-amount' }}">{{ summary.total_out|inr }}</div></div>
   <div class="card stat"><div class="lbl">To Collect</div><div class="val {{ 'pos' if pending.owed > 0 else 'zero-amount' }}">{% if pending.owed > 0 %}+{{ pending.owed|inr }}{% else %}₹0{% endif %}</div></div>
   <div class="card stat"><div class="lbl">To Pay</div><div class="val {{ 'neg' if pending.reimb > 0 else 'zero-amount' }}">{% if pending.reimb > 0 %}-{{ pending.reimb|inr }}{% else %}₹0{% endif %}</div></div>
-  <div class="card stat team-balance"><div class="lbl">Current Team Balance</div><div class="val {{ 'neg' if summary.balance < 0 else ('zero-amount' if summary.balance == 0) }}">{{ summary.balance|inr }}</div></div>
-  <div class="card stat future-balance"><div class="lbl">Net Future Balance</div><div class="val {{ 'zero-amount' if summary.balance - pending.net == 0 else ('pos' if summary.balance - pending.net > 0 else 'neg') }}">{{ (summary.balance - pending.net)|inr(true) }}</div></div>
 </section>
 <section class="two">
   <div class="card"><h2>Expenses by category</h2>

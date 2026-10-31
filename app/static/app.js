@@ -16,65 +16,13 @@ function initPage() {
 
   // Clickable table rows
   document.querySelectorAll('tr[data-href]').forEach(tr => tr.addEventListener('click', e => {
-    if (e.target.closest('a,button,input,select,summary,form,details')) return;
+    if (e.target.closest('a,button,input,select,summary,form,details,dialog')) return;
     location.href = tr.dataset.href;
   }));
 
-  // Cancel player edits without submitting the form.
-  document.querySelectorAll('.edit-player-form .edit-cancel').forEach(button => {
-    button.addEventListener('click', () => {
-      const form = button.closest('form');
-      const details = button.closest('details.edit-popover');
-      if (form) form.reset();
-      if (details) details.open = false;
-    });
-  });
-
-  // Keep the player edit popup inside the visible mobile viewport.
-  document.querySelectorAll('details.edit-popover').forEach(details => {
-    if (details.dataset.popupPositioner === 'ready') return;
-    details.dataset.popupPositioner = 'ready';
-    details.addEventListener('toggle', () => {
-      const form = details.querySelector('.edit-player-form');
-      const trigger = details.querySelector('summary');
-      if (!form || !trigger) return;
-      if (!details.open) {
-        ['position','left','right','top','width','maxHeight','overflowY'].forEach(k => { form.style[k] = ''; });
-        return;
-      }
-      if (!window.matchMedia('(max-width:640px) and (orientation:portrait)').matches) return;
-      requestAnimationFrame(() => {
-        const rect = trigger.getBoundingClientRect();
-        const width = Math.min(280, window.innerWidth - 24);
-        form.style.position = 'fixed';
-        form.style.width = width + 'px';
-        form.style.maxHeight = Math.max(180, window.innerHeight - 100) + 'px';
-        form.style.overflowY = 'auto';
-        form.style.right = 'auto';
-        const left = Math.max(12, (window.innerWidth - width) / 2);
-        form.style.left = left + 'px';
-        const height = form.getBoundingClientRect().height;
-        let top = rect.bottom + 8;
-        if (top + height > window.innerHeight - 76) top = rect.top - height - 8;
-        form.style.top = Math.max(12, Math.min(top, window.innerHeight - Math.min(height, window.innerHeight - 24) - 12)) + 'px';
-      });
-    });
-  });
-
-  // Sidebar / mobile nav toggle
-  const menu = document.getElementById('menu-btn');
-  const setNav = open => {
-    document.body.classList.toggle('nav-open', open);
-    if (menu) menu.setAttribute('aria-expanded', String(open));
-  };
-  if (menu) menu.addEventListener('click', () => setNav(!document.body.classList.contains('nav-open')));
-  const backdrop = document.getElementById('backdrop');
-  if (backdrop) backdrop.addEventListener('click', () => setNav(false));
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') setNav(false); });
-  document.querySelectorAll('#sidebar a').forEach(a => a.addEventListener('click', () => setNav(false)));
-
-  // Bottom nav: close on link click (mobile)
-  document.querySelectorAll('.bottomnav a').forEach(a => a.addEventListener('click', () => setNav(false)));
+  initSheets();
+  initThemeFilter();
+  initGlass();
 
   // Flash messages auto-fade
   document.querySelectorAll('.flash').forEach(el => setTimeout(() => {
@@ -115,6 +63,8 @@ document.addEventListener('submit', async e => {
     const parsed = new DOMParser().parseFromString(html, 'text/html');
     if (!parsed.body || !parsed.querySelector('main.container')) throw new Error('Could not update this page.');
     document.title = parsed.title;
+    const oldTheme = document.querySelector('head style'), newTheme = parsed.querySelector('head style');
+    if (oldTheme && newTheme) oldTheme.textContent = newTheme.textContent;
     document.body.innerHTML = parsed.body.innerHTML;
     if (response.url && new URL(response.url).origin === location.origin) {
       history.replaceState({}, '', response.url);
@@ -196,7 +146,7 @@ function initTxnForm(form) {
 // Make transaction cards and rows keyboard- and pointer-accessible.
 document.addEventListener('click', function(e) {
   const row = e.target.closest('tr[data-href]');
-  if (!row || e.target.closest('a,button,input,select,textarea,summary,form,details')) return;
+  if (!row || e.target.closest('a,button,input,select,textarea,summary,form,details,dialog')) return;
   window.location.href = row.dataset.href;
 });
 document.addEventListener('keydown', function(e) {
@@ -205,19 +155,70 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
-// ---- Glass switch: tap or drag, spring driven, interruptible (Apple fluid-interface rules) ----
-(function () {
+
+// ---- Sheets: native <dialog> bottom sheets with drag to dismiss ----
+function initSheets() {
+  const close = d => {
+    if (!d.open || d.classList.contains('closing')) return;
+    d.classList.add('closing');
+    d.addEventListener('animationend', () => { d.classList.remove('closing'); d.style.transform = ''; d.close(); }, { once: true });
+  };
+  document.querySelectorAll('[data-sheet-open]').forEach(b => b.addEventListener('click', () => {
+    const d = document.getElementById(b.dataset.sheetOpen);
+    if (d && !d.open) d.showModal();
+  }));
+  document.querySelectorAll('dialog.sheet').forEach(d => {
+    d.addEventListener('click', e => { if (e.target === d) close(d); });                  // tap the scrim
+    d.addEventListener('cancel', e => { e.preventDefault(); close(d); });                // Escape
+    d.querySelectorAll('[data-sheet-close]').forEach(b => b.addEventListener('click', () => close(d)));
+    d.querySelectorAll('a[href]').forEach(a => a.addEventListener('click', () => close(d)));
+    const grip = d.querySelector('.sheet-grip');
+    if (!grip) return;
+    let drag = null;
+    grip.addEventListener('pointerdown', e => {
+      grip.setPointerCapture(e.pointerId); d.classList.add('dragging'); d.classList.remove('settling');
+      drag = { y: e.clientY, dy: 0, hist: [{ y: e.clientY, t: e.timeStamp }] };
+    });
+    grip.addEventListener('pointermove', e => {
+      if (!drag) return;
+      const raw = e.clientY - drag.y;
+      drag.dy = raw < 0 ? -(Math.abs(raw) * 0.55) / (1 + Math.abs(raw) / 120) : raw;     // resist upward drag
+      drag.hist.push({ y: e.clientY, t: e.timeStamp }); if (drag.hist.length > 6) drag.hist.shift();
+      d.style.transform = `translateY(${drag.dy}px)`;                                      // 1:1 with the finger
+    });
+    const end = () => {
+      if (!drag) return;
+      const a = drag.hist[0], b = drag.hist[drag.hist.length - 1];
+      const v = b.t > a.t ? (b.y - a.y) / (b.t - a.t) : 0;                                 // px/ms
+      const landing = drag.dy + v * 1000 * 0.2;                                            // project the flick
+      drag = null; d.classList.remove('dragging');
+      if (landing > d.offsetHeight * 0.35) { d.style.transition = 'transform .28s cubic-bezier(.32,.72,0,1), opacity .28s'; d.style.transform = 'translateY(100%)'; d.style.opacity = '0'; setTimeout(() => { d.style.transition = d.style.transform = d.style.opacity = ''; d.close(); }, 280); }
+      else { d.classList.add('settling'); d.style.transform = ''; setTimeout(() => d.classList.remove('settling'), 420); }
+    };
+    grip.addEventListener('pointerup', end); grip.addEventListener('pointercancel', end);
+  });
+}
+
+// ---- Theme tone filter (All / Light / Dark) ----
+function initThemeFilter() {
+  const btns = document.querySelectorAll('[data-theme-filter]');
+  btns.forEach(b => b.addEventListener('click', () => {
+    btns.forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    document.querySelectorAll('.themes form[data-tone]').forEach(f => { f.hidden = b.dataset.themeFilter !== 'all' && f.dataset.tone !== b.dataset.themeFilter; });
+  }));
+}
+
+// ---- Glass switch: tap or drag, spring driven, interruptible ----
+function initGlass() {
   const root = document.documentElement;
   const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
   const project = (v, d = 0.998) => (v / 1000) * d / (1 - d);              // px/s -> resting offset in px
   const rubber = (o, c = 0.55) => (o * c) / (1 + c * Math.abs(o));          // soft edge past 0..1
   const isOn = () => root.dataset.glass === 'on';
   const save = on => { document.cookie = 'ehcc_glass=' + (on ? 'on' : 'off') + ';path=/;max-age=31536000;samesite=lax'; };
-
   const sw = [...document.querySelectorAll('[data-glass-switch]')].map(el => ({ el, p: isOn() ? 1 : 0, v: 0, raf: 0 }));
-  if (!sw.length) return;
-
   const paint = s => s.el.style.setProperty('--p', s.p.toFixed(4));
+  const label = on => document.querySelectorAll('[data-glass-state]').forEach(n => { n.textContent = on ? 'ON' : 'OFF'; });
 
   // Critically damped spring (response 0.3s). Starts from the live value and live velocity.
   function spring(s, target, zeta = 1) {
@@ -227,29 +228,25 @@ document.addEventListener('keydown', function(e) {
     let last = performance.now();
     const step = now => {
       const dt = Math.min((now - last) / 1000, 1 / 30); last = now;
-      s.v += (-k * (s.p - target) - c * s.v) * dt;
-      s.p += s.v * dt; paint(s);
+      s.v += (-k * (s.p - target) - c * s.v) * dt; s.p += s.v * dt; paint(s);
       if (Math.abs(s.p - target) < 0.0005 && Math.abs(s.v) < 0.005) { s.p = target; s.v = 0; paint(s); return; }
       s.raf = requestAnimationFrame(step);
     };
     s.raf = requestAnimationFrame(step);
   }
-
   function commit(on, from, v = 0) {
     const changed = on !== isOn();
-    root.dataset.glass = on ? 'on' : 'off';
-    save(on);
+    root.dataset.glass = on ? 'on' : 'off'; save(on); label(on);
     sw.forEach(s => {
       s.el.setAttribute('aria-checked', String(on));
-      if (s === from) s.v = v / (s.el.clientWidth - 32 || 20); // keep the finger's velocity
+      if (s === from) s.v = v / ((s.el.clientWidth - 32) || 20);
       spring(s, on ? 1 : 0, s === from && Math.abs(v) > 200 ? 0.8 : 1);
     });
     if (changed && navigator.vibrate) navigator.vibrate(8);
   }
-
   sw.forEach(s => {
     const el = s.el, travel = () => el.clientWidth - 32;
-    el.setAttribute('aria-checked', String(isOn())); paint(s);
+    el.setAttribute('aria-checked', String(isOn())); label(isOn()); paint(s);
     let drag = null;
     el.addEventListener('pointerdown', e => {
       if (e.button) return;
@@ -266,17 +263,15 @@ document.addEventListener('keydown', function(e) {
       const raw = drag.p + dx / travel();
       s.p = raw < 0 ? -rubber(-raw) : raw > 1 ? 1 + rubber(raw - 1) : raw; s.v = 0; paint(s);
     });
-    const end = e => {
+    el.addEventListener('pointerup', () => {
       if (!drag) return;
       const d = drag; drag = null; el.classList.remove('dragging');
       if (!d.moved) { commit(!isOn(), s); return; }                         // tap
       const a = d.hist[0], b = d.hist[d.hist.length - 1];
       const v = b.t > a.t ? ((b.x - a.x) / (b.t - a.t)) * 1000 : 0;         // px/s
-      const landing = s.p * travel() + project(v);                          // where the flick is heading
-      commit(landing > travel() / 2, s, v);
-    };
-    el.addEventListener('pointerup', end);
+      commit(s.p * travel() + project(v) > travel() / 2, s, v);             // land where the flick is heading
+    });
     el.addEventListener('pointercancel', () => { if (drag) { drag = null; el.classList.remove('dragging'); spring(s, isOn() ? 1 : 0); } });
     el.addEventListener('click', e => { if (e.detail === 0) commit(!isOn(), s); }); // keyboard only
   });
-})();
+}
