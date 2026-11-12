@@ -1,4 +1,4 @@
 <resources>
     <string name="app_name">EHCC Admin</string>
-    <string name="app_url">https://ehcc-admin.onrender.com/</string>
+    <string name="app_url">https://periodically-nickel-gerald-cent.trycloudflare.com/</string> <!-- https://ehcc-admin.onrender.com/ -->
 </resources>
