@@ -407,7 +407,12 @@ def collect(db: Session, allocation_id: int, actor: str) -> m.Settlement:
         raise ConflictError(f"{a.account.name} has already paid this.")
     team_acct = get_team_account(db, t.team_id)
     payer = _payer_account(t)
-    recipient = payer if payer is not None and payer.kind == "player" else team_acct
+    reimbursed = db.scalar(select(m.Settlement.id).where(
+        m.Settlement.transaction_id == t.id, m.Settlement.kind == "reimbursement",
+        m.Settlement.status == "active"))
+    # Before reimbursement, players repay the person who fronted the expense.
+    # After reimbursement, collections replenish the team account instead.
+    recipient = team_acct if reimbursed or payer is None or payer.kind != "player" else payer
     if recipient.id == a.account_id:
         raise ConflictError(f"{a.account.name}'s share is already covered by the amount they paid.")
     try:
@@ -590,8 +595,12 @@ def _active_collected(db: Session, allocation: m.Allocation) -> Decimal:
         m.Settlement.kind == "collection", m.Settlement.status == "active")))
 
 def _finalize_team_balance_rounding(db: Session, t: m.Transaction, actor: str) -> None:
-    """Move the rounded-up difference into team balance once all player shares are collected."""
+    """Move rounding surplus to the team only when collections went to the player payer."""
     if t.type != "expense" or t.status != "active" or not t.surplus_amount:
+        return
+    if db.scalar(select(m.Settlement.id).where(
+        m.Settlement.transaction_id == t.id, m.Settlement.kind == "reimbursement",
+        m.Settlement.status == "active")):
         return
     if db.scalar(select(m.Settlement.id).where(
         m.Settlement.transaction_id == t.id, m.Settlement.kind == "team_balance",
@@ -790,6 +799,9 @@ def pending_positions(db: Session, team_id: int) -> dict[int, dict]:
         .where(m.Transaction.team_id == team_id, m.Transaction.status == "active",
                m.Transaction.type == "expense", m.Account.kind == "player",
                m.Allocation.settlement_status == 0)).all()
+    reimbursed_txn_ids = set(db.scalars(select(m.Settlement.transaction_id).where(
+        m.Settlement.transaction_id.in_(select(m.Transaction.id).where(m.Transaction.team_id == team_id)),
+        m.Settlement.kind == "reimbursement", m.Settlement.status == "active")).all())
     owed_by_account: dict[int, list[Decimal]] = {}
     owed_to_team_by_account: dict[int, list[Decimal]] = {}
     for allocation in allocs:
@@ -800,7 +812,7 @@ def pending_positions(db: Session, team_id: int) -> dict[int, dict]:
             # Player collections for player-paid expenses go directly to the payer.
             # Only collections for team-paid expenses increase the team's cash forecast.
             payer = _payer_account(allocation.transaction)
-            if payer is not None and payer.kind == "team":
+            if payer is not None and (payer.kind == "team" or allocation.transaction_id in reimbursed_txn_ids):
                 owed_to_team_by_account.setdefault(allocation.account_id, []).append(due)
     for aid, amounts in owed_by_account.items():
         slot(aid).update(owed=q2(sum(amounts, ZERO)), owed_n=len(amounts),
