@@ -73,6 +73,8 @@ def test_reimbursement_is_full_once_and_a_transfer(db, team):
     assert before_expected == after_expected
     assert before_pending["reimb"] == D("830.00")
     assert after_pending["reimb"] == D("0.00")
+    assert after_pending["owed"] == D("850.00")
+    assert after_pending["owed_to_team"] == D("850.00")
     transfers = db.scalars(select(m.Transaction).where(m.Transaction.type == "transfer")).all()
     assert len(transfers) == 1 and transfers[0].amount == D("830.00")
     assert db.get(m.Transaction, t.id).type == "expense"
@@ -84,6 +86,11 @@ def test_reimbursement_is_full_once_and_a_transfer(db, team):
     assert by["Akshay"]["net"] == D("0.00")
     s = ledger.team_summary(db, team.id)
     assert s["balance"] == D("-830.00")  # payer own allocation is excluded from reimbursement
+    ledger.collect_all(db, t.id, "test")
+    db.commit()
+    db.expire_all()
+    assert ledger.team_summary(db, team.id)["balance"] == D("20.00")
+    assert all(row["net"] == D("0.00") for row in ledger.player_balances(db, team.id))
 
 
 def test_reimburse_requires_player_payer(db, team):
@@ -371,7 +378,7 @@ def test_player_history_running_balance(db, team):
     p = next(r["player"] for r in ledger.player_balances(db, team.id) if r["player"].player_name == "Akshay")
     events, net = ledger.player_history(db, p)
     assert [e["role"] for e in events] == ["Owed", "Paid", "Reimbursed"]
-    assert net == D("170.00") == events[-1]["running"]
+    assert net == D("0.00") == events[-1]["running"]
 
 
 def test_delete_player_rules(db, team):
