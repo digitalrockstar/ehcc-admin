@@ -81,13 +81,13 @@ def test_full_flow_through_the_ui(admin, db):
 
     detail = admin.get(f"/transactions/{t.id}").text
     assert "Who owes what" in detail and "Collect from everyone left" in detail
-    assert "Expected after pending" in admin.get(f"/?team={team.id}").text   # collections still open
+    assert "Net Future Balance" in admin.get(f"/?team={team.id}").text   # collections still open
     assert post(admin, f"/transactions/{t.id}/collect-all").status_code == 303
 
     akshay = account_of(db, team.id, "Akshay").player_id
     assert "Reimbursed" in admin.get(f"/players/{akshay}").text
     dash = admin.get(f"/?team={team.id}").text
-    assert "Expected after pending" not in dash and "Ground Charges" in dash
+    assert "Net Future Balance" in dash and "Ground Charges" in dash
 
     assert post(admin, f"/transactions/{t.id}/void", reason="typo").status_code == 303
     assert "Voided" in admin.get(f"/transactions?team={team.id}").text
@@ -279,14 +279,14 @@ def test_tables_scroll_and_use_type_pills(client, db, team):
     assert ".card.flush{" not in css or "overflow:hidden" not in css.split(".card.flush{")[1].split("}")[0]
     expense(db, team, 200, "Akshay", ["Bala"])
     html = client.get(f"/transactions?team={team.id}").text
-    assert 'class="pill expense"' in html and "Swipe sideways" in html and 'class="card flush scroll"' in html
+    assert 'class="plain-type"' in html and "Swipe sideways" in html and 'class="card flush scroll responsive-cards"' in html
 
 
 def test_expected_after_pending_sign(admin, db, team):
     from .conftest import NAMES, expense as mk
     mk(db, team, 807, "team", NAMES[:3])  # team paid 807 directly; collecting 3 shares rounds up to 810: +3 expected
     dash = admin.get(f"/?team={team.id}").text
-    assert "Expected after pending" in dash and "+₹3" in dash and 'class="expected pos"' in dash
+    assert "Net Future Balance" in dash and "+₹3" in dash and 'class="val pos"' in dash
 
 
 def test_dashboard_shows_all_outstanding_not_just_five(admin, db, team):
