@@ -93,6 +93,23 @@ def test_reimbursement_is_full_once_and_a_transfer(db, team):
     assert all(row["net"] == D("0.00") for row in ledger.player_balances(db, team.id))
 
 
+def test_reversing_reimbursement_also_reverses_team_collections(db, team):
+    t = expense(db, team, 1000, "Akshay", NAMES)
+    reimbursement = ledger.reimburse(db, t.id, "test")
+    db.commit()
+    ledger.collect_all(db, t.id, "test")
+    db.commit()
+    assert ledger.team_summary(db, team.id)["balance"] == D("20.00")
+    reversed_count = ledger.reverse_settlement(db, reimbursement.id, "test", "undo reimbursement")
+    db.commit()
+    assert reversed_count == 6  # reimbursement plus five collections
+    assert ledger.team_summary(db, team.id)["balance"] == D("0.00")
+    pending = ledger.team_pending_totals(ledger.pending_positions(db, team.id))
+    assert pending["reimb"] == D("830.00")
+    assert pending["owed"] == D("850.00")
+    assert pending["owed_to_team"] == D("0.00")
+
+
 def test_reimburse_requires_player_payer(db, team):
     t = expense(db, team, 500, "team", NAMES[:2])
     with pytest.raises(LedgerError):
