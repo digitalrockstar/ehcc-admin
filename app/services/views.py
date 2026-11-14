@@ -56,9 +56,11 @@ def describe(db: Session, txns: list[m.Transaction], pending: dict | None = None
             col1, col2 = party_label(acc_in), party_label(acc_out)
         active = t.status == "active"
         row = {"t": t, "item": item_label(t), "col1": col1, "col2": col2, "link": links.get(t.id),
-               "reimb": None, "reimb_s": None, "coll": None}
+               "reimb": None, "reimb_s": None, "reimb_due": None, "coll": None}
         if t.type == "expense" and active:
             if paid_by and paid_by[0].kind == "player":
+                own_share = next((a.allocated_amount for a in t.allocations if a.account_id == paid_by[0].id), 0)
+                row["reimb_due"] = max(0, t.amount - own_share)
                 s = next((x for x in parents.get(t.id, []) if x.kind == "reimbursement"), None)
                 row["reimb"], row["reimb_s"] = ("paid" if s else "pay"), s
                 if not s:
