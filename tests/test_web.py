@@ -69,6 +69,8 @@ def test_full_flow_through_the_ui(admin, db):
     assert r.status_code == 303, r.text[:300]
     t = db.scalars(select(m.Transaction)).one()
     assert t.surplus_amount == Decimal("20.00")
+    own_allocation = next(a for a in t.allocations if a.account_id == ids["Akshay"])
+    assert own_allocation.settlement_status == 1
 
     page = admin.get(f"/transactions?team={team.id}").text
     assert "6 players" in page and "Akshay" in page and "Ground Charges" in page and "PAY" in page
@@ -84,7 +86,10 @@ def test_full_flow_through_the_ui(admin, db):
     assert "Net Future Balance" in admin.get(f"/?team={team.id}").text   # collections still open
     assert post(admin, f"/transactions/{t.id}/collect-all").status_code == 303
     db.expire_all()
-    assert ledger.team_summary(db, team.id)["balance"] == Decimal("20.00")
+    summary = ledger.team_summary(db, team.id)
+    transfer_rows = db.scalars(select(m.Transaction).where(m.Transaction.team_id == team.id, m.Transaction.type == "transfer")).all()
+    transfer_debug = [(x.amount, x.status, [(a.role, a.account_id) for a in x.accounts]) for x in transfer_rows]
+    assert summary["balance"] == Decimal("20.00"), f"summary={summary}; transfers={transfer_debug}"
 
     akshay = account_of(db, team.id, "Akshay").player_id
     assert "Reimbursed" in admin.get(f"/players/{akshay}").text
