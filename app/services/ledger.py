@@ -683,6 +683,13 @@ def _active_group(db: Session, s: m.Settlement) -> list[m.Settlement]:
             m.Settlement.transaction_id == s.transaction_id,
             m.Settlement.kind == "collection", m.Settlement.status == "active")).all()
         rows.extend(collections)
+    elif s.kind == "reimbursement":
+        # These collections were directed to the team because reimbursement was active.
+        # Reversing the reimbursement must reverse them too, so the money is not stranded.
+        collections = db.scalars(select(m.Settlement).where(
+            m.Settlement.transaction_id == s.transaction_id,
+            m.Settlement.kind == "collection", m.Settlement.status == "active")).all()
+        rows.extend(collections)
     return rows
 
 
@@ -788,7 +795,7 @@ def void_transaction(db: Session, txn_id: int, actor: str, reason: str | None = 
 # ---------------------------------------------------------------- pending and net settlement
 
 def pending_positions(db: Session, team_id: int) -> dict[int, dict]:
-    """Outstanding player shares and unreimbursed player-fronted expenses."""
+    """Outstanding player shares and the net reimbursement due to player payers."""
     out: dict[int, dict] = {}
 
     def slot(aid):
@@ -809,8 +816,8 @@ def pending_positions(db: Session, team_id: int) -> dict[int, dict]:
                      - _applied_credit(db, allocation)))
         if due > ZERO:
             owed_by_account.setdefault(allocation.account_id, []).append(due)
-            # Player collections for player-paid expenses go directly to the payer.
-            # Only collections for team-paid expenses increase the team's cash forecast.
+            # Before reimbursement, player collections go to the payer; after reimbursement,
+            # they go to the team and therefore increase the team's cash forecast.
             payer = _payer_account(allocation.transaction)
             if payer is not None and (payer.kind == "team" or allocation.transaction_id in reimbursed_txn_ids):
                 owed_to_team_by_account.setdefault(allocation.account_id, []).append(due)
