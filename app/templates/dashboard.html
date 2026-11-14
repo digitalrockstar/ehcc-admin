@@ -35,7 +35,7 @@
     {% if top %}
     <div class="dashboard-balance-cards responsive-cards"><table class="plain"><tbody>
       {% for r in top %}<tr>
-        <td data-label="Player"><strong>{{ r.player.player_name }}</strong></td>
+        <td data-label="Player"><a href="/players/{{ r.player.id }}"><strong>{{ r.player.player_name }}</strong></a></td>
         <td class="num">{{ ui.net(r.net) }}</td>
         {% if is_admin %}<td class="num">{{ ui.action('/players/%d/settle-net' % r.player.id, ui.icon('wallet'), request.url.path, 'btn small ghost icon-action settle-icon', 'Settle the net amount for %s (%s) in one transfer?' % (r.player.player_name, (r.net|abs)|inr)) }}</td>{% endif %}
       </tr>{% endfor %}
