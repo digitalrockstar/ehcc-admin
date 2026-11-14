@@ -83,6 +83,8 @@ def test_full_flow_through_the_ui(admin, db):
     assert "Who owes what" in detail and "Collect from everyone left" in detail
     assert "Net Future Balance" in admin.get(f"/?team={team.id}").text   # collections still open
     assert post(admin, f"/transactions/{t.id}/collect-all").status_code == 303
+    db.expire_all()
+    assert ledger.team_summary(db, team.id)["balance"] == Decimal("20.00")
 
     akshay = account_of(db, team.id, "Akshay").player_id
     assert "Reimbursed" in admin.get(f"/players/{akshay}").text
