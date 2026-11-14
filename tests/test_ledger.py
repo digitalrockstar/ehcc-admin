@@ -71,19 +71,43 @@ def test_reimbursement_is_full_once_and_a_transfer(db, team):
     after_pending = ledger.team_pending_totals(ledger.pending_positions(db, team.id))
     after_expected = after_balance - after_pending["net"]
     assert before_expected == after_expected
-    assert before_pending["reimb"] == D("1000.00")
+    assert before_pending["reimb"] == D("830.00")
     assert after_pending["reimb"] == D("0.00")
+    assert after_pending["owed"] == D("850.00")
+    assert after_pending["owed_to_team"] == D("850.00")
     transfers = db.scalars(select(m.Transaction).where(m.Transaction.type == "transfer")).all()
-    assert len(transfers) == 1 and transfers[0].amount == D("1000.00")
+    assert len(transfers) == 1 and transfers[0].amount == D("830.00")
     assert db.get(m.Transaction, t.id).type == "expense"
     with pytest.raises(LedgerError):
         ledger.reimburse(db, t.id, "test")
     db.rollback()
     assert len(db.scalars(select(m.Transaction).where(m.Transaction.type == "transfer")).all()) == 1
     by = {r["player"].player_name: r for r in ledger.player_balances(db, team.id)}
-    assert by["Akshay"]["net"] == D("170.00")
+    assert by["Akshay"]["net"] == D("0.00")
     s = ledger.team_summary(db, team.id)
-    assert s["balance"] == D("-1000.00")  # team paid the player out of its account
+    assert s["balance"] == D("-830.00")  # payer own allocation is excluded from reimbursement
+    ledger.collect_all(db, t.id, "test")
+    db.commit()
+    db.expire_all()
+    assert ledger.team_summary(db, team.id)["balance"] == D("20.00")
+    assert all(row["net"] == D("0.00") for row in ledger.player_balances(db, team.id))
+
+
+def test_reversing_reimbursement_also_reverses_team_collections(db, team):
+    t = expense(db, team, 1000, "Akshay", NAMES)
+    reimbursement = ledger.reimburse(db, t.id, "test")
+    db.commit()
+    ledger.collect_all(db, t.id, "test")
+    db.commit()
+    assert ledger.team_summary(db, team.id)["balance"] == D("20.00")
+    reversed_count = ledger.reverse_settlement(db, reimbursement.id, "test", "undo reimbursement")
+    db.commit()
+    assert reversed_count == 6  # reimbursement plus five collections
+    assert ledger.team_summary(db, team.id)["balance"] == D("0.00")
+    pending = ledger.team_pending_totals(ledger.pending_positions(db, team.id))
+    assert pending["reimb"] == D("830.00")
+    assert pending["owed"] == D("850.00")
+    assert pending["owed_to_team"] == D("0.00")
 
 
 def test_reimburse_requires_player_payer(db, team):
@@ -336,7 +360,7 @@ def test_income_and_transfer_and_team_balance(db, team):
     assert s["total_in"] == 1250 and s["total_out"] == 400
     assert s["balance"] == D("500") + 1200 + 50 - 300 - 400
     by = {r["player"].player_name: r for r in ledger.player_balances(db, team.id)}
-    assert by["Bala"]["paid"] == D("200") - D("300") and by["Bala"]["net"] == D("100")  # owed nothing, received 300 > paid 200
+    assert by["Bala"]["paid"] == D("200") + D("50") - D("300") and by["Bala"]["net"] == D("50")  # includes the 50 transfer paid back to the team
 
 
 def test_transfer_validation(db, team):
@@ -371,7 +395,7 @@ def test_player_history_running_balance(db, team):
     p = next(r["player"] for r in ledger.player_balances(db, team.id) if r["player"].player_name == "Akshay")
     events, net = ledger.player_history(db, p)
     assert [e["role"] for e in events] == ["Owed", "Paid", "Reimbursed"]
-    assert net == D("170.00") == events[-1]["running"]
+    assert net == D("0.00") == events[-1]["running"]
 
 
 def test_delete_player_rules(db, team):
@@ -598,10 +622,10 @@ def test_team_expected_balance_only_offsets_collections_received_by_team(db, tea
     # players' collections go directly to that player and must not offset team cash.
     t = expense(db, team, 4250, "Akshay", NAMES)
     pending = ledger.team_pending_totals(ledger.pending_positions(db, team.id))
-    assert pending["reimb"] == D("4250.00")
-    assert pending["owed"] == D("3825.00")  # payer's own share is already covered
+    assert pending["reimb"] == D("3540.00")
+    assert pending["owed"] == D("3550.00")  # five other players owe their rounded shares
     assert pending["owed_to_team"] == D("0.00")
-    assert pending["net"] == D("425.00")
+    assert pending["net"] == D("-10.00")  # rounded-up allocations exceed reimbursable amount by ₹10
 
     # When the team pays, outstanding player collections will enter the team account.
     team_expense = expense(db, team, 1000, "team", NAMES, category="Nets")
@@ -615,7 +639,7 @@ def test_reimbursement_excludes_payers_own_charged_share(db, team):
     pending = ledger.team_pending_totals(ledger.pending_positions(db, team.id))
     akshay = account_of(db, team.id, "Akshay")
     position = ledger.pending_of(ledger.pending_positions(db, team.id), akshay.id)
-    assert position["reimb"] == D("3825.00")
-    assert pending["reimb"] == D("3825.00")
-    assert pending["owed"] == D("3825.00")
-    assert pending["net"] == D("0.00")
+    assert position["reimb"] == D("3540.00")
+    assert pending["reimb"] == D("3540.00")
+    assert pending["owed"] == D("3550.00")
+    assert pending["net"] == D("-10.00")

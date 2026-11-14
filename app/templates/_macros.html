@@ -57,9 +57,11 @@
         <span class="chipstate on">PAID</span>
         {% if is_admin %}{{ action('/settlements/%d/reverse' % row.reimb_s.id, 'Undo', next, 'btn small ghost', ('Undo the whole net settlement? Every item settled together reopens.' if row.reimb_s.batch_id else 'Reverse this reimbursement?')) }}{% endif %}
       {% elif is_admin %}
-        {% set msg = 'Reimburse %s in full?' % (row.t.amount|inr) %}
-        {% if row.reimb_warn %}{% set msg = msg ~ ' ' ~ row.reimb_who ~ ' still owes the team ' ~ (row.reimb_warn|inr) ~ '. To pay only the difference, use Settle net on their player page.' %}{% endif %}
-        {{ action('/transactions/%d/reimburse' % row.t.id, 'PAY', next, 'btn small', msg) }}
+        {% if row.reimb_due > 0 %}
+          {% set msg = 'Reimburse %s in full?' % (row.reimb_due|inr) %}
+          {% if row.reimb_warn %}{% set msg = msg ~ ' ' ~ row.reimb_who ~ ' still owes the team ' ~ (row.reimb_warn|inr) ~ '. To pay only the difference, use Settle net on their player page.' %}{% endif %}
+          {{ action('/transactions/%d/reimburse' % row.t.id, 'PAY', next, 'btn small', msg) }}
+        {% else %}<span class="chipstate on">Covered</span>{% endif %}
       {% else %}<span class="chipstate">Pending</span>{% endif %}
     </div>
     {% if is_admin and row.reimb == 'pay' and row.reimb_warn %}<a class="hint warn" href="/players/{{ row.reimb_pid }}">Owes {{ row.reimb_warn|inr }}: settle net</a>{% endif %}

@@ -352,6 +352,13 @@ def _make_transfer(db: Session, team_id: int, out_acct: m.Account, in_acct: m.Ac
     return tr
 
 
+def _reimbursable_amount(db: Session, txn_id: int, amount: Decimal, payer_id: int) -> Decimal:
+    """Return the expense amount less the payer's own allocated share, which they already covered."""
+    own_share = db.scalar(select(func.coalesce(func.sum(m.Allocation.allocated_amount), 0)).where(
+        m.Allocation.transaction_id == txn_id, m.Allocation.account_id == payer_id))
+    return q2(max(ZERO, Decimal(amount) - q2(own_share or ZERO)))
+
+
 def reimburse(db: Session, txn_id: int, actor: str) -> m.Settlement:
     t = _lock_txn(db, txn_id)
     if t.type != "expense" or t.status != "active":
@@ -364,18 +371,21 @@ def reimburse(db: Session, txn_id: int, actor: str) -> m.Settlement:
         m.Settlement.kind == "reimbursement", m.Settlement.status == "active"))
     if exists:
         raise ConflictError("This expense has already been reimbursed.")
+    reimbursable = _reimbursable_amount(db, t.id, t.amount, payer.id)
+    if reimbursable <= ZERO:
+        raise ConflictError("The payer's own share is already covered; no reimbursement is due.")
     team_acct = get_team_account(db, t.team_id)
     try:
         with db.begin_nested():
-            tr = _make_transfer(db, t.team_id, team_acct, payer, t.amount, f"Reimbursement for #{t.id}", actor)
+            tr = _make_transfer(db, t.team_id, team_acct, payer, reimbursable, f"Reimbursement for #{t.id}", actor)
             s = m.Settlement(kind="reimbursement", transaction_id=t.id, account_id=payer.id,
-                             amount=t.amount, settlement_transaction_id=tr.id, status="active")
+                             amount=reimbursable, settlement_transaction_id=tr.id, status="active")
             db.add(s)
             db.flush()
     except IntegrityError:
         raise ConflictError("This expense has already been reimbursed.")
     log(db, actor, "settlement.reimburse", "transaction", t.id, t.team_id,
-        {"to": payer.name, "amount": t.amount, "transfer_id": tr.id})
+        {"to": payer.name, "amount": reimbursable, "transfer_id": tr.id})
     return s
 
 
@@ -397,7 +407,12 @@ def collect(db: Session, allocation_id: int, actor: str) -> m.Settlement:
         raise ConflictError(f"{a.account.name} has already paid this.")
     team_acct = get_team_account(db, t.team_id)
     payer = _payer_account(t)
-    recipient = payer if payer is not None and payer.kind == "player" else team_acct
+    reimbursed = db.scalar(select(m.Settlement.id).where(
+        m.Settlement.transaction_id == t.id, m.Settlement.kind == "reimbursement",
+        m.Settlement.status == "active"))
+    # Before reimbursement, players repay the person who fronted the expense.
+    # After reimbursement, collections replenish the team account instead.
+    recipient = team_acct if reimbursed or payer is None or payer.kind != "player" else payer
     if recipient.id == a.account_id:
         raise ConflictError(f"{a.account.name}'s share is already covered by the amount they paid.")
     try:
@@ -580,8 +595,12 @@ def _active_collected(db: Session, allocation: m.Allocation) -> Decimal:
         m.Settlement.kind == "collection", m.Settlement.status == "active")))
 
 def _finalize_team_balance_rounding(db: Session, t: m.Transaction, actor: str) -> None:
-    """Move the rounded-up difference into team balance once all player shares are collected."""
+    """Move rounding surplus to the team only when collections went to the player payer."""
     if t.type != "expense" or t.status != "active" or not t.surplus_amount:
+        return
+    if db.scalar(select(m.Settlement.id).where(
+        m.Settlement.transaction_id == t.id, m.Settlement.kind == "reimbursement",
+        m.Settlement.status == "active")):
         return
     if db.scalar(select(m.Settlement.id).where(
         m.Settlement.transaction_id == t.id, m.Settlement.kind == "team_balance",
@@ -660,6 +679,13 @@ def _active_group(db: Session, s: m.Settlement) -> list[m.Settlement]:
         rows.extend(rounding)
     elif s.kind == "team_balance":
         # Reversing the adjustment invalidates the full set of collections that triggered it.
+        collections = db.scalars(select(m.Settlement).where(
+            m.Settlement.transaction_id == s.transaction_id,
+            m.Settlement.kind == "collection", m.Settlement.status == "active")).all()
+        rows.extend(collections)
+    elif s.kind == "reimbursement":
+        # These collections were directed to the team because reimbursement was active.
+        # Reversing the reimbursement must reverse them too, so the money is not stranded.
         collections = db.scalars(select(m.Settlement).where(
             m.Settlement.transaction_id == s.transaction_id,
             m.Settlement.kind == "collection", m.Settlement.status == "active")).all()
@@ -769,7 +795,7 @@ def void_transaction(db: Session, txn_id: int, actor: str, reason: str | None = 
 # ---------------------------------------------------------------- pending and net settlement
 
 def pending_positions(db: Session, team_id: int) -> dict[int, dict]:
-    """Outstanding player shares and unreimbursed player-fronted expenses."""
+    """Outstanding player shares and the net reimbursement due to player payers."""
     out: dict[int, dict] = {}
 
     def slot(aid):
@@ -780,6 +806,9 @@ def pending_positions(db: Session, team_id: int) -> dict[int, dict]:
         .where(m.Transaction.team_id == team_id, m.Transaction.status == "active",
                m.Transaction.type == "expense", m.Account.kind == "player",
                m.Allocation.settlement_status == 0)).all()
+    reimbursed_txn_ids = set(db.scalars(select(m.Settlement.transaction_id).where(
+        m.Settlement.transaction_id.in_(select(m.Transaction.id).where(m.Transaction.team_id == team_id)),
+        m.Settlement.kind == "reimbursement", m.Settlement.status == "active")).all())
     owed_by_account: dict[int, list[Decimal]] = {}
     owed_to_team_by_account: dict[int, list[Decimal]] = {}
     for allocation in allocs:
@@ -787,10 +816,10 @@ def pending_positions(db: Session, team_id: int) -> dict[int, dict]:
                      - _applied_credit(db, allocation)))
         if due > ZERO:
             owed_by_account.setdefault(allocation.account_id, []).append(due)
-            # Player collections for player-paid expenses go directly to the payer.
-            # Only collections for team-paid expenses increase the team's cash forecast.
+            # Before reimbursement, player collections go to the payer; after reimbursement,
+            # they go to the team and therefore increase the team's cash forecast.
             payer = _payer_account(allocation.transaction)
-            if payer is not None and payer.kind == "team":
+            if payer is not None and (payer.kind == "team" or allocation.transaction_id in reimbursed_txn_ids):
                 owed_to_team_by_account.setdefault(allocation.account_id, []).append(due)
     for aid, amounts in owed_by_account.items():
         slot(aid).update(owed=q2(sum(amounts, ZERO)), owed_n=len(amounts),
@@ -809,9 +838,7 @@ def pending_positions(db: Session, team_id: int) -> dict[int, dict]:
                    m.Account.kind == "player", ~reimbursed)).all():
         # If the payer is also charged for this expense, their own share is already
         # covered by the amount they fronted; reimburse only the other players' shares.
-        own_allocation = db.scalar(select(m.Allocation.allocated_amount).where(
-            m.Allocation.transaction_id == txn_id, m.Allocation.account_id == aid))
-        reimbursable = q2(max(ZERO, amount - (own_allocation or ZERO)))
+        reimbursable = _reimbursable_amount(db, txn_id, amount, aid)
         if reimbursable > ZERO:
             reimbursement_by_account.setdefault(aid, []).append(reimbursable)
         else:
@@ -868,7 +895,8 @@ def settle_net(db: Session, player_id: int, actor: str) -> dict:
     exps, allocs = _pending_items(db, acct)
     if not exps and not allocs:
         raise ConflictError(f"Nothing is pending for {p.player_name}.")
-    reimb_total = sum((t.amount for t in exps), ZERO)
+    reimb_amounts = {t.id: _reimbursable_amount(db, t.id, t.amount, acct.id) for t in exps}
+    reimb_total = sum(reimb_amounts.values(), ZERO)
     coll_total = sum((q2(max(ZERO, a.allocated_amount - _active_collected(db, a) - _applied_credit(db, a)))
                       for a in allocs), ZERO)
     net = q2(reimb_total - coll_total)
@@ -884,7 +912,7 @@ def settle_net(db: Session, player_id: int, actor: str) -> dict:
                 tr = _make_transfer(db, p.team_id, acct, team_acct, -net, note, actor)
             first = True
             for t in exps:
-                db.add(m.Settlement(kind="reimbursement", transaction_id=t.id, account_id=acct.id, amount=t.amount,
+                db.add(m.Settlement(kind="reimbursement", transaction_id=t.id, account_id=acct.id, amount=reimb_amounts[t.id],
                                     settlement_transaction_id=tr.id if (tr and first) else None,
                                     batch_id=batch, status="active"))
                 first = False
