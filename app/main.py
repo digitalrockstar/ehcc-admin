@@ -32,7 +32,7 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(title="EHCC Expense Tracker", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None,\n              root_path=config.APP_BASE_PATH)
 app.add_middleware(SessionMiddleware, secret_key=config.SECRET_KEY, max_age=14 * 24 * 3600,
-                   same_site="lax", https_only=config.IS_PROD, session_cookie="ehcc_session")
+                   same_site="lax", https_only=config.IS_PROD, session_cookie="ehcc_session",\n                   path=(config.APP_BASE_PATH + "/" if config.APP_BASE_PATH else "/"))
 app.mount("/static", StaticFiles(directory=str(Path(__file__).parent / "static")), name="static")
 
 for r in (auth, dashboard, export, transactions, players, settings):
