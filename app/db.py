@@ -1,20 +1,27 @@
+from pathlib import Path
+
 from sqlalchemy import create_engine, event, inspect, text
+from sqlalchemy.engine import make_url
 from sqlalchemy.orm import sessionmaker
 
 from .config import DATABASE_URL
 from .models import Base
 
-_kwargs = {"pool_pre_ping": True, "pool_recycle": 300}
+_kwargs = {"pool_pre_ping": True}
 if DATABASE_URL.startswith("sqlite"):
-    _kwargs = {"connect_args": {"check_same_thread": False}}
+    sqlite_path = make_url(DATABASE_URL).database
+    if sqlite_path and sqlite_path != ":memory:":
+        Path(sqlite_path).expanduser().parent.mkdir(parents=True, exist_ok=True)
+    _kwargs = {"connect_args": {"check_same_thread": False, "timeout": 30}}
 
 engine = create_engine(DATABASE_URL, **_kwargs)
 
 if DATABASE_URL.startswith("sqlite"):
     @event.listens_for(engine, "connect")
-    def _sqlite_fk(dbapi_conn, _):
+    def _sqlite_pragmas(dbapi_conn, _):
         cur = dbapi_conn.cursor()
         cur.execute("PRAGMA foreign_keys=ON")
+        cur.execute("PRAGMA busy_timeout=30000")
         cur.close()
 
 SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
