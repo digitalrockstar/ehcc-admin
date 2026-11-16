@@ -328,3 +328,16 @@ def test_static_font_urls_are_relative_to_stylesheet(client):
     css = client.get("/static/app.css").text
     assert "url(fonts/" in css
     assert "url(/static/fonts/" not in css
+
+
+
+def test_static_files_work_with_prefix_stripped_by_proxy():
+    from fastapi.testclient import TestClient
+    from app.main import app
+
+    # Caddy handle_path removes /ehcc before forwarding, so the ASGI app
+    # receives /static/... and must not have an app/server root_path.
+    assert app.root_path == ""
+    with TestClient(app) as proxy_client:
+        assert proxy_client.get("/static/app.css").status_code == 200
+        assert proxy_client.get("/static/favicon.svg").status_code == 200
