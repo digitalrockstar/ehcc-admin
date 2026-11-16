@@ -77,7 +77,7 @@ def page(request: Request, db: Session, name: str, *, status_code: int = 200, te
         csrf=csrf_token(request), glass=request.cookies.get("ehcc_glass") == "on",
         theme_css=css_block(theme if valid_theme(theme) else DEFAULT_THEME),
         teams=([t for t in all_teams(db) if t.status == "active"] if teambar else []), team=team, show_teambar=teambar,
-        teambar_path=teambar_path or request.url.path,
+        teambar_path=app_path(teambar_path or request.url.path),
         flashes=request.session.pop("_flash", []), path=request.scope.get("path", "/"),
         show_mobile=is_admin(request) or config.SHOW_MOBILE_TO_VIEWERS, mask_mobile=mask_mobile,
         errors=ctx.get("errors", {}), form_data=ctx.get("form_data", {}),
