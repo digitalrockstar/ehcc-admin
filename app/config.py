@@ -1,16 +1,24 @@
 import os
+from pathlib import Path
+
+from sqlalchemy.engine import URL
 
 ENV = os.getenv("APP_ENV", "development")
 IS_PROD = ENV == "production"
 
 
 def _database_url() -> str:
-    url = os.getenv("DATABASE_URL", "sqlite:///./ehcc.db").strip()
-    if url.startswith("postgres://"):
-        url = "postgresql://" + url[len("postgres://"):]
-    if url.startswith("postgresql://"):
-        url = "postgresql+psycopg://" + url[len("postgresql://"):]
-    return url
+    """Use an explicitly configured external URL, otherwise a local SQLite file."""
+    external_url = os.getenv("DATABASE_URL", "").strip()
+    if external_url:
+        if external_url.startswith("postgres://"):
+            external_url = "postgresql://" + external_url[len("postgres://"):]
+        if external_url.startswith("postgresql://"):
+            external_url = "postgresql+psycopg://" + external_url[len("postgresql://"):]
+        return external_url
+
+    sqlite_path = Path(os.getenv("SQLITE_DB_PATH", "./ehcc.db").strip()).expanduser()
+    return URL.create("sqlite", database=str(sqlite_path)).render_as_string(hide_password=False)
 
 
 DATABASE_URL = _database_url()
