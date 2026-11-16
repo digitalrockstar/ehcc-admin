@@ -1,14 +1,14 @@
 /* ---------- Fonts (self-hosted, SIL OFL) ---------- */
-@font-face{font-family:"Num";src:url(/static/fonts/google-sans-code-latin-400-normal.woff2) format("woff2");font-weight:400;font-display:swap;size-adjust:88%;unicode-range:U+0030-0039}
-@font-face{font-family:"Num";src:url(/static/fonts/google-sans-code-latin-600-normal.woff2) format("woff2");font-weight:600;font-display:swap;size-adjust:88%;unicode-range:U+0030-0039}
-@font-face{font-family:"Num";src:url(/static/fonts/google-sans-code-latin-700-normal.woff2) format("woff2");font-weight:700;font-display:swap;size-adjust:88%;unicode-range:U+0030-0039}
-@font-face{font-family:"Body";src:local("Calibri"),local("Carlito"),url(/static/fonts/carlito-latin-400-normal.woff2) format("woff2");font-weight:400;font-display:swap}
-@font-face{font-family:"Body";src:local("Calibri Bold"),local("Carlito Bold"),url(/static/fonts/carlito-latin-700-normal.woff2) format("woff2");font-weight:700;font-display:swap}
-@font-face{font-family:"Body";src:url(/static/fonts/carlito-latin-ext-400-normal.woff2) format("woff2");font-weight:400;font-display:swap;unicode-range:U+20B9}
-@font-face{font-family:"Body";src:url(/static/fonts/carlito-latin-ext-700-normal.woff2) format("woff2");font-weight:700;font-display:swap;unicode-range:U+20B9}
-@font-face{font-family:"Heading";src:url(/static/fonts/open-sans-latin-400-normal.woff2) format("woff2");font-weight:400;font-display:swap}
-@font-face{font-family:"Heading";src:url(/static/fonts/open-sans-latin-600-normal.woff2) format("woff2");font-weight:600;font-display:swap}
-@font-face{font-family:"Heading";src:url(/static/fonts/open-sans-latin-700-normal.woff2) format("woff2");font-weight:700;font-display:swap}
+@font-face{font-family:"Num";src:url(fonts/fonts/google-sans-code-latin-400-normal.woff2) format("woff2");font-weight:400;font-display:swap;size-adjust:88%;unicode-range:U+0030-0039}
+@font-face{font-family:"Num";src:url(fonts/fonts/google-sans-code-latin-600-normal.woff2) format("woff2");font-weight:600;font-display:swap;size-adjust:88%;unicode-range:U+0030-0039}
+@font-face{font-family:"Num";src:url(fonts/fonts/google-sans-code-latin-700-normal.woff2) format("woff2");font-weight:700;font-display:swap;size-adjust:88%;unicode-range:U+0030-0039}
+@font-face{font-family:"Body";src:local("Calibri"),local("Carlito"),url(fonts/fonts/carlito-latin-400-normal.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Body";src:local("Calibri Bold"),local("Carlito Bold"),url(fonts/fonts/carlito-latin-700-normal.woff2) format("woff2");font-weight:700;font-display:swap}
+@font-face{font-family:"Body";src:url(fonts/fonts/carlito-latin-ext-400-normal.woff2) format("woff2");font-weight:400;font-display:swap;unicode-range:U+20B9}
+@font-face{font-family:"Body";src:url(fonts/fonts/carlito-latin-ext-700-normal.woff2) format("woff2");font-weight:700;font-display:swap;unicode-range:U+20B9}
+@font-face{font-family:"Heading";src:url(fonts/fonts/open-sans-latin-400-normal.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Heading";src:url(fonts/fonts/open-sans-latin-600-normal.woff2) format("woff2");font-weight:600;font-display:swap}
+@font-face{font-family:"Heading";src:url(fonts/fonts/open-sans-latin-700-normal.woff2) format("woff2");font-weight:700;font-display:swap}
 
 /* ============================================================
    EHCC Admin stylesheet. One file, no patches, no overrides.
