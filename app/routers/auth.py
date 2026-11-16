@@ -53,4 +53,4 @@ def login(request: Request, name: str = Form(""), password: str = Form(""), next
 def logout(request: Request, form=Depends(admin_form)):
     for k in ("admin", "admin_name", "admin_at", "csrf"):
         request.session.pop(k, None)
-    return RedirectResponse("/", status_code=303)
+    return RedirectResponse(config.APP_BASE_PATH + "/", status_code=303)

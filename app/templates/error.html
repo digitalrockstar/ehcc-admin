@@ -2,5 +2,5 @@
 {% block title %}Error {{ code }}{% endblock %}
 {% block content %}
 <div class="card narrow"><h1>{{ code }}</h1><p>{{ message }}</p>
-<p><a href="/">Back to dashboard</a>{% if code == 403 and not is_admin %} or <a href="/login">log in as admin</a>{% endif %}</p></div>
+<p><a href="{{ base_path }}/">Back to dashboard</a>{% if code == 403 and not is_admin %} or <a href="{{ base_path }}/login">log in as admin</a>{% endif %}</p></div>
 {% endblock %}

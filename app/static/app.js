@@ -215,7 +215,8 @@ function initGlass() {
   const project = (v, d = 0.998) => (v / 1000) * d / (1 - d);              // px/s -> resting offset in px
   const rubber = (o, c = 0.55) => (o * c) / (1 + c * Math.abs(o));          // soft edge past 0..1
   const isOn = () => root.dataset.glass === 'on';
-  const save = on => { document.cookie = 'ehcc_glass=' + (on ? 'on' : 'off') + ';path=/;max-age=31536000;samesite=lax'; };
+  const basePath = document.querySelector('meta[name="app-base-path"]')?.content || '';
+  const save = on => { document.cookie = 'ehcc_glass=' + (on ? 'on' : 'off') + ';path=' + (basePath || '/') + ';max-age=31536000;samesite=lax'; };
   const sw = [...document.querySelectorAll('[data-glass-switch]')].map(el => ({ el, p: isOn() ? 1 : 0, v: 0, raf: 0 }));
   const paint = s => s.el.style.setProperty('--p', s.p.toFixed(4));
   const label = on => document.querySelectorAll('[data-glass-state]').forEach(n => { n.textContent = on ? 'ON' : 'OFF'; });

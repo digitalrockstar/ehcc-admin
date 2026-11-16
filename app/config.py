@@ -30,6 +30,10 @@ if not SECRET_KEY:
     SECRET_KEY = "dev-only-secret-change-me"
 
 SHOW_MOBILE_TO_VIEWERS = os.getenv("SHOW_MOBILE_TO_VIEWERS", "0") == "1"
+APP_BASE_PATH = os.getenv("APP_BASE_PATH", "").strip().rstrip("/")
+if APP_BASE_PATH and (not APP_BASE_PATH.startswith("/") or "//" in APP_BASE_PATH or "?" in APP_BASE_PATH or "#" in APP_BASE_PATH):
+    raise RuntimeError("APP_BASE_PATH must be an absolute URL path, e.g. /ehcc")
+
 TIMEZONE = "Asia/Kolkata"
 DEFAULT_ROUNDING_STEP = 5
 ADMIN_SESSION_HOURS = 12

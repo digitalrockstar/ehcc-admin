@@ -2,7 +2,7 @@
 {% import "_macros.html" as ui with context %}
 {% block title %}{{ player.player_name }}{% endblock %}
 {% block content %}
-<p><a href="/players?team={{ team.id }}">&larr; Players</a></p>
+<p><a href="{{ base_path }}/players?team={{ team.id }}">&larr; Players</a></p>
 <div class="head"><h1>{{ player.player_name }} <span class="muted small">{{ team.name }}{% if player.status == 'archived' %} &middot; archived{% endif %}</span></h1></div>
 <section class="cards">
   <div class="card stat"><div class="lbl">Total owed</div><div class="val">{{ owed|inr }}</div></div>
@@ -30,7 +30,7 @@
       <td class="num" data-label="Original">{{ credit.original_amount|inr }}</td><td class="num" data-label="Available">{{ credit.remaining_amount|inr }}</td>
       {% if is_admin %}<td>
         {% if credit_allocations %}
-        <form method="post" action="/players/{{ player.id }}/credits/{{ credit.id }}/apply" class="inline-form">
+        <form method="post" action="{{ base_path }}/players/{{ player.id }}/credits/{{ credit.id }}/apply" class="inline-form">
           {{ ui.csrf_input() }}
           <select name="allocation_id" required aria-label="Expense to apply credit to">
             {% for a in credit_allocations %}<option value="{{ a.id }}">#{{ a.transaction_id }} · {{ a.transaction.item_description or (a.transaction.category.name if a.transaction.category else 'Expense') }} · {{ a.allocated_amount|inr }}</option>{% endfor %}
@@ -38,7 +38,7 @@
           <button class="btn small">{{ ui.icon('check') }}<span>Apply credit</span></button>
         </form>
         {% endif %}
-        <form method="post" action="/players/{{ player.id }}/credits/{{ credit.id }}/transfer" class="inline-form" data-confirm="Transfer this entire available credit to the team account?">
+        <form method="post" action="{{ base_path }}/players/{{ player.id }}/credits/{{ credit.id }}/transfer" class="inline-form" data-confirm="Transfer this entire available credit to the team account?">
           {{ ui.csrf_input() }}<button class="btn small ghost">{{ ui.icon('transactions') }}<span>Transfer to team</span></button>
         </form>
       </td>{% endif %}
@@ -53,7 +53,7 @@
   {% for e in events %}{% set t = e.t %}
     <tr class="{{ 'voided' if t.status != 'active' }}">
       <td data-label="Date">{{ t.transaction_date|dmy }}</td><td data-label="Type">{{ ui.tpill(t.type) }} {{ ui.status(t) }}</td>
-      <td data-label="Item / Category"><a class="goto" href="/transactions/{{ t.id }}" aria-label="Open transaction {{ t.id }}" title="Open transaction">{{ ui.icon('arrow-up-right') }}</a>{{ item_label(t) }}</td>
+      <td data-label="Item / Category"><a class="goto" href="{{ base_path }}/transactions/{{ t.id }}" aria-label="Open transaction {{ t.id }}" title="Open transaction">{{ ui.icon('arrow-up-right') }}</a>{{ item_label(t) }}</td>
       <td class="num" data-label="Amount">{{ e.amount|inr }}</td><td data-label="Role">{{ e.role }}</td>
       <td>
         {% if t.status == 'active' and e.role == 'Owed' %}

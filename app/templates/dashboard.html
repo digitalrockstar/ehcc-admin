@@ -4,7 +4,7 @@
 {% block content %}
 {% if not team %}
   <div class="card narrow"><h1>No teams yet</h1>
-  {% if is_admin %}<p>Create the first team in <a href="/settings#teams">Settings</a>. A team account is created with it.</p>
+  {% if is_admin %}<p>Create the first team in <a href="{{ base_path }}/settings#teams">Settings</a>. A team account is created with it.</p>
   {% else %}<p>An admin needs to create a team before anything shows up here.</p>{% endif %}</div>
 {% else %}
 <div class="head">
@@ -35,7 +35,7 @@
     {% if top %}
     <div class="dashboard-balance-cards responsive-cards"><table class="plain"><tbody>
       {% for r in top %}<tr>
-        <td data-label="Player"><a href="/players/{{ r.player.id }}"><strong>{{ r.player.player_name }}</strong></a></td>
+        <td data-label="Player"><a href="{{ base_path }}/players/{{ r.player.id }}"><strong>{{ r.player.player_name }}</strong></a></td>
         <td class="num">{{ ui.net(r.net) }}</td>
         {% if is_admin %}<td class="num">{{ ui.action('/players/%d/settle-net' % r.player.id, ui.icon('wallet'), request.url.path, 'btn small ghost icon-action settle-icon', 'Settle the net amount for %s (%s) in one transfer?' % (r.player.player_name, (r.net|abs)|inr)) }}</td>{% endif %}
       </tr>{% endfor %}
@@ -49,7 +49,7 @@
   <div class="scroll responsive-cards dashboard-recent"><table>
     <thead><tr><th>Date</th><th>Type</th><th>Item / Category</th><th class="num">Amount</th></tr></thead>
     <tbody>{% for r in recent %}
-      <tr data-href="/transactions/{{ r.t.id }}" tabindex="0" role="link" aria-label="Open transaction {{ r.t.id }}" class="card-row-link"><td data-label="Date">{{ r.t.transaction_date|dmy }}</td><td data-label="Type"><span class="plain-type">{{ r.t.type|capitalize }}</span></td>
+      <tr data-href="{{ base_path }}/transactions/{{ r.t.id }}" tabindex="0" role="link" aria-label="Open transaction {{ r.t.id }}" class="card-row-link"><td data-label="Date">{{ r.t.transaction_date|dmy }}</td><td data-label="Type"><span class="plain-type">{{ r.t.type|capitalize }}</span></td>
         <td data-label="Item / Category" class="item-name-cell"><strong>{% if r.link and r.link.kind == "collection" %}Collection from {{ r.link.account.name }} for #{{ r.link.transaction_id }}{% else %}{{ r.item }}{% endif %}</strong></td><td data-label="Amount" class="num">{{ r.t.amount|inr }}</td></tr>
     {% endfor %}</tbody></table></div>
   {% else %}<p class="muted">Nothing recorded yet.</p>{% endif %}

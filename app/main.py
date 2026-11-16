@@ -30,9 +30,11 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title="EHCC Expense Tracker", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
+app = FastAPI(title="EHCC Expense Tracker", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None,
+              root_path=config.APP_BASE_PATH)
 app.add_middleware(SessionMiddleware, secret_key=config.SECRET_KEY, max_age=14 * 24 * 3600,
-                   same_site="lax", https_only=config.IS_PROD, session_cookie="ehcc_session")
+                   same_site="lax", https_only=config.IS_PROD, session_cookie="ehcc_session",
+                   path=(config.APP_BASE_PATH + "/" if config.APP_BASE_PATH else "/"))
 app.mount("/static", StaticFiles(directory=str(Path(__file__).parent / "static")), name="static")
 
 for r in (auth, dashboard, export, transactions, players, settings):
@@ -65,7 +67,7 @@ def healthz():
 
 @app.exception_handler(LoginRequired)
 async def login_required(request: Request, exc: LoginRequired):
-    return RedirectResponse(f"/login?next={quote(exc.next_url)}", status_code=303)
+    return RedirectResponse(f"{config.APP_BASE_PATH}/login?next={quote(exc.next_url)}", status_code=303)
 
 
 def _error(request: Request, code: int, message: str):
