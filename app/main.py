@@ -59,7 +59,8 @@ async def security_headers(request: Request, call_next):
 
 @app.get("/favicon.ico", include_in_schema=False)
 def favicon():
-    return FileResponse(Path(__file__).parent / "static" / "favicon.ico", media_type="image/x-icon")
+    # Serve the current SVG brand mark for legacy browser favicon requests.
+    return FileResponse(Path(__file__).parent / "static" / "favicon.svg", media_type="image/svg+xml")
 
 
 @app.get("/healthz", include_in_schema=False)
