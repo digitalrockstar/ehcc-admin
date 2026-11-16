@@ -26,10 +26,20 @@ def flash(request: Request, message: str, kind: str = "ok") -> None:
     request.session.setdefault("_flash", []).append([kind, message])
 
 
+def app_path(path: str) -> str:
+    """Prefix an application URL when this deployment is mounted below a path."""
+    if not path.startswith("/"):
+        path = "/" + path
+    prefix = config.APP_BASE_PATH
+    if not prefix or path == prefix or path.startswith(prefix + "/"):
+        return path
+    return prefix + path
+
+
 def safe_next(target: str | None, default: str) -> str:
     if target and target.startswith("/") and not target.startswith("//") and "\\" not in target:
-        return target
-    return default
+        return app_path(target)
+    return app_path(default)
 
 
 def redirect(request: Request, form, default: str) -> RedirectResponse:
@@ -62,12 +72,12 @@ def page(request: Request, db: Session, name: str, *, status_code: int = 200, te
          team: m.Team | None = None, teambar_path: str | None = None, **ctx):
     theme = get_setting(db, "theme", DEFAULT_THEME)
     ctx.update(
-        request=request, is_admin=is_admin(request), admin_name=admin_name(request),
+        request=request, base_path=config.APP_BASE_PATH, app_path=app_path,\n        is_admin=is_admin(request), admin_name=admin_name(request),
         csrf=csrf_token(request), glass=request.cookies.get("ehcc_glass") == "on",
         theme_css=css_block(theme if valid_theme(theme) else DEFAULT_THEME),
         teams=([t for t in all_teams(db) if t.status == "active"] if teambar else []), team=team, show_teambar=teambar,
         teambar_path=teambar_path or request.url.path,
-        flashes=request.session.pop("_flash", []), path=request.url.path,
+        flashes=request.session.pop("_flash", []), path=request.scope.get("path", "/"),
         show_mobile=is_admin(request) or config.SHOW_MOBILE_TO_VIEWERS, mask_mobile=mask_mobile,
         errors=ctx.get("errors", {}), form_data=ctx.get("form_data", {}),
     )
