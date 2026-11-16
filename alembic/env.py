@@ -1,7 +1,9 @@
 from logging.config import fileConfig
+from pathlib import Path
 
 from alembic import context
 from sqlalchemy import create_engine
+from sqlalchemy.engine import make_url
 
 from app.config import DATABASE_URL
 from app.models import Base
@@ -19,6 +21,9 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
+    url = make_url(DATABASE_URL)
+    if url.drivername.startswith("sqlite") and url.database and url.database != ":memory:":
+        Path(url.database).expanduser().parent.mkdir(parents=True, exist_ok=True)
     engine = create_engine(DATABASE_URL, pool_pre_ping=True)
     with engine.connect() as connection:
         context.configure(connection=connection, target_metadata=target_metadata)
