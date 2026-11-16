@@ -30,8 +30,10 @@ async def lifespan(_: FastAPI):
     yield
 
 
-app = FastAPI(title="EHCC Expense Tracker", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None,
-              root_path=config.APP_BASE_PATH)
+# URL prefixes belong to the ASGI server's root_path, not FastAPI's app-level
+# root_path. Keeping this app root path empty allows mounted apps such as
+# StaticFiles to resolve their paths correctly behind a prefix-stripping proxy.
+app = FastAPI(title="EHCC Expense Tracker", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
 app.add_middleware(SessionMiddleware, secret_key=config.SECRET_KEY, max_age=14 * 24 * 3600,
                    same_site="lax", https_only=config.IS_PROD, session_cookie="ehcc_session",
                    path=(config.APP_BASE_PATH + "/" if config.APP_BASE_PATH else "/"))
