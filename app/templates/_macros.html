@@ -21,8 +21,8 @@
 {%- endmacro %}
 
 {% macro action(url, label, next, cls='btn small', confirm=None, extra=None, attrs=None, ico=None) %}
-<form method="post" action="{{ url }}" class="inline"{% if confirm %} data-confirm="{{ confirm }}"{% endif %}>
-  {{ csrf_input() }}<input type="hidden" name="next" value="{{ next }}">
+<form method="post" action="{{ base_path }}{{ url }}" class="inline"{% if confirm %} data-confirm="{{ confirm }}"{% endif %}>
+  {{ csrf_input() }}<input type="hidden" name="next" value="{{ app_path(next) }}">
   {% if extra %}{% for k, v in extra.items() %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}{% endif %}
   {%- set lab = label|string -%}{%- set ic = ico or ('undo' if lab == 'Undo' else 'collect' if lab.startswith('Collect') else 'pay' if lab in ('PAY', 'Reimburse') else 'transactions' if lab.startswith('Settle net') else None) -%}
   <button class="{{ cls }}" {% if attrs %}{% for k, v in attrs.items() %}{{ k }}="{{ v }}" {% endfor %}{% endif %}>{% if ic and '<svg' not in lab %}{{ icon(ic) }}<span>{{ label }}</span>{% else %}{{ label }}{% endif %}</button>
@@ -30,7 +30,7 @@
 {% endmacro %}
 
 {% macro link_action(url, label, cls='btn small ghost') %}
-<a href="{{ url }}" class="{{ cls }}">{{ label }}</a>
+<a href="{{ base_path }}{{ url }}" class="{{ cls }}">{{ label }}</a>
 {% endmacro %}
 
 {% macro net(v) -%}
@@ -49,7 +49,7 @@
 {% macro settle(row, next) %}
   {% if row.link %}
     <span class="badge">{% if row.link.batch_id %}Net settlement for {{ row.link.account.name }}{% else %}{{ 'Reimbursement' if row.link.kind == 'reimbursement' else 'Collection' }} for
-      <a href="/transactions/{{ row.link.transaction_id }}">#{{ row.link.transaction_id }}</a>{% endif %}</span>
+      <a href="{{ base_path }}/transactions/{{ row.link.transaction_id }}">#{{ row.link.transaction_id }}</a>{% endif %}</span>
   {% endif %}
   {% if row.reimb %}
     <div class="settle"><span class="lbl">Reimburse</span>
@@ -64,7 +64,7 @@
         {% else %}<span class="chipstate on">Covered</span>{% endif %}
       {% else %}<span class="chipstate">Pending</span>{% endif %}
     </div>
-    {% if is_admin and row.reimb == 'pay' and row.reimb_warn %}<a class="hint warn" href="/players/{{ row.reimb_pid }}">Owes {{ row.reimb_warn|inr }}: settle net</a>{% endif %}
+    {% if is_admin and row.reimb == 'pay' and row.reimb_warn %}<a class="hint warn" href="{{ base_path }}/players/{{ row.reimb_pid }}">Owes {{ row.reimb_warn|inr }}: settle net</a>{% endif %}
   {% endif %}
   {% if row.coll %}
     <div class="settle"><span class="lbl">Collect</span>
@@ -77,9 +77,9 @@
           {% if row.coll.warn %}{% set cmsg = cmsg ~ ' The team owes ' ~ row.coll.who ~ ' ' ~ (row.coll.warn|inr) ~ ' for expenses they paid. To settle only the difference, use Settle net on their player page.' %}{% endif %}
           {{ action('/allocations/%d/collect' % row.coll.single.id, 'Collect', next, 'btn small', cmsg) }}
         {% else %}<span class="chipstate">Pending</span>{% endif %}
-        {% if is_admin and row.coll.single.settlement_status == 0 and row.coll.warn %}<a class="hint warn" href="/players/{{ row.coll.pid }}">Team owes {{ row.coll.warn|inr }}: settle net</a>{% endif %}
+        {% if is_admin and row.coll.single.settlement_status == 0 and row.coll.warn %}<a class="hint warn" href="{{ base_path }}/players/{{ row.coll.pid }}">Team owes {{ row.coll.warn|inr }}: settle net</a>{% endif %}
       {% else %}
-        <a href="/transactions/{{ row.t.id }}">{{ row.coll.done }}/{{ row.coll.total }} collected</a>
+        <a href="{{ base_path }}/transactions/{{ row.t.id }}">{{ row.coll.done }}/{{ row.coll.total }} collected</a>
       {% endif %}
     </div>
   {% endif %}
