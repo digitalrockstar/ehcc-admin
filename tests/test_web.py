@@ -328,3 +328,14 @@ def test_static_font_urls_are_relative_to_stylesheet(client):
     css = client.get("/static/app.css").text
     assert "url(fonts/" in css
     assert "url(/static/fonts/" not in css
+
+
+
+def test_static_files_work_with_server_root_path():
+    from fastapi.testclient import TestClient
+    from app.main import app
+
+    assert app.root_path == ""
+    with TestClient(app, root_path="/ehcc") as prefixed_client:
+        assert prefixed_client.get("/static/app.css").status_code == 200
+        assert prefixed_client.get("/static/favicon.svg").status_code == 200
