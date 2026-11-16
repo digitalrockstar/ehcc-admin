@@ -7,9 +7,9 @@
 {% else %}
 <div class="head">
   <h1>Transactions <span class="muted small">{{ team.name }} &middot; {{ account.name }}</span></h1>
-  {% if is_admin and team.status == 'active' %}<a class="btn" href="/transactions/new?team_id={{ team.id }}">{{ ui.icon('plus') }}<span>Add transaction</span></a>{% endif %}
+  {% if is_admin and team.status == 'active' %}<a class="btn" href="{{ base_path }}/transactions/new?team_id={{ team.id }}">{{ ui.icon('plus') }}<span>Add transaction</span></a>{% endif %}
 </div>
-<form class="filters" method="get" action="/transactions">
+<form class="filters" method="get" action="{{ base_path }}/transactions">
   <input type="hidden" name="team" value="{{ team.id }}">
   <div class="field"><span class="cap">Type</span>
     {{ ui.choice('type', [('all', 'All'), ('income', 'Income'), ('expense', 'Expense'), ('transfer', 'Transfer')], type, 'Type', attrs='data-autosubmit') }}</div>
@@ -27,15 +27,15 @@
     {% if ns.d != r.t.transaction_date %}{% set ns.d = r.t.transaction_date %}
       <tr class="dategroup"><th colspan="{{ 8 if is_admin else 7 }}">{{ r.t.transaction_date|dmy }} <span class="muted">&middot; {{ team.name }} &middot; {{ account.name }}</span></th></tr>
     {% endif %}
-    <tr data-href="/transactions/{{ r.t.id }}" tabindex="0" role="link" aria-label="Open transaction {{ r.t.id }}" class="card-row-link {{ 'voided' if r.t.status != 'active' }}">
+    <tr data-href="{{ base_path }}/transactions/{{ r.t.id }}" tabindex="0" role="link" aria-label="Open transaction {{ r.t.id }}" class="card-row-link {{ 'voided' if r.t.status != 'active' }}">
       <td class="muted txn-number" data-label="#">#{{ r.t.id }}</td>
       <td data-label="Type"><span class="plain-type">{{ r.t.type|capitalize }}</span> {{ ui.status(r.t) }}</td>
       <td data-label="Item / Category" class="item-name-cell"><strong>{{ r.item }}</strong></td>
       <td class="num" data-label="Amount">{{ r.t.amount|inr }}</td>
       <td data-label="Paid By">{{ r.col1 }}</td><td data-label="Charged To">{{ r.col2 }}</td><td data-label="Settlement">{{ ui.settle(r, request.url.path) }}</td>
       {% if is_admin %}<td class="acts" data-label="Actions">
-        {% if r.t.status == 'active' and not r.link %}<a class="btn small ghost icon-action" href="/transactions/{{ r.t.id }}/edit" aria-label="Edit transaction {{ r.t.id }}" title="Edit transaction">{{ ui.icon('edit') }}</a>{% endif %}
-        <a class="btn small ghost icon-action" href="/transactions/new?copy_from={{ r.t.id }}" aria-label="Copy transaction {{ r.t.id }}" title="Copy transaction">{{ ui.icon('copy') }}</a></td>{% endif %}
+        {% if r.t.status == 'active' and not r.link %}<a class="btn small ghost icon-action" href="{{ base_path }}/transactions/{{ r.t.id }}/edit" aria-label="Edit transaction {{ r.t.id }}" title="Edit transaction">{{ ui.icon('edit') }}</a>{% endif %}
+        <a class="btn small ghost icon-action" href="{{ base_path }}/transactions/new?copy_from={{ r.t.id }}" aria-label="Copy transaction {{ r.t.id }}" title="Copy transaction">{{ ui.icon('copy') }}</a></td>{% endif %}
     </tr>
   {% endfor %}
   </tbody></table></div>
