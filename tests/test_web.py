@@ -298,3 +298,33 @@ def test_dashboard_shows_all_outstanding_not_just_five(admin, db, team):
     mk(db, team, 6000, "team", NAMES)  # 6 players owe the team, all nonzero
     dash = admin.get(f"/?team={team.id}").text
     assert dash.count('href="/players/') >= 6 and "Outstanding balances" in dash
+
+
+
+def test_configurable_base_path_prefixes_rendered_urls(client, monkeypatch):
+    from app import config
+    from app.web import safe_next
+
+    monkeypatch.setattr(config, "APP_BASE_PATH", "/ehcc")
+    html = client.get("/").text
+    assert 'href="/ehcc/static/app.css' in html
+    assert 'href="/ehcc/static/favicon.svg' in html
+    assert 'href="/ehcc/transactions"' in html
+    assert 'href="/ehcc/players"' in html
+    assert safe_next("/players?team=2", "/") == "/ehcc/players?team=2"
+    assert safe_next("/ehcc/players", "/") == "/ehcc/players"
+    assert safe_next("//example.com", "/") == "/ehcc/"
+
+
+def test_configurable_base_path_prefixes_login_form(client, monkeypatch):
+    from app import config
+
+    monkeypatch.setattr(config, "APP_BASE_PATH", "/ehcc")
+    html = client.get("/login").text
+    assert 'action="/ehcc/login"' in html
+
+
+def test_static_font_urls_are_relative_to_stylesheet(client):
+    css = client.get("/static/app.css").text
+    assert "url(fonts/" in css
+    assert "url(/static/fonts/" not in css
