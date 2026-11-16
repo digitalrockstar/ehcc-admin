@@ -8,7 +8,8 @@ Team-wise cricket ledger: income, expenses, transfers, player balances, full rei
 
 - **Default:** SQLite database at `./ehcc.db`.
 - **Custom local path:** set `SQLITE_DB_PATH`, preferably to an absolute path for server deployments. Example: `SQLITE_DB_PATH=/opt/apps/EHCC/DB/ehcc-admin.db`.
-- **External database:** set a non-empty `DATABASE_URL`. PostgreSQL `postgres://` and `postgresql://` URLs are accepted and normalized automatically.
+- **Explicit database URL:** a non-empty `DATABASE_URL` takes precedence over `SQLITE_DB_PATH`. It can point to SQLite (for example, `sqlite:////opt/apps/EHCC/DB/ehcc-admin.db`) or PostgreSQL.
+- PostgreSQL `postgres://` and `postgresql://` URLs are accepted and normalized automatically.
 - If `DATABASE_URL` is absent or blank, the app uses the local SQLite path. No external database is contacted by default.
 
 The application and Alembic create the parent directory for a file-based SQLite database when needed. SQLite connections enable foreign-key enforcement and a 30-second busy timeout.
@@ -28,22 +29,31 @@ Open http://localhost:8000, log in from the top bar with your name and the admin
 
 Tests: `pytest`. To run them against Postgres: `TEST_DATABASE_URL=postgresql://user:pass@localhost/ehcc_test pytest`.
 
-## Deploy on EC2 with local SQLite
+## Deploy on EC2
 
 1. Clone the repository into the app's dedicated directory.
-2. Create the app-specific database directory and configure `SQLITE_DB_PATH` to its absolute database path.
-3. Set `ADMIN_PASSWORD`, `SECRET_KEY`, and `APP_ENV=production` in the app's private `.env`.
-4. Leave `DATABASE_URL` unset or blank to use SQLite.
+2. Create the app-specific database directory.
+3. Configure the environment in the app's private `.env` file. The six deployment keys below mirror the Render environment-variable names; keep their values private.
+4. For local SQLite, set `DATABASE_URL` to the SQLite URL for the persistent EC2 database. Alternatively, leave `DATABASE_URL` blank and set `SQLITE_DB_PATH`.
 5. Run `alembic upgrade head`, then start Uvicorn through the app's systemd service.
 
-Example:
+Example using the six Render variable names plus the app's required local settings:
 
 ```env
+ADMIN_PASSWORD=replace-with-existing-admin-password
+ADMIN_USERNAME=your-admin-username
+DATABASE_URL=sqlite:////home/ubuntu/webapps/ehcc/db/ehcc-admin.db
+PYTHON_VERSION=3.12.16
+VIEW_ACCESS_PWD=replace-with-view-access-password
+VIEW_ACCESS_USER=your-view-access-username
 APP_ENV=production
-SQLITE_DB_PATH=/opt/apps/EHCC/DB/ehcc-admin.db
-ADMIN_PASSWORD=replace-me
 SECRET_KEY=replace-with-a-long-random-secret
+SHOW_MOBILE_TO_VIEWERS=0
 ```
+
+**Current application support:** the application currently reads `ADMIN_PASSWORD` and `DATABASE_URL` from this six-key set. `ADMIN_USERNAME`, `VIEW_ACCESS_PWD`, and `VIEW_ACCESS_USER` are not currently referenced by the application code, and `PYTHON_VERSION` is deployment metadata rather than an application setting. Defining those variables in `.env` preserves the Render key set but does not, by itself, enable username-based admin login or separate view-only authentication. Do not assume those access controls are active until implemented in the application.
+
+Use a strong, EC2-specific `SECRET_KEY`; do not reuse a development secret. Keep `.env` out of Git.
 
 ## Deploy with an external PostgreSQL database
 
@@ -51,11 +61,22 @@ Set a non-empty `DATABASE_URL` (for example, a Neon connection string) and run `
 
 ## Environment variables
 
+### Render / deployment keys
+
+| Variable | Purpose / current application behavior |
+|---|---|
+| `ADMIN_PASSWORD` | Shared admin password. Admin login is disabled if unset; this is read by the application. |
+| `ADMIN_USERNAME` | Present in the Render configuration; not currently read by the application. Admins currently enter their name at login. |
+| `DATABASE_URL` | Optional explicit database URL. A non-empty value overrides `SQLITE_DB_PATH`; supports SQLite and PostgreSQL. |
+| `PYTHON_VERSION` | Deployment/runtime version metadata; not read by the application. |
+| `VIEW_ACCESS_PWD` | Present in the Render configuration; not currently read by the application. |
+| `VIEW_ACCESS_USER` | Present in the Render configuration; not currently read by the application. |
+
+### Additional application settings
+
 | Variable | Purpose |
 |---|---|
-| `DATABASE_URL` | Optional external database URL. When non-empty, it overrides local SQLite. |
-| `SQLITE_DB_PATH` | Local SQLite file path; defaults to `./ehcc.db`. |
-| `ADMIN_PASSWORD` | Shared admin password. Admin login is disabled if unset. |
+| `SQLITE_DB_PATH` | Local SQLite file path used when `DATABASE_URL` is absent or blank; defaults to `./ehcc.db`. |
 | `SECRET_KEY` | Signs session cookies. Required in production. |
 | `APP_ENV` | `production` turns on secure cookies. |
 | `SHOW_MOBILE_TO_VIEWERS` | `1` shows full mobile numbers to view-only visitors. Default is masked. |
