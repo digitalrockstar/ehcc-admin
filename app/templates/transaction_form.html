@@ -21,7 +21,7 @@
   <input type="hidden" name="next" value="{{ app_path(('/transactions/%d' % txn.id) if txn else ('/transactions?team=%d' % team.id)) }}">
   <div class="field{% if errors.get('team_id') %} has-error{% endif %}"><span class="cap">Team</span>
     {% if txn %}{{ ui.choice('team_display', [(team.id, team.name)], team.id, 'Team', disabled=True) }}<input type="hidden" name="team_id" value="{{ team.id }}">
-    {% else %}{{ ui.choice('team_id', team_opts, team.id, 'Team', 'f-team', required=True, attrs='data-team-switch="{{ base_path }}/transactions/new"') }}{% endif %}
+    {% else %}{{ ui.choice('team_id', team_opts, team.id, 'Team', 'f-team', required=True, attrs='data-team-switch="' ~ base_path ~ '/transactions/new"') }}{% endif %}
     {% if errors.get('team_id') %}<span class="field-error">{{ errors['team_id'] }}</span>{% endif %}
   </div>
   <label class="field{% if errors.get('transaction_date') %} has-error{% endif %}"><span class="cap">Date</span><input type="date" name="transaction_date" value="{{ f.transaction_date }}" required{% if errors.get('transaction_date') %} class="invalid"{% endif %}>{% if errors.get('transaction_date') %}<span class="field-error">{{ errors['transaction_date'] }}</span>{% endif %}</label>
@@ -75,7 +75,7 @@
   <p id="preview" class="span preview" aria-live="polite"></p>
   <script type="application/json" id="cat-data">{{ cat_json|tojson }}</script>
   <div class="span actions txn-form-actions">
-    <a class="btn ghost" href="{{ ('/transactions/%d' % txn.id) if txn else '/transactions' }}" aria-label="Cancel" title="Cancel">{{ ui.icon('close') }}<span>Cancel</span></a>
+    <a class="btn ghost" href="{{ base_path }}{{ ('/transactions/%d' % txn.id) if txn else '/transactions' }}" aria-label="Cancel" title="Cancel">{{ ui.icon('close') }}<span>Cancel</span></a>
     <button type="submit" class="btn" aria-label="{{ 'Save changes' if txn else 'Save transaction' }}" title="{{ 'Save changes' if txn else 'Save transaction' }}">{{ ui.icon('save') }}<span>Save</span></button>
   </div>
 </form>
