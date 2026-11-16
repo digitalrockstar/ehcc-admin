@@ -2,14 +2,23 @@
 
 Team-wise cricket ledger: income, expenses, transfers, player balances, full reimbursements and collections, and team-balance rounding adjustment. Built to the PRD v2 (one integrated MVP).
 
-**Stack:** FastAPI, Jinja2 templates (no build step), SQLAlchemy 2, Alembic, PostgreSQL (Neon) in production, SQLite for quick local runs. Hosted on Render.
+**Stack:** FastAPI, Jinja2 templates (no build step), SQLAlchemy 2, Alembic. Local SQLite is the default; an external PostgreSQL database can be selected by explicitly setting `DATABASE_URL`.
+
+## Database configuration
+
+- **Default:** SQLite database at `./ehcc.db`.
+- **Custom local path:** set `SQLITE_DB_PATH`, preferably to an absolute path for server deployments. Example: `SQLITE_DB_PATH=/opt/apps/EHCC/DB/ehcc-admin.db`.
+- **External database:** set a non-empty `DATABASE_URL`. PostgreSQL `postgres://` and `postgresql://` URLs are accepted and normalized automatically.
+- If `DATABASE_URL` is absent or blank, the app uses the local SQLite path. No external database is contacted by default.
+
+The application and Alembic create the parent directory for a file-based SQLite database when needed. SQLite connections enable foreign-key enforcement and a 30-second busy timeout.
 
 ## Run locally
 
 ```bash
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements-dev.txt
-cp .env.example .env            # then export the variables, or set them inline
+cp .env.example .env
 export ADMIN_PASSWORD=change-me SECRET_KEY=any-long-random-string
 alembic upgrade head
 uvicorn app.main:app --reload
@@ -19,16 +28,33 @@ Open http://localhost:8000, log in from the top bar with your name and the admin
 
 Tests: `pytest`. To run them against Postgres: `TEST_DATABASE_URL=postgresql://user:pass@localhost/ehcc_test pytest`.
 
-## Deploy on Render with Neon
+## Deploy on EC2 with local SQLite
 
-1. Create a Neon project and copy its connection string.
-2. On Render, create a Blueprint from this repo (`render.yaml`).
-3. Set `DATABASE_URL` (Neon string) and `ADMIN_PASSWORD`. `SECRET_KEY` is generated for you.
-4. Deploy. The start command runs `alembic upgrade head` before starting the server.
+1. Clone the repository into the app's dedicated directory.
+2. Create the app-specific database directory and configure `SQLITE_DB_PATH` to its absolute database path.
+3. Set `ADMIN_PASSWORD`, `SECRET_KEY`, and `APP_ENV=production` in the app's private `.env`.
+4. Leave `DATABASE_URL` unset or blank to use SQLite.
+5. Run `alembic upgrade head`, then start Uvicorn through the app's systemd service.
+
+Example:
+
+```env
+APP_ENV=production
+SQLITE_DB_PATH=/opt/apps/EHCC/DB/ehcc-admin.db
+ADMIN_PASSWORD=replace-me
+SECRET_KEY=replace-with-a-long-random-secret
+```
+
+## Deploy with an external PostgreSQL database
+
+Set a non-empty `DATABASE_URL` (for example, a Neon connection string) and run `alembic upgrade head` before starting the server. This explicitly overrides `SQLITE_DB_PATH`.
+
+## Environment variables
 
 | Variable | Purpose |
 |---|---|
-| `DATABASE_URL` | Neon/Postgres URL. `postgres://` and `postgresql://` are both accepted. |
+| `DATABASE_URL` | Optional external database URL. When non-empty, it overrides local SQLite. |
+| `SQLITE_DB_PATH` | Local SQLite file path; defaults to `./ehcc.db`. |
 | `ADMIN_PASSWORD` | Shared admin password. Admin login is disabled if unset. |
 | `SECRET_KEY` | Signs session cookies. Required in production. |
 | `APP_ENV` | `production` turns on secure cookies. |
