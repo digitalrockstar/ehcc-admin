@@ -3,52 +3,52 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-  <link rel="icon" href="/static/favicon-32.png" sizes="32x32" type="image/png">
-  <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+  <link rel="icon" href="{{ base_path }}/static/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="{{ base_path }}/static/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="{{ base_path }}/static/apple-touch-icon.png">
   <title>{% block title %}EHCC Expense Tracker{% endblock %}</title>
-  <link rel="preload" href="/static/fonts/carlito-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="/static/fonts/google-sans-code-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/static/app.css?v=20261031-ehcc2">
+  <link rel="preload" href="{{ base_path }}/static/fonts/carlito-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="{{ base_path }}/static/fonts/google-sans-code-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="{{ base_path }}/static/app.css?v=20261031-ehcc2">
   <style>{{ theme_css|safe }}</style>
-  <script src="/static/app.js?v=20261031-ehcc2" defer></script>
+  <script src="{{ base_path }}/static/app.js?v=20261031-ehcc2" defer></script>
 </head>
 <body>
 {% import "_macros.html" as ui with context %}
 <aside class="sidebar" id="sidebar" aria-label="Main navigation">
-  <a class="brand" href="/">EHCC Expenses</a>
+  <a class="brand" href="{{ base_path }}/">EHCC Expenses</a>
   <nav>
-    <a href="/" {% if path == '/' %}class="on" aria-current="page"{% endif %}>{{ ui.icon('dashboard') }}<span>Dashboard</span></a>
-    <a href="/transactions" {% if path.startswith('/transactions') and path != '/transactions/new' %}class="on"{% endif %}>{{ ui.icon('transactions') }}<span>Transactions</span></a>
-    <a href="/players" {% if path.startswith('/players') %}class="on"{% endif %}>{{ ui.icon('players') }}<span>Players</span></a>
-    {% if is_admin %}<a href="/transactions/new" {% if path == '/transactions/new' %}class="on"{% endif %}>{{ ui.icon('add') }}<span>Add transaction</span></a>
-    <a href="/settings" {% if path.startswith('/settings') or path == '/audit' %}class="on"{% endif %}>{{ ui.icon('settings') }}<span>Settings</span></a>
+    <a href="{{ base_path }}/" {% if path == '/' %}class="on" aria-current="page"{% endif %}>{{ ui.icon('dashboard') }}<span>Dashboard</span></a>
+    <a href="{{ base_path }}/transactions" {% if path.startswith('/transactions') and path != '/transactions/new' %}class="on"{% endif %}>{{ ui.icon('transactions') }}<span>Transactions</span></a>
+    <a href="{{ base_path }}/players" {% if path.startswith('/players') %}class="on"{% endif %}>{{ ui.icon('players') }}<span>Players</span></a>
+    {% if is_admin %}<a href="{{ base_path }}/transactions/new" {% if path == '/transactions/new' %}class="on"{% endif %}>{{ ui.icon('add') }}<span>Add transaction</span></a>
+    <a href="{{ base_path }}/settings" {% if path.startswith('/settings') or path == '/audit' %}class="on"{% endif %}>{{ ui.icon('settings') }}<span>Settings</span></a>
     {% else %}
-    <a href="/login" {% if path == '/login' %}class="on"{% endif %}>{{ ui.icon('login') }}<span>Login</span></a>
+    <a href="{{ base_path }}/login" {% if path == '/login' %}class="on"{% endif %}>{{ ui.icon('login') }}<span>Login</span></a>
     {% endif %}
   </nav>
   <div class="who">
     {% if is_admin %}<span class="muted">Signed in as {{ admin_name }}</span>
-      <form method="post" action="/logout" class="inline"><input type="hidden" name="csrf_token" value="{{ csrf }}"><button class="linkbtn">{{ ui.icon('logout') }}<span>Log out</span></button></form>
+      <form method="post" action="{{ base_path }}/logout" class="inline"><input type="hidden" name="csrf_token" value="{{ csrf }}"><button class="linkbtn">{{ ui.icon('logout') }}<span>Log out</span></button></form>
     {% else %}<span class="muted">View only</span>{% endif %}
   </div>
 </aside>
 <nav class="bottomnav" aria-label="Mobile navigation">
-  <a href="/" {% if path == '/' %}class="on" aria-current="page"{% endif %}>{{ ui.icon('dashboard') }}<span>Home</span></a>
-  <a href="/transactions" {% if path.startswith('/transactions') and path != '/transactions/new' %}class="on"{% endif %}>{{ ui.icon('transactions') }}<span>Txns</span></a>
-  {% if is_admin %}<a href="/transactions/new" class="nav-add" aria-label="Add transaction"><span class="plus">{{ ui.icon('plus') }}</span><span>Add</span></a>{% endif %}
-  <a href="/players" {% if path.startswith('/players') %}class="on"{% endif %}>{{ ui.icon('players') }}<span>Players</span></a>
+  <a href="{{ base_path }}/" {% if path == '/' %}class="on" aria-current="page"{% endif %}>{{ ui.icon('dashboard') }}<span>Home</span></a>
+  <a href="{{ base_path }}/transactions" {% if path.startswith('/transactions') and path != '/transactions/new' %}class="on"{% endif %}>{{ ui.icon('transactions') }}<span>Txns</span></a>
+  {% if is_admin %}<a href="{{ base_path }}/transactions/new" class="nav-add" aria-label="Add transaction"><span class="plus">{{ ui.icon('plus') }}</span><span>Add</span></a>{% endif %}
+  <a href="{{ base_path }}/players" {% if path.startswith('/players') %}class="on"{% endif %}>{{ ui.icon('players') }}<span>Players</span></a>
   {% if is_admin %}<button type="button" data-sheet-open="more-sheet" aria-haspopup="dialog">{{ ui.icon('more') }}<span>More</span></button>
-  {% else %}<a href="/login" {% if path == '/login' %}class="on"{% endif %}>{{ ui.icon('login') }}<span>Login</span></a>{% endif %}
+  {% else %}<a href="{{ base_path }}/login" {% if path == '/login' %}class="on"{% endif %}>{{ ui.icon('login') }}<span>Login</span></a>{% endif %}
 </nav>
 {% if is_admin %}
 <dialog class="sheet" id="more-sheet" aria-labelledby="more-title">
   <div class="sheet-grip"></div>
   <h2 id="more-title">More</h2>
   <div class="sheet-list">
-    <a href="/settings">{{ ui.icon('settings') }}<span>Settings &amp; themes</span></a>
-    <a href="/audit">{{ ui.icon('transactions') }}<span>Audit log</span></a>
-    <form method="post" action="/logout"><input type="hidden" name="csrf_token" value="{{ csrf }}"><button type="submit">{{ ui.icon('logout') }}<span>Log out</span></button></form>
+    <a href="{{ base_path }}/settings">{{ ui.icon('settings') }}<span>Settings &amp; themes</span></a>
+    <a href="{{ base_path }}/audit">{{ ui.icon('transactions') }}<span>Audit log</span></a>
+    <form method="post" action="{{ base_path }}/logout"><input type="hidden" name="csrf_token" value="{{ csrf }}"><button type="submit">{{ ui.icon('logout') }}<span>Log out</span></button></form>
   </div>
   <p class="sheet-meta">Signed in as {{ admin_name }}</p>
 </dialog>
