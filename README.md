@@ -33,53 +33,39 @@ Tests: `pytest`. To run them against Postgres: `TEST_DATABASE_URL=postgresql://u
 
 1. Clone the repository into the app's dedicated directory.
 2. Create the app-specific database directory.
-3. Configure the environment in the app's private `.env` file. The six deployment keys below mirror the Render environment-variable names; keep their values private.
-4. For local SQLite, set `DATABASE_URL` to the SQLite URL for the persistent EC2 database. Alternatively, leave `DATABASE_URL` blank and set `SQLITE_DB_PATH`.
+3. Configure the same six environment-variable keys used in Render in the app's private `.env` file.
+4. Set `DATABASE_URL` to the SQLite URL for the persistent EC2 database, for example `sqlite:////home/ubuntu/webapps/ehcc/db/ehcc-admin.db`.
 5. Run `alembic upgrade head`, then start Uvicorn through the app's systemd service.
 
-Example using the six Render variable names plus the app's required local settings:
+Example — the six Render environment-variable keys, with EC2's SQLite database URL:
 
 ```env
-ADMIN_PASSWORD=replace-with-existing-admin-password
+ADMIN_PASSWORD=your-existing-admin-password
 ADMIN_USERNAME=your-admin-username
 DATABASE_URL=sqlite:////home/ubuntu/webapps/ehcc/db/ehcc-admin.db
 PYTHON_VERSION=3.12.16
-VIEW_ACCESS_PWD=replace-with-view-access-password
+VIEW_ACCESS_PWD=your-view-access-password
 VIEW_ACCESS_USER=your-view-access-username
-APP_ENV=production
-SECRET_KEY=replace-with-a-long-random-secret
-SHOW_MOBILE_TO_VIEWERS=0
 ```
 
-**Current application support:** the application currently reads `ADMIN_PASSWORD` and `DATABASE_URL` from this six-key set. `ADMIN_USERNAME`, `VIEW_ACCESS_PWD`, and `VIEW_ACCESS_USER` are not currently referenced by the application code, and `PYTHON_VERSION` is deployment metadata rather than an application setting. Defining those variables in `.env` preserves the Render key set but does not, by itself, enable username-based admin login or separate view-only authentication. Do not assume those access controls are active until implemented in the application.
+The six keys are documented exactly as configured in Render. In the current application code, `ADMIN_PASSWORD` and `DATABASE_URL` are read by the app; `ADMIN_USERNAME`, `VIEW_ACCESS_PWD`, and `VIEW_ACCESS_USER` are not currently referenced by the application, and `PYTHON_VERSION` is deployment/runtime metadata. Their presence in `.env` does not by itself enable username-based admin login or separate view-only authentication.
 
-Use a strong, EC2-specific `SECRET_KEY`; do not reuse a development secret. Keep `.env` out of Git.
+Keep `.env` private and out of Git.
 
 ## Deploy with an external PostgreSQL database
 
-Set a non-empty `DATABASE_URL` (for example, a Neon connection string) and run `alembic upgrade head` before starting the server. This explicitly overrides `SQLITE_DB_PATH`.
+Set `DATABASE_URL` to a non-empty PostgreSQL connection string (for example, a Neon connection string) and run `alembic upgrade head` before starting the server. This explicitly overrides `SQLITE_DB_PATH`.
 
 ## Environment variables
 
-### Render / deployment keys
-
 | Variable | Purpose / current application behavior |
 |---|---|
-| `ADMIN_PASSWORD` | Shared admin password. Admin login is disabled if unset; this is read by the application. |
-| `ADMIN_USERNAME` | Present in the Render configuration; not currently read by the application. Admins currently enter their name at login. |
-| `DATABASE_URL` | Optional explicit database URL. A non-empty value overrides `SQLITE_DB_PATH`; supports SQLite and PostgreSQL. |
+| `ADMIN_PASSWORD` | Shared admin password. Admin login is disabled if unset; read by the application. |
+| `ADMIN_USERNAME` | Render deployment key; not currently read by the application. Admins currently enter their name at login. |
+| `DATABASE_URL` | Explicit database URL. A non-empty value overrides `SQLITE_DB_PATH`; supports SQLite and PostgreSQL. |
 | `PYTHON_VERSION` | Deployment/runtime version metadata; not read by the application. |
-| `VIEW_ACCESS_PWD` | Present in the Render configuration; not currently read by the application. |
-| `VIEW_ACCESS_USER` | Present in the Render configuration; not currently read by the application. |
-
-### Additional application settings
-
-| Variable | Purpose |
-|---|---|
-| `SQLITE_DB_PATH` | Local SQLite file path used when `DATABASE_URL` is absent or blank; defaults to `./ehcc.db`. |
-| `SECRET_KEY` | Signs session cookies. Required in production. |
-| `APP_ENV` | `production` turns on secure cookies. |
-| `SHOW_MOBILE_TO_VIEWERS` | `1` shows full mobile numbers to view-only visitors. Default is masked. |
+| `VIEW_ACCESS_PWD` | Render deployment key; not currently read by the application. |
+| `VIEW_ACCESS_USER` | Render deployment key; not currently read by the application. |
 
 ## How the rules are implemented
 
