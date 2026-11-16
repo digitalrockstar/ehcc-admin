@@ -16,9 +16,9 @@
 </div>
 {% endif %}
 <form method="post" id="txn-form" class="card formgrid" data-step="{{ step }}"
-      action="{{ ('/transactions/%d/edit' % txn.id) if txn else '/transactions/new' }}">
+      action="{{ base_path }}{{ ('/transactions/%d/edit' % txn.id) if txn else '/transactions/new' }}">
   {{ ui.csrf_input() }}
-  <input type="hidden" name="next" value="{{ ('/transactions/%d' % txn.id) if txn else ('/transactions?team=%d' % team.id) }}">
+  <input type="hidden" name="next" value="{{ app_path(('/transactions/%d' % txn.id) if txn else ('/transactions?team=%d' % team.id)) }}">
   <div class="field{% if errors.get('team_id') %} has-error{% endif %}"><span class="cap">Team</span>
     {% if txn %}{{ ui.choice('team_display', [(team.id, team.name)], team.id, 'Team', disabled=True) }}<input type="hidden" name="team_id" value="{{ team.id }}">
     {% else %}{{ ui.choice('team_id', team_opts, team.id, 'Team', 'f-team', required=True, attrs='data-team-switch="{{ base_path }}/transactions/new"') }}{% endif %}
