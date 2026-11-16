@@ -21,7 +21,7 @@
   <input type="hidden" name="next" value="{{ ('/transactions/%d' % txn.id) if txn else ('/transactions?team=%d' % team.id) }}">
   <div class="field{% if errors.get('team_id') %} has-error{% endif %}"><span class="cap">Team</span>
     {% if txn %}{{ ui.choice('team_display', [(team.id, team.name)], team.id, 'Team', disabled=True) }}<input type="hidden" name="team_id" value="{{ team.id }}">
-    {% else %}{{ ui.choice('team_id', team_opts, team.id, 'Team', 'f-team', required=True, attrs='data-team-switch="/transactions/new"') }}{% endif %}
+    {% else %}{{ ui.choice('team_id', team_opts, team.id, 'Team', 'f-team', required=True, attrs='data-team-switch="{{ base_path }}/transactions/new"') }}{% endif %}
     {% if errors.get('team_id') %}<span class="field-error">{{ errors['team_id'] }}</span>{% endif %}
   </div>
   <label class="field{% if errors.get('transaction_date') %} has-error{% endif %}"><span class="cap">Date</span><input type="date" name="transaction_date" value="{{ f.transaction_date }}" required{% if errors.get('transaction_date') %} class="invalid"{% endif %}>{% if errors.get('transaction_date') %}<span class="field-error">{{ errors['transaction_date'] }}</span>{% endif %}</label>
