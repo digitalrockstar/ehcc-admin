@@ -1,6 +1,13 @@
 package com.ehcc.admin;
 
 import android.app.Activity;
+import android.content.ContentValues;
+import android.content.ClipData;
+import android.os.Build;
+import android.provider.MediaStore;
+import android.webkit.JavascriptInterface;
+import java.io.OutputStream;
+import android.util.Base64;
 import android.app.AlertDialog;
 import android.webkit.JsResult;
 import android.webkit.WebChromeClient;
@@ -30,6 +37,7 @@ public class MainActivity extends Activity {
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);
         CookieManager.getInstance().setAcceptCookie(true);
+        web.addJavascriptInterface(new AndroidShareBridge(), "EHCCAndroid");
         web.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
@@ -66,6 +74,43 @@ public class MainActivity extends Activity {
             ((DownloadManager) getSystemService(DOWNLOAD_SERVICE)).enqueue(req);
         });
         if (b == null) web.loadUrl(home); else web.restoreState(b);
+    }
+
+    // A WebView-safe native file share. Keep the APK activity alive and let
+    // Android's chooser handle the hand-off to the selected target app.
+    private class AndroidShareBridge {
+        @JavascriptInterface
+        public boolean sharePng(String dataUrl) {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || dataUrl == null ||
+                    !dataUrl.startsWith("data:image/png;base64,")) return false;
+            Uri imageUri = null;
+            try {
+                byte[] bytes = Base64.decode(dataUrl.substring(dataUrl.indexOf(',') + 1), Base64.DEFAULT);
+                ContentValues values = new ContentValues();
+                values.put(MediaStore.Downloads.DISPLAY_NAME, "ehcc-players-owing-team.png");
+                values.put(MediaStore.Downloads.MIME_TYPE, "image/png");
+                values.put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/EHCC");
+                imageUri = getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
+                if (imageUri == null) return false;
+                try (OutputStream stream = getContentResolver().openOutputStream(imageUri)) {
+                    if (stream == null) throw new IllegalStateException("Unable to write shared image");
+                    stream.write(bytes);
+                }
+                final Uri sharedImage = imageUri;
+                runOnUiThread(() -> {
+                    Intent send = new Intent(Intent.ACTION_SEND);
+                    send.setType("image/png");
+                    send.putExtra(Intent.EXTRA_STREAM, sharedImage);
+                    send.setClipData(ClipData.newUri(getContentResolver(), "EHCC players owing the team", sharedImage));
+                    send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    startActivity(Intent.createChooser(send, "Share players owing the team"));
+                });
+                return true;
+            } catch (Exception e) {
+                if (imageUri != null) getContentResolver().delete(imageUri, null, null);
+                return false;
+            }
+        }
     }
 
     @Override protected void onSaveInstanceState(Bundle o) { super.onSaveInstanceState(o); web.saveState(o); }
