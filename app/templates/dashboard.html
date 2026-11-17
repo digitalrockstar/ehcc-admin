@@ -31,10 +31,14 @@
     </ul>
     {% else %}<p class="muted">No expenses yet.</p>{% endif %}
   </div>
-  <div class="card"><h2>Outstanding balances</h2>
+  <div class="card"><div class="card-heading"><h2>Outstanding balances</h2>
+    {% if is_admin and top|selectattr('net', 'lt', 0)|list %}
+    <button type="button" class="btn small ghost icon-action" data-share-balances data-team-name="{{ team.name }}" aria-label="Share outstanding balances" title="Share outstanding balances">{{ ui.icon('share') }}</button>
+    {% endif %}
+  </div>
     {% if top %}
     <div class="dashboard-balance-cards responsive-cards"><table class="plain"><tbody>
-      {% for r in top %}<tr>
+      {% for r in top %}<tr{% if r.net < 0 %} data-share-player="{{ r.player.player_name }}" data-share-amount="{{ -r.net }}"{% endif %}>
         <td data-label="Player"><a href="{{ base_path }}/players/{{ r.player.id }}"><strong>{{ r.player.player_name }}</strong></a></td>
         <td class="num">{{ ui.net(r.net) }}</td>
         {% if is_admin %}<td class="num">{{ ui.action('/players/%d/settle-net' % r.player.id, ui.icon('wallet'), request.url.path, 'btn small ghost icon-action settle-icon', 'Settle the net amount for %s (%s) in one transfer?' % (r.player.player_name, (r.net|abs)|inr)) }}</td>{% endif %}
