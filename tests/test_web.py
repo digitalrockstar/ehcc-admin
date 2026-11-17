@@ -301,6 +301,17 @@ def test_dashboard_shows_all_outstanding_not_just_five(admin, db, team):
     assert dash.count('href="/players/') >= 6 and "Outstanding balances" in dash
 
 
+def test_dashboard_share_button_includes_only_players_who_owe_team(admin, client, db, team):
+    from .conftest import expense as mk
+    mk(db, team, 1000, "Akshay", ["Bala"])  # Team owes Akshay; Bala owes the team.
+    html = admin.get(f"/?team={team.id}").text
+    assert 'data-share-balances' in html
+    assert 'data-share-player="Bala"' in html and 'data-share-amount="170.00"' in html
+    assert 'data-share-player="Akshay"' not in html
+    client_html = client.get(f"/?team={team.id}").text
+    assert 'data-share-balances' not in client_html
+
+
 
 def test_configurable_base_path_prefixes_rendered_urls(client, monkeypatch):
     from app import config
