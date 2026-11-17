@@ -87,7 +87,7 @@ public class MainActivity extends Activity {
             try {
                 byte[] bytes = Base64.decode(dataUrl.substring(dataUrl.indexOf(',') + 1), Base64.DEFAULT);
                 ContentValues values = new ContentValues();
-                values.put(MediaStore.Downloads.DISPLAY_NAME, "ehcc-outstanding-balances.png");
+                values.put(MediaStore.Downloads.DISPLAY_NAME, "ehcc-players-owing-team.png");
                 values.put(MediaStore.Downloads.MIME_TYPE, "image/png");
                 values.put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/EHCC");
                 imageUri = getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
@@ -101,9 +101,9 @@ public class MainActivity extends Activity {
                     Intent send = new Intent(Intent.ACTION_SEND);
                     send.setType("image/png");
                     send.putExtra(Intent.EXTRA_STREAM, sharedImage);
-                    send.setClipData(ClipData.newUri(getContentResolver(), "EHCC outstanding balances", sharedImage));
+                    send.setClipData(ClipData.newUri(getContentResolver(), "EHCC players owing the team", sharedImage));
                     send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                    startActivity(Intent.createChooser(send, "Share outstanding balances"));
+                    startActivity(Intent.createChooser(send, "Share players owing the team"));
                 });
                 return true;
             } catch (Exception e) {
