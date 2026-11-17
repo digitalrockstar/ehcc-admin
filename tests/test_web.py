@@ -183,7 +183,7 @@ def test_form_uses_chips_and_flash_script(admin, db, team):
 
 def test_favicon_served(client):
     assert client.get("/favicon.ico").status_code == 200
-    assert client.get("/static/app-icon-512.png").status_code == 200
+    assert client.get("/static/apple-touch-icon.png").status_code == 200
     assert client.get("/static/manifest.webmanifest").status_code == 200
     assert 'rel="icon"' in client.get("/").text
 
@@ -309,7 +309,7 @@ def test_configurable_base_path_prefixes_rendered_urls(client, monkeypatch):
     monkeypatch.setattr(config, "APP_BASE_PATH", "/ehcc")
     html = client.get("/").text
     assert 'href="/ehcc/static/app.css' in html
-    assert 'href="/ehcc/static/app-icon-192.png' in html
+    assert 'href="/ehcc/static/apple-touch-icon.png' in html
     assert 'href="/ehcc/static/manifest.webmanifest' in html
     assert 'href="/ehcc/transactions"' in html
     assert 'href="/ehcc/players"' in html
@@ -342,4 +342,4 @@ def test_static_files_work_with_prefix_stripped_by_proxy():
     assert app.root_path == ""
     with TestClient(app) as proxy_client:
         assert proxy_client.get("/static/app.css").status_code == 200
-        assert proxy_client.get("/static/app-icon-512.png").status_code == 200
+        assert proxy_client.get("/static/apple-touch-icon.png").status_code == 200
