@@ -301,7 +301,7 @@ def test_dashboard_shows_all_outstanding_not_just_five(admin, db, team):
     assert dash.count('href="/players/') >= 6 and "Outstanding balances" in dash
 
 
-def test_dashboard_share_button_includes_only_players_who_owe_team(admin, client, db, team):
+def test_dashboard_share_button_includes_only_positive_net_players_who_owe_team(admin, client, db, team):
     from .conftest import expense as mk
     mk(db, team, 1000, "Akshay", ["Bala"])  # Team owes Akshay; Bala owes the team.
     html = admin.get(f"/?team={team.id}").text
