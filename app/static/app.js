@@ -59,7 +59,7 @@ function initBalanceSharing() {
         ctx.fillStyle = '#697586'; ctx.font = '600 18px Arial, sans-serif';
         ctx.fillText((button.dataset.teamName || 'TEAM').toUpperCase(), pad, 112);
         ctx.fillStyle = '#17212b'; ctx.font = '700 34px Arial, sans-serif';
-        ctx.fillText('Outstanding Balances', pad, 178);
+        ctx.fillText('Players Owing Team', pad, 178);
         ctx.fillStyle = '#697586'; ctx.font = '18px Arial, sans-serif';
         ctx.fillText(new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }), pad, 214);
 
@@ -77,13 +77,13 @@ function initBalanceSharing() {
         const total = rows.reduce((sum, row) => sum + row.amount, 0);
         ctx.fillStyle = '#17212b'; ctx.fillRect(pad, y + 18, width - pad * 2, 2);
         ctx.textAlign = 'left'; ctx.fillStyle = '#17212b'; ctx.font = '700 24px Arial, sans-serif';
-        ctx.fillText('TOTAL OUTSTANDING', pad + 18, y + 70);
+        ctx.fillText('TOTAL TO COLLECT', pad + 18, y + 70);
         ctx.textAlign = 'right'; ctx.fillStyle = '#c43d4b'; ctx.font = '700 28px Arial, sans-serif';
         ctx.fillText(money(total), width - pad - 18, y + 70);
 
         const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
         if (!blob) throw new Error('Could not create the image.');
-        const file = new File([blob], 'ehcc-outstanding-balances.png', { type: 'image/png' });
+        const file = new File([blob], 'ehcc-players-owing-team.png', { type: 'image/png' });
         // Android WebView needs a native bridge for ACTION_SEND. Calling the
         // browser Web Share API from a WebView can hand off the whole activity.
         if (window.EHCCAndroid && typeof window.EHCCAndroid.sharePng === 'function') {
@@ -95,7 +95,7 @@ function initBalanceSharing() {
           });
           if (!window.EHCCAndroid.sharePng(dataUrl)) throw new Error('Android sharing is unavailable on this device.');
         } else if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({ files: [file], title: 'Outstanding balances' });
+          await navigator.share({ files: [file], title: 'Players owing team' });
         } else {
           const url = URL.createObjectURL(blob);
           const link = document.createElement('a');
