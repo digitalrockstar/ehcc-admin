@@ -4,9 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="app-base-path" content="{{ base_path }}">
-  <link rel="icon" href="{{ base_path }}/static/favicon.svg" type="image/svg+xml" media="(prefers-color-scheme: light)">
-  <link rel="icon" href="{{ base_path }}/static/favicon-dark.svg" type="image/svg+xml" media="(prefers-color-scheme: dark)">
-  <link rel="apple-touch-icon" href="{{ base_path }}/static/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="{{ base_path }}/static/app-icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="{{ base_path }}/static/app-icon-512.png">
+  <link rel="apple-touch-icon" href="{{ base_path }}/static/app-icon-512.png">
+  <link rel="manifest" href="{{ base_path }}/static/manifest.webmanifest">
   <title>{% block title %}EHCC Expense Tracker{% endblock %}</title>
   <link rel="preload" href="{{ base_path }}/static/fonts/carlito-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="{{ base_path }}/static/fonts/google-sans-code-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
