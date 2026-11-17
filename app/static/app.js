@@ -20,6 +20,7 @@ function initPage() {
     location.href = tr.dataset.href;
   }));
 
+  initBalanceSharing();
   initSheets();
   initThemeFilter();
   initGlass();
@@ -33,6 +34,69 @@ function initPage() {
   // Transaction form
   const form = document.getElementById('txn-form');
   if (form) initTxnForm(form);
+}
+
+function initBalanceSharing() {
+  document.querySelectorAll('[data-share-balances]').forEach(button => {
+    button.addEventListener('click', async () => {
+      const rows = Array.from(document.querySelectorAll('[data-share-player][data-share-amount]'))
+        .map(row => ({ name: row.dataset.sharePlayer, amount: Number(row.dataset.shareAmount) }))
+        .filter(row => row.name && Number.isFinite(row.amount) && row.amount > 0);
+      if (!rows.length) return;
+
+      button.disabled = true;
+      try {
+        const width = 960, pad = 64, rowHeight = 76, headerHeight = 250, footerHeight = 100;
+        const height = headerHeight + rows.length * rowHeight + footerHeight;
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, width, height);
+        ctx.fillStyle = '#17212b'; ctx.font = '700 38px Arial, sans-serif';
+        ctx.fillText('EHCC', pad, 72);
+        ctx.fillStyle = '#697586'; ctx.font = '600 18px Arial, sans-serif';
+        ctx.fillText((button.dataset.teamName || 'TEAM').toUpperCase(), pad, 112);
+        ctx.fillStyle = '#17212b'; ctx.font = '700 34px Arial, sans-serif';
+        ctx.fillText('Outstanding Balances', pad, 178);
+        ctx.fillStyle = '#697586'; ctx.font = '18px Arial, sans-serif';
+        ctx.fillText(new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }), pad, 214);
+
+        const money = value => '₹' + value.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        let y = headerHeight;
+        rows.forEach((row, index) => {
+          ctx.fillStyle = index % 2 ? '#f7f8fa' : '#ffffff';
+          ctx.fillRect(pad, y, width - pad * 2, rowHeight);
+          ctx.fillStyle = '#202a35'; ctx.font = '600 25px Arial, sans-serif';
+          ctx.textAlign = 'left'; ctx.fillText(row.name, pad + 18, y + 47);
+          ctx.fillStyle = '#c43d4b'; ctx.font = '700 25px Arial, sans-serif';
+          ctx.textAlign = 'right'; ctx.fillText(money(row.amount), width - pad - 18, y + 47);
+          y += rowHeight;
+        });
+        const total = rows.reduce((sum, row) => sum + row.amount, 0);
+        ctx.fillStyle = '#17212b'; ctx.fillRect(pad, y + 18, width - pad * 2, 2);
+        ctx.textAlign = 'left'; ctx.fillStyle = '#17212b'; ctx.font = '700 24px Arial, sans-serif';
+        ctx.fillText('TOTAL OUTSTANDING', pad + 18, y + 70);
+        ctx.textAlign = 'right'; ctx.fillStyle = '#c43d4b'; ctx.font = '700 28px Arial, sans-serif';
+        ctx.fillText(money(total), width - pad - 18, y + 70);
+
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+        if (!blob) throw new Error('Could not create the image.');
+        const file = new File([blob], 'ehcc-outstanding-balances.png', { type: 'image/png' });
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], title: 'Outstanding balances' });
+        } else {
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url; link.download = file.name; link.click();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
+      } catch (err) {
+        if (err.name !== 'AbortError') alert('Could not share outstanding balances. Please try again.');
+      } finally {
+        button.disabled = false;
+      }
+    });
+  });
 }
 
 document.addEventListener('DOMContentLoaded', initPage);
