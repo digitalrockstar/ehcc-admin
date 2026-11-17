@@ -60,7 +60,7 @@ async def security_headers(request: Request, call_next):
 @app.get("/favicon.ico", include_in_schema=False)
 def favicon():
     # Serve the dark-background PNG brand mark for legacy browser favicon requests.
-    return FileResponse(Path(__file__).parent / "static" / "app-icon-512.png", media_type="image/png")
+    return FileResponse(Path(__file__).parent / "static" / "apple-touch-icon.png", media_type="image/png")
 
 
 @app.get("/healthz", include_in_schema=False)
