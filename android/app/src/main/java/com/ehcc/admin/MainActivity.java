@@ -96,12 +96,15 @@ public class MainActivity extends Activity {
                     if (stream == null) throw new IllegalStateException("Unable to write shared image");
                     stream.write(bytes);
                 }
-                Intent send = new Intent(Intent.ACTION_SEND);
-                send.setType("image/png");
-                send.putExtra(Intent.EXTRA_STREAM, imageUri);
-                send.setClipData(ClipData.newUri(getContentResolver(), "EHCC outstanding balances", imageUri));
-                send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                startActivity(Intent.createChooser(send, "Share outstanding balances"));
+                final Uri sharedImage = imageUri;
+                runOnUiThread(() -> {
+                    Intent send = new Intent(Intent.ACTION_SEND);
+                    send.setType("image/png");
+                    send.putExtra(Intent.EXTRA_STREAM, sharedImage);
+                    send.setClipData(ClipData.newUri(getContentResolver(), "EHCC outstanding balances", sharedImage));
+                    send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    startActivity(Intent.createChooser(send, "Share outstanding balances"));
+                });
                 return true;
             } catch (Exception e) {
                 if (imageUri != null) getContentResolver().delete(imageUri, null, null);
